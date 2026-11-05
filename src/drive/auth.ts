@@ -25,9 +25,20 @@ type GoogleOAuth = {
 };
 
 type Access = { token: string; signal: AbortSignal };
+type SessionOptions = { redirectUri?: string; useRedirect?: boolean };
+type RedirectRequest = { state: string; expiresAt: number; redirectUri: string; clientId: string };
 type GoogleWindow = Window & { google?: { accounts?: { oauth2?: GoogleOAuth } } };
 const oauth = () => (window as GoogleWindow).google?.accounts?.oauth2;
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
+const GOOGLE_AUTHORIZE = 'https://accounts.google.com/o/oauth2/v2/auth';
+const REDIRECT_STATE = 'tai-hub.google-oauth.v1';
+const REDIRECT_TIMEOUT = 5 * 60 * 1000;
+const OAUTH_FIELDS = ['state', 'access_token', 'token_type', 'scope', 'expires_in', 'error'];
+const MISSING_CLIENT = 'Falta configurar el cliente OAuth de TAI Hub.';
+const CANCELLED = 'Se ha cancelado la conexión con Google.';
+const DENIED = 'No se ha autorizado el acceso a Drive.';
+const FAILED = 'Google no pudo completar la autorización.';
+const INVALID_REDIRECT = 'La autorización de Google ha caducado o no coincide. Vuelve a conectar.';
 const RECONNECT = 'Vuelve a conectar Google Drive para continuar.';
 
 let loadingGoogle: Promise<GoogleOAuth> | undefined;
@@ -71,16 +82,22 @@ export class SessionExpiredError extends Error {
 
 export class GoogleSession {
   #clientId: string;
+  #redirectUri?: string;
+  #useRedirect: boolean;
   #google?: GoogleOAuth;
   #snapshot: AuthSnapshot = { status: 'loading' };
   #listeners = new Set<() => void>();
   #credential?: { token: string; expiresAt: number; controller: AbortController };
   #expiryTimer?: number;
   #cancelConnect?: () => void;
+  #cancelRedirect?: () => void;
   #hint?: string;
 
-  constructor(clientId: string) {
+  constructor(clientId: string, { redirectUri, useRedirect = false }: SessionOptions = {}) {
     this.#clientId = clientId.trim();
+    this.#redirectUri = redirectUri;
+    this.#useRedirect = useRedirect;
+    if (typeof window !== 'undefined') this.#consumeRedirect();
   }
 
   snapshot = (): AuthSnapshot => this.#snapshot;
@@ -92,26 +109,31 @@ export class GoogleSession {
 
   async prepare(): Promise<void> {
     if (this.#google) return;
-    if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(this.#clientId)) {
-      this.#publish('error', 'Falta configurar el cliente OAuth de TAI Hub.');
+    if (!this.#validClient()) {
+      this.#publish('error', MISSING_CLIENT);
       return;
     }
-    this.#publish('loading');
+    if (this.#useRedirect) {
+      if (this.#snapshot.status === 'loading') this.#publish('ready');
+      return;
+    }
     try {
       this.#google = await loadGoogle();
-      this.#publish('ready');
+      if (this.#snapshot.status === 'loading') this.#publish('ready');
     } catch (error) {
-      this.#publish('error', (error as Error).message);
+      if (this.#snapshot.status === 'loading') this.#publish('error', (error as Error).message);
     }
   }
 
-  connect({ switchAccount = false }: { switchAccount?: boolean } = {}): Promise<void> {
-    if (!this.#google) return Promise.reject(new Error('El acceso de Google aún no está disponible.'));
-    if (this.#cancelConnect) return Promise.reject(new Error('Ya hay una ventana de Google abierta.'));
+  connect({ switchAccount = false, sameTab = this.#useRedirect }: { switchAccount?: boolean; sameTab?: boolean } = {}): Promise<void> {
+    if (!this.#validClient()) return Promise.reject(new Error(MISSING_CLIENT));
+    if (this.#cancelConnect || this.#cancelRedirect) return Promise.reject(new Error('Ya hay una autorización de Google en curso.'));
+    if (!sameTab && !this.#google) return Promise.reject(new Error('El acceso de Google aún no está disponible.'));
     if (switchAccount) {
       this.#clearAccess();
       this.#hint = undefined;
     }
+    if (sameTab) return this.#startRedirect();
 
     return new Promise<void>((resolve, reject) => {
       let finished = false;
@@ -142,7 +164,7 @@ export class GoogleSession {
             if (finished) return;
             const expiresIn = Number(response.expires_in);
             if (response.error || !response.access_token || !Number.isFinite(expiresIn) || expiresIn <= 0) {
-              fail(response.error === 'access_denied' ? 'No se ha autorizado el acceso a Drive.' : 'Google no pudo completar la autorización.');
+              fail(response.error === 'access_denied' ? DENIED : FAILED);
               return;
             }
             if (!response.scope?.split(/\s+/).includes(DRIVE_SCOPE)) {
@@ -150,15 +172,7 @@ export class GoogleSession {
               return;
             }
             cleanup();
-            this.#clearAccess();
-            const lifetime = Math.max(1, expiresIn - Math.min(30, expiresIn / 10)) * 1000;
-            this.#credential = {
-              token: response.access_token,
-              expiresAt: Date.now() + lifetime,
-              controller: new AbortController(),
-            };
-            this.#expiryTimer = window.setTimeout(() => this.expire(), lifetime);
-            this.#publish('connected');
+            this.#acceptToken(response.access_token, expiresIn);
             resolve();
           },
           error_callback: (error) => {
@@ -194,14 +208,158 @@ export class GoogleSession {
   expire(expectedToken?: string): void {
     if (!this.#credential || (expectedToken && this.#credential.token !== expectedToken)) return;
     this.#clearAccess();
-    if (!this.#cancelConnect) this.#publish('expired', RECONNECT);
+    if (!this.#cancelConnect && !this.#cancelRedirect) this.#publish('expired', RECONNECT);
   }
 
   disconnect(): void {
     this.#cancelConnect?.();
+    this.#cancelRedirect?.();
     this.#clearAccess();
     this.#hint = undefined;
-    this.#publish(this.#google ? 'ready' : 'loading');
+    this.#publish(this.#google || this.#useRedirect ? 'ready' : 'loading');
+  }
+
+  #validClient(): boolean {
+    return /^[\w.-]+\.apps\.googleusercontent\.com$/.test(this.#clientId);
+  }
+
+  #callbackUrl(): URL | undefined {
+    if (!window.location) return undefined;
+    try {
+      const callback = new URL(this.#redirectUri ?? window.location.pathname, window.location.origin);
+      const secure = callback.protocol === 'https:'
+        || (callback.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(callback.hostname));
+      if (secure && callback.origin === window.location.origin && !callback.username && !callback.password
+        && !callback.search && !callback.hash) return callback;
+    } catch {
+      return undefined;
+    }
+  }
+
+  #startRedirect(): Promise<void> {
+    const callback = this.#callbackUrl();
+    if (!callback) return Promise.reject(new Error('La dirección de retorno de Google no está configurada.'));
+    const state = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
+    const pending: RedirectRequest = {
+      state,
+      expiresAt: Date.now() + REDIRECT_TIMEOUT,
+      redirectUri: callback.href,
+      clientId: this.#clientId,
+    };
+    try {
+      window.sessionStorage.setItem(REDIRECT_STATE, JSON.stringify(pending));
+    } catch {
+      const message = 'Safari necesita permitir el almacenamiento temporal de este sitio para conectar Google Drive.';
+      this.#publish(this.#credential ? 'connected' : 'error', message);
+      return Promise.reject(new Error(message));
+    }
+
+    const authorize = new URL(GOOGLE_AUTHORIZE);
+    authorize.search = new URLSearchParams({
+      client_id: this.#clientId,
+      redirect_uri: callback.href,
+      response_type: 'token',
+      scope: DRIVE_SCOPE,
+      include_granted_scopes: 'false',
+      state,
+      ...(this.#hint ? { login_hint: this.#hint } : { prompt: 'select_account' }),
+    }).toString();
+    const cancel = () => {
+      clearTimeout(timeout);
+      window.removeEventListener('pageshow', onReturn);
+      this.#cancelRedirect = undefined;
+      // Back navigation can restore the page that started the authorization from Safari's cache.
+      try {
+        const saved = JSON.parse(window.sessionStorage.getItem(REDIRECT_STATE) ?? 'null') as RedirectRequest | null;
+        if (saved?.state === state) window.sessionStorage.removeItem(REDIRECT_STATE);
+      } catch {
+        // A missing or blocked storage entry cannot be used to authorize.
+      }
+    };
+    const onReturn = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      cancel();
+      this.#publish(this.#credential ? 'connected' : 'error', CANCELLED);
+    };
+    const timeout = window.setTimeout(() => {
+      cancel();
+      this.#publish(this.#credential ? 'connected' : 'error', INVALID_REDIRECT);
+    }, REDIRECT_TIMEOUT);
+    this.#cancelRedirect = cancel;
+    window.addEventListener('pageshow', onReturn);
+    this.#publish('connecting');
+    try {
+      window.location.assign(authorize.href);
+      return Promise.resolve();
+    } catch {
+      cancel();
+      this.#publish(this.#credential ? 'connected' : 'error', FAILED);
+      return Promise.reject(new Error(FAILED));
+    }
+  }
+
+  #consumeRedirect(): void {
+    const fragment = new URLSearchParams(window.location?.hash.slice(1));
+    if (!['access_token', 'token_type', 'error'].some(field => fragment.has(field))) return;
+
+    // Drop the callback fragment before loading GIS or rendering the application.
+    try {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+    } catch {
+      window.location.replace(window.location.pathname + window.location.search);
+      return;
+    }
+
+    let pending: RedirectRequest | null = null;
+    try {
+      const saved = window.sessionStorage.getItem(REDIRECT_STATE);
+      window.sessionStorage.removeItem(REDIRECT_STATE);
+      if (saved) pending = JSON.parse(saved) as RedirectRequest;
+    } catch {
+      // An inaccessible nonce cannot authorize an incoming token.
+    }
+    const callback = this.#callbackUrl();
+    if (!this.#validClient() || !pending || typeof pending.state !== 'string'
+      || !/^[0-9a-f]{64}$/.test(pending.state) || !Number.isSafeInteger(pending.expiresAt)
+      || pending.expiresAt <= Date.now() || pending.clientId !== this.#clientId
+      || !callback || callback.href !== pending.redirectUri
+      || callback.pathname !== window.location.pathname || window.location.search
+      || OAUTH_FIELDS.some(field => fragment.getAll(field).length > 1)
+      || fragment.get('state') !== pending.state) {
+      this.#publish('error', INVALID_REDIRECT);
+      return;
+    }
+    const error = fragment.get('error');
+    if (error) {
+      this.#publish('error', error === 'access_denied' ? DENIED : FAILED);
+      return;
+    }
+    const token = fragment.get('access_token');
+    const scope = fragment.get('scope')?.trim().split(/\s+/);
+    const lifetime = Number(fragment.get('expires_in'));
+    if (!token || !/^[a-zA-Z0-9._~+\/-]+=*$/.test(token) || fragment.get('token_type')?.toLowerCase() !== 'bearer'
+      || !Number.isSafeInteger(lifetime) || lifetime <= 0) {
+      this.#publish('error', FAILED);
+      return;
+    }
+    if (!scope?.length || scope.some(value => value !== DRIVE_SCOPE)) {
+      this.#publish('error', 'Autoriza solo el acceso a los archivos de TAI Hub en Google Drive.');
+      return;
+    }
+    this.#acceptToken(token, lifetime);
+  }
+
+  #acceptToken(token: string, expiresIn: number): void {
+    this.#clearAccess();
+    const seconds = Math.min(expiresIn, 3600);
+    const lifetime = Math.max(1, seconds - Math.min(30, seconds / 10)) * 1000;
+    this.#credential = {
+      token,
+      expiresAt: Date.now() + lifetime,
+      controller: new AbortController(),
+    };
+    this.#expiryTimer = window.setTimeout(() => this.expire(), lifetime);
+    this.#publish('connected');
   }
 
   #clearAccess(): void {

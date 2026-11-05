@@ -24,8 +24,8 @@ function mockGoogle(response?: { scope?: string; error?: string }) {
 }
 
 const sessions: GoogleSession[] = [];
-function newSession() {
-  const session = new GoogleSession(CLIENT_ID);
+function newSession(options?: ConstructorParameters<typeof GoogleSession>[1]) {
+  const session = new GoogleSession(CLIENT_ID, options);
   sessions.push(session);
   return session;
 }
@@ -76,6 +76,149 @@ describe('Google OAuth', () => {
     expect(session.snapshot().status).toBe('expired');
     await session.connect();
     expect(session.snapshot().status).toBe('connected');
+  });
+});
+
+const CALLBACK = 'https://tai-hub.example.test/tai-hub/';
+
+function mockRedirectBrowser() {
+  const current = new URL(CALLBACK);
+  const location = Object.assign(current, { assign: vi.fn(), replace: vi.fn() });
+  const sessionData = new Map<string, string>();
+  const sessionStorage = {
+    getItem: (key: string) => sessionData.get(key) ?? null,
+    setItem: (key: string, value: string) => sessionData.set(key, value),
+    removeItem: (key: string) => sessionData.delete(key),
+  };
+  const history = {
+    state: null,
+    replaceState: vi.fn((_state: unknown, _title: string, path: string) => { current.href = new URL(path, CALLBACK).href; }),
+  };
+  const browser = Object.assign(new EventTarget(), { location, history, sessionStorage, setTimeout });
+  Object.defineProperty(browser, 'google', { get: () => { throw new Error('GIS should not be loaded for same-tab OAuth'); } });
+  vi.stubGlobal('window', browser);
+  return { browser, location, history, sessionData };
+}
+
+function returnedToken(location: URL, state: string, override: Record<string, string> = {}) {
+  location.hash = new URLSearchParams({
+    state,
+    access_token: TEST_TOKEN,
+    token_type: 'Bearer',
+    expires_in: '3600',
+    scope: DRIVE_SCOPE,
+    ...override,
+  }).toString();
+}
+
+describe('Same-tab Google OAuth', () => {
+  it('uses one-time state and clears the token fragment before loading GIS or reading storage', async () => {
+    const { location, history, sessionData, browser } = mockRedirectBrowser();
+    const session = newSession({ redirectUri: CALLBACK, useRedirect: true });
+    await session.prepare();
+    expect(session.snapshot().status).toBe('ready');
+    const navigation = session.connect();
+    expect(location.assign).toHaveBeenCalledTimes(1);
+    await navigation;
+    const destination = new URL(location.assign.mock.calls[0][0]);
+    expect(destination.origin + destination.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
+    expect(Object.fromEntries(destination.searchParams)).toMatchObject({
+      client_id: CLIENT_ID,
+      redirect_uri: CALLBACK,
+      response_type: 'token',
+      scope: DRIVE_SCOPE,
+      include_granted_scopes: 'false',
+      prompt: 'select_account',
+    });
+    const state = destination.searchParams.get('state')!;
+    expect(state).toMatch(/^[0-9a-f]{64}$/);
+    expect([...sessionData.values()]).toHaveLength(1);
+    expect([...sessionData.values()][0]).not.toContain(TEST_TOKEN);
+    expect([...sessionData.values()][0]).toContain(state);
+
+    returnedToken(location, state);
+    const getItem = browser.sessionStorage.getItem;
+    browser.sessionStorage.getItem = key => {
+      expect(location.href).toBe(CALLBACK);
+      return getItem(key);
+    };
+    const returned = newSession({ redirectUri: CALLBACK, useRedirect: true });
+    expect(history.replaceState).toHaveBeenCalledWith(null, '', '/tai-hub/');
+    expect(location.hash).toBe('');
+    expect(returned.access().token).toBe(TEST_TOKEN);
+    expect(sessionData.size).toBe(0);
+    await returned.prepare();
+    expect(returned.snapshot().status).toBe('connected');
+
+    returnedToken(location, state);
+    const replay = newSession({ redirectUri: CALLBACK, useRedirect: true });
+    expect(replay.snapshot().status).toBe('error');
+    expect(location.hash).toBe('');
+    expect(() => replay.access()).toThrow(SessionExpiredError);
+  });
+
+  it('supports explicit same-tab fallback before GIS becomes available', async () => {
+    const { location } = mockRedirectBrowser();
+    const session = newSession({ redirectUri: CALLBACK });
+    await session.connect({ sameTab: true });
+    expect(location.assign).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['incorrect state', { state: 'unexpected' }],
+    ['wrong token type', { token_type: 'Basic' }],
+    ['extra scope', { scope: DRIVE_SCOPE + ' https://www.googleapis.com/auth/drive' }],
+    ['invalid token lifetime', { expires_in: 'NaN' }],
+  ])('rejects %s and clears the callback URL', async (_label, override) => {
+    const { location, sessionData } = mockRedirectBrowser();
+    const options = { redirectUri: CALLBACK, useRedirect: true };
+    await newSession(options).connect();
+    const state = new URL(location.assign.mock.calls[0][0]).searchParams.get('state')!;
+    returnedToken(location, state, override);
+    const returned = newSession(options);
+    expect(returned.snapshot().status).toBe('error');
+    expect(() => returned.access()).toThrow(SessionExpiredError);
+    expect(location.hash).toBe('');
+    expect(sessionData.size).toBe(0);
+  });
+
+  it('rejects expired state even when the remaining Google response is valid', async () => {
+    vi.useFakeTimers();
+    const { location } = mockRedirectBrowser();
+    const options = { redirectUri: CALLBACK, useRedirect: true };
+    await newSession(options).connect();
+    const state = new URL(location.assign.mock.calls[0][0]).searchParams.get('state')!;
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000 + 1);
+    returnedToken(location, state);
+    const returned = newSession(options);
+    expect(returned.snapshot().error).toContain('caducado');
+    expect(() => returned.access()).toThrow(SessionExpiredError);
+  });
+
+  it('handles denied consent and returns to an actionable state after Safari back navigation', async () => {
+    const { location, browser, sessionData } = mockRedirectBrowser();
+    const options = { redirectUri: CALLBACK, useRedirect: true };
+    const session = newSession(options);
+    await session.connect();
+    const state = new URL(location.assign.mock.calls[0][0]).searchParams.get('state')!;
+    location.hash = new URLSearchParams({ state, error: 'access_denied' }).toString();
+    const denied = newSession(options);
+    expect(denied.snapshot().error).toBe('No se ha autorizado el acceso a Drive.');
+    expect(location.hash).toBe('');
+
+    browser.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+    expect(session.snapshot().error).toContain('cancelado');
+    expect(sessionData.size).toBe(0);
+    await session.connect();
+    expect(location.assign).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a redirect URI on another origin without navigating or creating state', async () => {
+    const { location, sessionData } = mockRedirectBrowser();
+    const session = newSession({ redirectUri: 'https://other.example.test/tai-hub/', useRedirect: true });
+    await expect(session.connect()).rejects.toThrow('dirección de retorno');
+    expect(location.assign).not.toHaveBeenCalled();
+    expect(sessionData.size).toBe(0);
   });
 });
 
