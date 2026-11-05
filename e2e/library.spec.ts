@@ -124,7 +124,8 @@ test('replaces and reindexes a PDF while retaining its previous original', async
   await search.fill('observacion objetivo')
   await expect.poll(() => drive.savedIndexes()).toHaveLength(3)
   await page.getByRole('button', { name: /Documento de prueba General · Página 2/ }).click()
-  await page.getByRole('button', { name: 'Editar', exact: true }).click()
+  await page.getByRole('button', { name: 'Opciones', exact: true }).click()
+  await page.getByRole('button', { name: 'Editar ficha', exact: true }).click()
   const form = page.getByRole('dialog', { name: 'Editar recurso' })
   await form.getByLabel('Elegir nueva versión').setInputFiles({
     name: 'version-nueva.pdf', mimeType: 'application/pdf', buffer: fixturePdf(['Contenido sustituto verificable']),
@@ -135,6 +136,7 @@ test('replaces and reindexes a PDF while retaining its previous original', async
   await form.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(form).not.toBeVisible()
   await expect(page.getByRole('heading', { name: 'Documento actualizado' })).toBeVisible()
+  await page.getByRole('button', { name: 'Opciones', exact: true }).click()
   await page.getByRole('button', { name: 'Versiones', exact: true }).click()
   const versions = page.getByRole('dialog', { name: 'Versiones del original' })
   const oldEvent = page.waitForEvent('download')

@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useS
 import {
   ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock3, Cloud, CloudOff, Download, Ellipsis,
   ExternalLink, FileSearch, FolderOpen, LayoutGrid, LibraryBig, List, LockKeyhole, LogOut,
-  Menu, Moon, Plus, RefreshCw, Search, Settings2, Star, Sun, Upload, X,
+  Menu, Moon, Plus, RefreshCw, Search, Settings2, Star, Sun, Trash2, Upload, X,
 } from 'lucide-react'
 import { GoogleSession, DriveLibrary, StudySync, type Resource, type ResourceDraft, type StudyPatch, type StudyState } from './drive'
 import type { PdfIndex, PdfSearchHit } from './pdf/index'
@@ -29,7 +29,8 @@ const getEmptyStudy = () => emptyStudy
 type View = { page: 'home' | 'general' | 'favorites' | 'recent' | 'review' | 'search' }
   | { page: 'block' | 'topic'; id: string }
   | { page: 'resource'; id: string; initialPage?: number; query?: string }
-type Modal = { kind: 'add' | 'edit' | 'trash' | 'versions' | 'import' | 'settings'; resource?: Resource }
+type Modal = { kind: 'add' | 'import' | 'settings'; resource?: never }
+  | { kind: 'edit' | 'manage' | 'trash' | 'versions'; resource: Resource }
 type Revision = Awaited<ReturnType<DriveLibrary['revisions']>>[number]
 const mainNav = [
   { page: 'home', label: 'Inicio', icon: LayoutGrid },
@@ -352,16 +353,19 @@ export default function App() {
           <div className="page-heading"><p className="context-label"><Search size={17} /> Biblioteca</p><h1>Búsqueda</h1><p>Busca por título, fuente y texto dentro de los PDF.</p></div>
           <SearchResults query={query} index={index} tick={indexTick} resources={resources} indexing={indexWorking} hasAccount={!!account} open={open} />
         </> : current && view.page === 'resource' ? <>
-          <button className="text-link back-link" onClick={() => navigate(back)}><ArrowLeft size={17} /> Volver</button>
+          <div className="resource-topline">
+            <button className="text-link" onClick={() => navigate(back)}><ArrowLeft size={17} /> Volver</button>
+            <div className="resource-actions">
+              <button className="button resource-favorite" aria-label={study.favorites[current.id] ? 'Quitar de favoritos' : 'Guardar en favoritos'}
+                aria-pressed={!!study.favorites[current.id]} onClick={() => favorite(current)}>
+                <Star size={17} className={study.favorites[current.id] ? 'filled' : ''} /><span>Favorito</span>
+              </button>
+              <button className="button" disabled={!connected} onClick={() => setModal({ kind: 'manage', resource: current })}><Ellipsis size={18} /> Opciones</button>
+            </div>
+          </div>
           <div className="page-heading resource-heading">
             <p className="context-label">{locationName(current.topicId)}</p><h1>{current.title}</h1>
             <p>{[current.source, kinds[current.kind].label, bytes(current.size)].filter(Boolean).join(' · ')}</p>
-          </div>
-          <div className="resource-actions">
-            <button className="button" aria-pressed={!!study.favorites[current.id]} onClick={() => favorite(current)}><Star size={17} className={study.favorites[current.id] ? 'filled' : ''} /> {study.favorites[current.id] ? 'En favoritos' : 'Favorito'}</button>
-            <button className="button" disabled={!connected} onClick={() => setModal({ kind: 'edit', resource: current })}><Settings2 size={16} /> Editar</button>
-            {driveLink(current) && <button className="button" disabled={!connected} onClick={() => versions(current)}><Clock3 size={16} /> Versiones</button>}
-            <button className="button danger-text" disabled={!connected} onClick={() => setModal({ kind: 'trash', resource: current })}><Ellipsis size={17} /> Enviar a papelera</button>
           </div>
           {current.kind === 'pdf' ? connected
             ? <PdfPane key={`${current.id}:${current.version}`} resource={current} initialPage={study.positions[current.id]?.version === current.version
@@ -397,9 +401,15 @@ export default function App() {
     </div>
 
     {modal && <Dialog key={modal.kind} title={({
-      add: 'Añadir recurso', edit: 'Editar recurso', trash: 'Enviar a la papelera', versions: 'Versiones del original', import: 'Importar biblioteca', settings: 'Ajustes',
+      add: 'Añadir recurso', edit: 'Editar recurso', manage: 'Opciones del recurso', trash: 'Enviar a la papelera',
+      versions: 'Versiones del original', import: 'Importar biblioteca', settings: 'Ajustes',
     })[modal.kind]} onClose={() => { if (modal.kind === 'import') void refresh(); setModal(undefined) }}>
       {(modal.kind === 'add' || modal.kind === 'edit') && <ResourceForm resource={modal.resource} initialTopic={topic?.id ?? null} sources={sourceNames} save={save} />}
+      {modal.kind === 'manage' && <div className="resource-options">
+        <button className="button" disabled={!connected} onClick={() => setModal({ kind: 'edit', resource: modal.resource })}><Settings2 size={17} /> Editar ficha</button>
+        {driveLink(modal.resource) && <button className="button" disabled={!connected} onClick={() => versions(modal.resource)}><Clock3 size={17} /> Versiones</button>}
+        <button className="button danger-text" disabled={!connected} onClick={() => setModal({ kind: 'trash', resource: modal.resource })}><Trash2 size={17} /> Enviar a papelera</button>
+      </div>}
       {modal.kind === 'import' && <ImportPanel library={library} onChange={refresh} connected={connected} reconnect={() => connect()} />}
       {modal.kind === 'trash' && <div className="settings-panel"><p>¿Enviar «{modal.resource?.title}» a la papelera de Drive? Puedes recuperarlo desde Drive.</p>
         {error && <p role="alert" className="form-error">{error}</p>}
