@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { TextLayer } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api'
+import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist/types/src/display/api'
 import type { PdfAnnotation, PdfRect } from './model'
 import { isTextItem, matchRanges, queryWords, textRuns } from './text'
 
 export interface PdfSelection {
+  page: number
   text: string
   rects: PdfRect[]
 }
@@ -17,9 +18,11 @@ interface Props {
   query: string
   annotations: PdfAnnotation[]
   onSelection: (selection: PdfSelection) => void
+  onMeasure: (page: number, ratio: number) => void
+  onPaint: () => void
 }
 
-export function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelection }: Props) {
+export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelection, onMeasure, onPaint }: Props) {
   const surface = useRef<HTMLDivElement>(null)
   const canvasHost = useRef<HTMLDivElement>(null)
   const textHost = useRef<HTMLDivElement>(null)
@@ -33,6 +36,7 @@ export function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelec
     const textContainer = textHost.current!
     let active = true
     let render: RenderTask | undefined
+    let pageProxy: PDFPageProxy | undefined
     let layer: TextLayer | undefined
     const canvas = document.createElement('canvas')
     canvas.setAttribute('role', 'img')
@@ -42,13 +46,18 @@ export function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelec
     setMatches([])
 
     async function draw() {
-      const pageProxy = await pdf.getPage(page)
-      if (!active) return
+      pageProxy = await pdf.getPage(page)
+      if (!active) {
+        pageProxy.cleanup()
+        return
+      }
       const base = pageProxy.getViewport({ scale: 1 })
+      onMeasure(page, base.height / base.width)
       const viewport = pageProxy.getViewport({ scale: width * zoom / base.width })
       const { width: pageWidth, height: pageHeight } = viewport
+      const pixelLimit = width <= 650 ? 4_000_000 : 8_000_000
       const ratio = Math.min(window.devicePixelRatio || 1, 2, 4096 / Math.max(pageWidth, pageHeight),
-        Math.sqrt(8_000_000 / (pageWidth * pageHeight)))
+        Math.sqrt(pixelLimit / (pageWidth * pageHeight)))
       sheet.style.width = `${pageWidth}px`
       sheet.style.height = `${pageHeight}px`
       sheet.style.setProperty('--total-scale-factor', String(viewport.scale * viewport.userUnit))
@@ -63,6 +72,7 @@ export function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelec
       await render.promise
       if (!active) return
       setStatus('ready')
+      onPaint()
       try {
         const content = await pageProxy.getTextContent()
         if (!active) return
@@ -74,17 +84,25 @@ export function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelec
       }
     }
 
-    void draw().catch(() => { if (active) setStatus('error') })
+    void draw().catch(() => {
+      if (active) {
+        setStatus('error')
+        onPaint()
+      }
+    })
     return () => {
       active = false
       layer?.cancel()
       render?.cancel()
       canvas.remove()
-      const release = () => { canvas.width = canvas.height = 0 }
+      const release = () => {
+        canvas.width = canvas.height = 0
+        pageProxy?.cleanup()
+      }
       void (render?.promise ?? Promise.resolve()).then(release, release)
       textContainer.replaceChildren()
     }
-  }, [pdf, page, width, zoom])
+  }, [pdf, page, width, zoom, onMeasure, onPaint])
 
   useEffect(() => {
     const layerState = textLayer
@@ -127,11 +145,11 @@ export function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelec
       if (!layer.contains(range.startContainer) || !layer.contains(range.endContainer)) return
       const text = selection.toString().trim()
       const rects = normalizeRects(range.getClientRects(), sheet.getBoundingClientRect())
-      if (text && rects.length) onSelection({ text: text.slice(0, 2000), rects: rects.slice(0, 200) })
+      if (text && rects.length) onSelection({ page, text: text.slice(0, 2000), rects: rects.slice(0, 200) })
     }
     document.addEventListener('selectionchange', selectionChanged)
     return () => document.removeEventListener('selectionchange', selectionChanged)
-  }, [onSelection])
+  }, [onSelection, page])
 
   return <div className="pdf-sheet" ref={surface} aria-busy={status === 'loading'}>
     <div className="pdf-canvas" ref={canvasHost} />
@@ -144,7 +162,7 @@ export function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelec
     {status === 'loading' && <p className="pdf-sheet-status" role="status">Cargando página…</p>}
     {status === 'error' && <p className="pdf-sheet-status" role="status">Esta página no se ha podido renderizar.</p>}
   </div>
-}
+})
 
 function Overlay({ rect, match }: { rect: PdfRect; match?: boolean }) {
   return <span className={match ? 'pdf-search-mark' : 'pdf-user-mark'} style={{

@@ -19,7 +19,7 @@ interface MockFile {
 const driveScope = 'https://www.googleapis.com/auth/drive.file'
 const accountId = 'sample-account'
 
-export function fixturePdf(pages: string[]) {
+export function fixturePdf(pages: string[], size = { width: 320, height: 440 }) {
   const kids = pages.map((_, index) => `${4 + index * 2} 0 R`).join(' ')
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
@@ -27,8 +27,8 @@ export function fixturePdf(pages: string[]) {
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
   ]
   pages.forEach((text, index) => {
-    const content = text ? `BT /F1 15 Tf 12 405 Td (${text}) Tj ET` : '12 405 m 100 410 l S'
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 440] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + index * 2} 0 R >>`)
+    const content = text ? `BT /F1 15 Tf 12 ${size.height - 35} Td (${text}) Tj ET` : '12 405 m 100 410 l S'
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${size.width} ${size.height}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + index * 2} 0 R >>`)
     objects.push(`<< /Length ${Buffer.byteLength(content, 'latin1')} >>\nstream\n${content}\nendstream`)
   })
   let pdf = '%PDF-1.4\n'
@@ -59,6 +59,10 @@ export class DriveFixture {
     this.resource('test-pdf-two', 'Segundo documento', 'pdf', this.secondPdf)
     this.resource('test-pdf-scan', 'Documento sin texto', 'pdf', fixturePdf(['']))
     this.resource(this.videoId, 'Vídeo de prueba', 'video', Buffer.alloc(0), 128 * 1024 ** 2)
+  }
+
+  addPdf(id: string, title: string, pages: string[], size?: { width: number; height: number }) {
+    this.resource(id, title, 'pdf', fixturePdf(pages, size))
   }
 
   async install(context: BrowserContext, binaryRouteBridge = false) {

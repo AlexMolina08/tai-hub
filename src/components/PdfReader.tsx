@@ -1,11 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Bookmark, ChevronLeft, ChevronRight, CornerDownLeft, Download, ExternalLink, Highlighter, Maximize2, Minus, Plus, Search, StickyNote, Trash2, X } from 'lucide-react'
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api'
 import { openPdf, pdfErrorMessage } from '../pdf/document'
 import { pdfAccessDenied } from '../pdf/range'
 import type { PdfAnnotation, PdfSource } from '../pdf/model'
-import { PageCanvas } from '../pdf/PageCanvas'
+import { PdfPages } from '../pdf/PdfPages'
+import type { PdfPageNavigation } from '../pdf/PdfPages'
 import type { PdfSelection } from '../pdf/PageCanvas'
 import { contextualSnippet, foldWord, isTextItem, queryWords, textRuns } from '../pdf/text'
 import './pdf-reader.css'
@@ -49,15 +50,20 @@ export default function PdfReader({
   const [activeQuery, setActiveQuery] = useState(initialQuery)
   const [matches, setMatches] = useState<LocalMatch[]>([])
   const [searchStatus, setSearchStatus] = useState('')
-  const [showSearch, setShowSearch] = useState(Boolean(initialQuery))
+  const [showSearch, setShowSearch] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [draft, setDraft] = useState('')
+  const [draftPage, setDraftPage] = useState<number>()
   const [searching, setSearching] = useState(false)
   const searchRun = useRef(0)
   const reader = useRef<HTMLElement>(null)
   const modeToggle = useRef<HTMLButtonElement>(null)
   const restoreModeFocus = useRef(false)
   const scroll = useRef<HTMLDivElement>(null)
+  const navigation = useRef<PdfPageNavigation>(null)
+  const activePage = useRef(initialPage)
+  const reportPage = useRef(onPageChange)
+  useLayoutEffect(() => { reportPage.current = onPageChange }, [onPageChange])
   const url = source.url
   const data = source.data
   const byteLength = source.byteLength
@@ -86,7 +92,9 @@ export default function PdfReader({
     void task.promise.then(document => {
       if (!active) return
       setPdf(document)
-      setPage(current => Math.max(1, Math.min(document.numPages, current)))
+      const current = Math.max(1, Math.min(document.numPages, activePage.current))
+      activePage.current = current
+      setPage(current)
     }, cause => { if (active && !recovering) setError(pdfErrorMessage(cause)) })
     return () => {
       active = false
@@ -97,8 +105,6 @@ export default function PdfReader({
 
   useEffect(() => {
     setPageInput(String(page))
-    setSelection(undefined)
-    scroll.current?.scrollTo({ top: 0, left: 0 })
   }, [page])
 
   useLayoutEffect(() => {
@@ -175,6 +181,13 @@ export default function PdfReader({
     setReadingMode(!readingMode)
   }
 
+  const changePage = useCallback((number: number) => {
+    if (activePage.current === number) return
+    activePage.current = number
+    setPage(number)
+    reportPage.current(number)
+  }, [])
+
   function jump(number: number) {
     if (!pdf || !Number.isFinite(number)) {
       setPageInput(String(page))
@@ -182,14 +195,14 @@ export default function PdfReader({
     }
     const target = Math.max(1, Math.min(pdf.numPages, Math.trunc(number)))
     setPageInput(String(target))
-    if (target !== page) {
-      setPage(target)
-      onPageChange(target)
-    }
+    setSelection(undefined)
+    window.getSelection()?.removeAllRanges()
+    navigation.current?.jump(target)
+    changePage(target)
   }
 
-  function add(kind: PdfAnnotation['kind'], text?: string, rects?: PdfAnnotation['rects']) {
-    onAnnotationAdd({ id: crypto.randomUUID(), page, kind, text, rects, createdAt: new Date().toISOString() })
+  function add(kind: PdfAnnotation['kind'], target = page, text?: string, rects?: PdfAnnotation['rects']) {
+    onAnnotationAdd({ id: crypto.randomUUID(), page: target, kind, text, rects, createdAt: new Date().toISOString() })
   }
 
   function addHighlight() {
@@ -197,7 +210,7 @@ export default function PdfReader({
       setHighlightHelp(value => !value)
       return
     }
-    add('highlight', selection.text, selection.rects)
+    add('highlight', selection.page, selection.text, selection.rects)
     setHighlightHelp(false)
     window.getSelection()?.removeAllRanges()
     setSelection(undefined)
@@ -248,7 +261,6 @@ export default function PdfReader({
   }
 
   const currentBookmark = annotations.find(annotation => annotation.kind === 'bookmark' && annotation.page === page)
-  const currentMarks = annotations.filter(annotation => annotation.kind === 'highlight' && annotation.page === page)
   const sortedAnnotations = [...annotations].sort((first, second) => first.page - second.page)
 
   return <section ref={reader} className={readingMode ? 'pdf-reader pdf-reader--focus' : 'pdf-reader'}
@@ -334,11 +346,15 @@ export default function PdfReader({
       <form className="pdf-panel-form" onSubmit={event => {
         event.preventDefault()
         if (!draft.trim()) return
-        add('note', draft.trim())
+        add('note', draftPage ?? page, draft.trim())
         setDraft('')
+        setDraftPage(undefined)
       }}>
-        <textarea aria-label={`Nota de la página ${page}`} placeholder={`Añadir nota a la página ${page}`}
-          maxLength={4000} value={draft} onChange={event => setDraft(event.target.value)} />
+        <textarea aria-label={`Nota de la página ${draftPage ?? page}`} placeholder={`Añadir nota a la página ${draftPage ?? page}`}
+          maxLength={4000} value={draft} onChange={event => {
+            setDraft(event.target.value)
+            setDraftPage(event.target.value ? draftPage ?? page : undefined)
+          }} />
         <button type="submit" disabled={!draft.trim()}>Guardar nota</button>
       </form>
       {!sortedAnnotations.length && <p className="pdf-feedback">Tus notas, marcadores y subrayados aparecerán aquí.</p>}
@@ -365,8 +381,9 @@ export default function PdfReader({
         {onReconnect && <button type="button" onClick={onReconnect}>Reconectar Drive</button>}
       </div>}
       {!error && !pdf && <p className="pdf-reader-state" role="status">Abriendo PDF…</p>}
-      {pdf && width > 0 && <PageCanvas key={page} pdf={pdf} page={page} width={width} zoom={zoom}
-        query={activeQuery} annotations={currentMarks} onSelection={setSelection} />}
+      {pdf && width > 0 && <PdfPages pdf={pdf} initialPage={page} width={width} zoom={zoom}
+        query={activeQuery} annotations={annotations} selectedPage={selection?.page} hostRef={scroll} navigationRef={navigation}
+        onPageChange={changePage} onSelection={setSelection} />}
     </div>
   </section>
 }

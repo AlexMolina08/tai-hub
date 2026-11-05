@@ -189,20 +189,28 @@
 }
 
 .pdf-scroll {
-  display: flex;
-  align-items: flex-start;
-  max-height: 77dvh;
+  height: 74dvh;
+  min-height: 180px;
   overflow: auto;
-  overscroll-behavior: contain;
-  padding: 6px;
+  overflow-anchor: none;
+  padding-inline: 6px;
   background: color-mix(in srgb, var(--pdf-panel) 94%, currentColor);
+}
+
+.pdf-pages {
+  position: relative;
+  margin-inline: auto;
+}
+
+.pdf-page-slot {
+  position: absolute;
+  inset-inline: 0;
+  background: white;
 }
 
 .pdf-sheet {
   position: relative;
-  flex: none;
   min-width: 0;
-  min-height: 120px;
   margin-inline: auto;
   overflow: hidden;
   background: white;
@@ -309,7 +317,7 @@
   }
 
   .pdf-scroll {
-    max-height: 73dvh;
+    height: 70dvh;
   }
 }
 
@@ -344,6 +352,7 @@
   flex: 1;
   min-height: 0;
   max-height: none;
+  overscroll-behavior: contain;
 }
 
 .pdf-mode-toggle,
@@ -427,6 +436,6 @@
   }
 
   .pdf-reader--focus .pdf-scroll {
-    padding: 4px;
+    padding-inline: 3px;
   }
 }
