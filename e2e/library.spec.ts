@@ -13,7 +13,7 @@ const sampleNote = 'Nota de verificación de una segunda sesión'
 async function connect(page: Page) {
   await page.goto(home)
   await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
-  await expect(page.getByRole('region', { name: 'Tu próxima sesión' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
 }
 
 test('navigates every official topic and switches appearance while signed out', async ({ page, context }) => {
@@ -79,7 +79,7 @@ test('opens exact PDF results, downloads original and syncs notes to an independ
     await drive.install(other, browserName === 'webkit')
     const tab = await other.newPage()
     await connect(tab)
-    await tab.getByRole('button', { name: 'Continuar lectura' }).click()
+    await tab.getByRole('button', { name: 'Abrir último recurso' }).click()
     await expect(tab.getByRole('img', { name: 'Página 2 del PDF' })).toBeVisible()
     await expect(tab.getByRole('button', { name: 'Quitar marcador' })).toBeVisible()
     await tab.getByRole('button', { name: 'Notas, marcadores y subrayados' }).click()

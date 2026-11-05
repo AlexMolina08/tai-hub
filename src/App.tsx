@@ -315,15 +315,15 @@ export default function App() {
         </div>}
         {notice && <div className="banner success" role="status"><span>{notice}</span><button className="icon-button" aria-label="Cerrar aviso" onClick={() => setNotice('')}><X size={17} /></button></div>}
         {view.page === 'home' ? <>
-          <div className="page-heading"><p className="context-label"><LibraryBig size={17} /> TAI AGE · Acceso libre</p><h1>Biblioteca de estudio</h1>
-            <p>Temario, exámenes y materiales de tu oposición.</p></div>
-          <section className="hero" aria-label={account ? 'Tu próxima sesión' : 'Conexión con Google Drive'}>
+          <div className="page-heading"><p className="context-label"><LibraryBig size={17} /> TAI AGE · Acceso libre</p><h1>Biblioteca de estudio</h1></div>
+          <section className="hero" aria-label={account ? 'Continuar estudio' : 'Conexión con Google Drive'}>
             <div className="hero-copy">
-              <span className="hero-kicker">{account ? <><BookOpen size={16} /> Tu próxima sesión</> : <><LockKeyhole size={15} /> Espacio privado</>}</span>
-              <h2>{account ? recent[0] ? 'Continúa donde lo dejaste' : 'Todo listo para estudiar' : 'Tu estudio, en un solo lugar'}</h2>
-              <p>{account ? recent[0]?.title ?? 'Explora el temario o añade tu primer recurso.'
-                : 'Conecta Google Drive para consultar tus documentos y recuperar el progreso desde cualquier dispositivo.'}</p>
-              {account && recent[0] ? <button className="hero-button" onClick={() => open(recent[0])}>Continuar lectura <ArrowRight size={17} /></button>
+              <span className="hero-kicker">{account ? <><BookOpen size={16} /> {recent[0] ? 'Último recurso' : 'Biblioteca privada'}</> : <><LockKeyhole size={15} /> Biblioteca privada</>}</span>
+              <h2>{account ? recent[0]?.title ?? (resources.length ? `${resources.length} recursos` : 'Añadir el primer recurso') : 'Google Drive'}</h2>
+              <p>{account
+                ? recent[0] ? locationName(recent[0].topicId) : resources.length ? `${indexStats.indexed} PDF indexados` : 'Puedes añadir archivos, enlaces y notas.'
+                : 'Conecta tu cuenta para consultar la biblioteca y sincronizar el progreso.'}</p>
+              {account && recent[0] ? <button className="hero-button" onClick={() => open(recent[0])}>Abrir último recurso <ArrowRight size={17} /></button>
                 : account ? <button className="hero-button" disabled={!connected} onClick={() => setModal({ kind: 'add' })}><Plus size={17} /> Añadir recurso</button>
                   : <button className="hero-button" disabled={!clientId || ['loading', 'connecting', 'connected'].includes(auth.status)} onClick={() => connect()}><Cloud size={18} />
                     {auth.status === 'connecting' ? 'Conectando…' : connected || working ? 'Cargando biblioteca…' : 'Conectar Google Drive'}<ArrowRight size={17} /></button>}
@@ -338,7 +338,7 @@ export default function App() {
               <span className={`block-number ${tones[i]}`}>{item.roman}</span><span><strong>{item.title}</strong><small>{item.topics.length} temas</small></span><ChevronRight size={18} />
             </button>)}</div>
           </section>
-          <section className="section"><div className="section-head"><div><h2>Accesos rápidos</h2><p>Los documentos que más utilizas</p></div></div>
+          <section className="section"><div className="section-head"><h2>Accesos rápidos</h2></div>
             <div className="shortcut-grid">{mainNav.slice(1).map(({ page, label, icon: Icon }) => <button key={page} className="shortcut" onClick={() => navigate({ page })}><Icon size={19} /> {label}<ChevronRight size={16} /></button>)}</div>
           </section>
         </> : view.page === 'search' ? <>
