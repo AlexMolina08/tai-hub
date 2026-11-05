@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Bookmark, ChevronLeft, ChevronRight, CornerDownLeft, Download, ExternalLink, Highlighter, Minus, Plus, Search, StickyNote, Trash2 } from 'lucide-react'
+import { Bookmark, ChevronLeft, ChevronRight, CornerDownLeft, Download, ExternalLink, Highlighter, Maximize2, Minus, Plus, Search, StickyNote, Trash2, X } from 'lucide-react'
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api'
 import { openPdf, pdfErrorMessage } from '../pdf/document'
 import type { PdfAnnotation, PdfSource } from '../pdf/model'
@@ -41,6 +41,8 @@ export default function PdfReader({
   const [zoom, setZoom] = useState(1)
   const [width, setWidth] = useState(0)
   const [selection, setSelection] = useState<PdfSelection>()
+  const [readingMode, setReadingMode] = useState(false)
+  const [highlightHelp, setHighlightHelp] = useState(false)
   const [query, setQuery] = useState(initialQuery)
   const [activeQuery, setActiveQuery] = useState(initialQuery)
   const [matches, setMatches] = useState<LocalMatch[]>([])
@@ -50,6 +52,9 @@ export default function PdfReader({
   const [draft, setDraft] = useState('')
   const [searching, setSearching] = useState(false)
   const searchRun = useRef(0)
+  const reader = useRef<HTMLElement>(null)
+  const modeToggle = useRef<HTMLButtonElement>(null)
+  const restoreModeFocus = useRef(false)
   const scroll = useRef<HTMLDivElement>(null)
   const url = source.url
   const data = source.data
@@ -82,14 +87,79 @@ export default function PdfReader({
     scroll.current?.scrollTo({ top: 0, left: 0 })
   }, [page])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const host = scroll.current!
-    const update = () => setWidth(Math.max(1, Math.min(1000, host.clientWidth - 12)))
+    const maxWidth = readingMode ? 1500 : 1000
+    const update = () => {
+      const style = getComputedStyle(host)
+      const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+      setWidth(Math.max(1, Math.min(maxWidth, host.clientWidth - padding)))
+    }
     update()
     const resize = new ResizeObserver(update)
     resize.observe(host)
     return () => resize.disconnect()
-  }, [])
+  }, [readingMode])
+
+  useLayoutEffect(() => {
+    if (!readingMode) {
+      if (restoreModeFocus.current) {
+        restoreModeFocus.current = false
+        modeToggle.current?.focus({ preventScroll: true })
+      }
+      return
+    }
+    if (!reader.current) return
+    restoreModeFocus.current = true
+    const surface = reader.current
+    const toggle = modeToggle.current
+    const inactive: HTMLElement[] = []
+    // Keep the page state and captured selection in the same reader.
+    for (let branch: HTMLElement | null = surface; branch && branch !== document.body; branch = branch.parentElement) {
+      for (const sibling of branch.parentElement?.children ?? []) {
+        if (sibling !== branch && sibling instanceof HTMLElement && !sibling.inert) {
+          sibling.inert = true
+          inactive.push(sibling)
+        }
+      }
+    }
+    document.documentElement.classList.add('pdf-reading-active')
+    toggle?.focus({ preventScroll: true })
+
+    function handleKeys(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        event.preventDefault()
+        setReadingMode(false)
+      }
+      if (event.key !== 'Tab') return
+      const controls = Array.from(surface.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+      )).filter(element => element.getClientRects().length)
+      const first = controls[0]
+      const last = controls.at(-1)
+      if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
+        event.preventDefault()
+        const next = event.shiftKey ? last : first
+        next?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeys)
+    return () => {
+      document.removeEventListener('keydown', handleKeys)
+      for (const element of inactive) element.inert = false
+      document.documentElement.classList.remove('pdf-reading-active')
+    }
+  }, [readingMode])
+
+  function toggleReadingMode() {
+    if (!readingMode) {
+      setShowSearch(false)
+      setShowNotes(false)
+      setHighlightHelp(false)
+    }
+    setReadingMode(!readingMode)
+  }
 
   function jump(number: number) {
     if (!pdf || !Number.isFinite(number)) {
@@ -109,8 +179,12 @@ export default function PdfReader({
   }
 
   function addHighlight() {
-    if (!selection) return
+    if (!selection) {
+      setHighlightHelp(value => !value)
+      return
+    }
     add('highlight', selection.text, selection.rects)
+    setHighlightHelp(false)
     window.getSelection()?.removeAllRanges()
     setSelection(undefined)
   }
@@ -163,14 +237,19 @@ export default function PdfReader({
   const currentMarks = annotations.filter(annotation => annotation.kind === 'highlight' && annotation.page === page)
   const sortedAnnotations = [...annotations].sort((first, second) => first.page - second.page)
 
-  return <section className="pdf-reader" aria-label="Lector PDF">
+  return <section ref={reader} className={readingMode ? 'pdf-reader pdf-reader--focus' : 'pdf-reader'}
+    role={readingMode ? 'dialog' : undefined} aria-modal={readingMode || undefined}
+    aria-label={readingMode ? 'Modo lectura PDF' : 'Lector PDF'}>
     <div className="pdf-toolbar">
       <div className="pdf-tools" role="group" aria-label="Navegación de páginas">
         <button type="button" aria-label="Página anterior" disabled={!pdf || page <= 1} onClick={() => jump(page - 1)}><ChevronLeft /></button>
         <form className="pdf-page-form" onSubmit={event => { event.preventDefault(); jump(pageInput ? Number(pageInput) : page) }}>
           <input aria-label="Número de página" inputMode="numeric" pattern="[0-9]*" value={pageInput} disabled={!pdf}
             onChange={event => setPageInput(event.target.value)} onKeyDown={event => {
-              if (event.key === 'Escape') setPageInput(String(page))
+              if (event.key === 'Escape' && pageInput !== String(page)) {
+                event.preventDefault()
+                setPageInput(String(page))
+              }
             }} />
           <span aria-label={pdf ? `de ${pdf.numPages} páginas` : 'Número de páginas desconocido'}>/ {pdf?.numPages ?? '–'}</span>
           <button type="submit" aria-label="Ir a la página" disabled={!pdf || pageInput === String(page) || !pageInput}>
@@ -193,14 +272,26 @@ export default function PdfReader({
           disabled={!pdf} onClick={() => currentBookmark
             ? window.confirm('¿Quitar el marcador de esta página?') && onAnnotationRemove(currentBookmark.id)
             : add('bookmark')}><Bookmark /></button>
-        <button type="button" aria-label="Subrayar texto seleccionado" title="Selecciona texto para subrayarlo"
-          disabled={!selection} onMouseDown={event => event.preventDefault()} onClick={addHighlight}><Highlighter /></button>
+        <button type="button" className="pdf-highlight-button" aria-label="Subrayar texto seleccionado"
+          title="Selecciona texto para subrayarlo" aria-expanded={selection ? undefined : highlightHelp}
+          data-selected={!!selection} disabled={!pdf}
+          onMouseDown={event => event.preventDefault()} onClick={addHighlight}><Highlighter /> <span>Subrayar</span></button>
         <button type="button" aria-label="Notas, marcadores y subrayados" aria-expanded={showNotes} disabled={!pdf}
           onClick={() => { setShowNotes(value => !value); setShowSearch(false) }}><StickyNote /></button>
         <button type="button" aria-label="Descargar original" onClick={onDownload}><Download /></button>
         {originalUrl && <a href={originalUrl} target="_blank" rel="noopener noreferrer" aria-label="Abrir PDF en Drive"><ExternalLink /></a>}
       </div>
+      <button type="button" className="pdf-mode-toggle" ref={modeToggle} onClick={toggleReadingMode}
+        aria-label={readingMode ? 'Salir del modo lectura' : 'Modo lectura'} aria-haspopup={readingMode ? undefined : 'dialog'}>
+        {readingMode ? <X /> : <Maximize2 />}
+        <span className="pdf-mode-label">{readingMode ? 'Salir' : 'Modo lectura'}</span>
+        {!readingMode && <span className="pdf-mode-short">Leer</span>}
+      </button>
     </div>
+
+    {highlightHelp && !selection && <p className="pdf-highlight-help" role="status">
+      Selecciona el texto del PDF y pulsa Subrayar. En iPhone, mantén pulsada una palabra y ajusta la selección.
+    </p>}
 
     {showSearch && <div className="pdf-panel">
       <form onSubmit={event => void find(event)} className="pdf-panel-form">
@@ -250,7 +341,7 @@ export default function PdfReader({
       </ul>}
     </div>}
 
-    <div className="pdf-scroll" ref={scroll}>
+    <div className="pdf-scroll" ref={scroll} role="region" aria-label="Página del PDF" tabIndex={0}>
       {error && <div className="pdf-reader-state" role="alert">
         <p>{error}</p>
         <button type="button" onClick={() => setAttempt(value => value + 1)}>Reintentar</button>

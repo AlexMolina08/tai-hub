@@ -312,3 +312,121 @@
     max-height: 73dvh;
   }
 }
+
+.pdf-reading-active {
+  overflow: hidden;
+}
+
+.pdf-reader--focus {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--pdf-panel);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.pdf-reader--focus .pdf-toolbar {
+  flex: none;
+  padding-inline: 10px;
+}
+
+.pdf-reader--focus .pdf-panel {
+  max-height: min(40dvh, 320px);
+  padding-inline: 10px;
+  overflow: auto;
+}
+
+.pdf-reader--focus .pdf-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.pdf-mode-toggle,
+.pdf-tools .pdf-highlight-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 5px 9px;
+  border: 1px solid var(--pdf-border);
+  border-radius: 8px;
+  background: var(--pdf-panel);
+  color: var(--pdf-accent);
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 630;
+}
+
+.pdf-mode-short {
+  display: none;
+}
+
+.pdf-mode-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pdf-mode-toggle:hover,
+.pdf-tools .pdf-highlight-button:hover {
+  background: color-mix(in srgb, var(--pdf-accent) 9%, var(--pdf-panel));
+}
+
+.pdf-tools .pdf-highlight-button[data-selected="true"] {
+  background: #ffdf78;
+  border-color: #ffdf78;
+  color: #2e2208;
+}
+
+.pdf-highlight-help {
+  margin: 0;
+  padding: 7px 10px;
+  border-block-end: 1px solid var(--pdf-border);
+  background: var(--pdf-panel);
+  font-size: 0.85rem;
+}
+
+.pdf-page-form button:disabled {
+  display: none;
+}
+
+@media (max-width: 650px) {
+  .pdf-mode-toggle {
+    margin-inline-start: auto;
+  }
+
+  .pdf-mode-label,
+  .pdf-reader:not(.pdf-reader--focus) .pdf-highlight-button span {
+    display: none;
+  }
+
+  .pdf-mode-short {
+    display: inline;
+  }
+
+  .pdf-reader--focus .pdf-toolbar {
+    gap: 4px;
+    padding: 3px 4px;
+  }
+
+  .pdf-reader--focus .pdf-mode-toggle {
+    min-width: 44px;
+  }
+
+  .pdf-page-form input {
+    width: 2.5rem;
+  }
+
+  .pdf-tools .pdf-zoom {
+    width: 2.8rem;
+  }
+
+  .pdf-reader--focus .pdf-scroll {
+    padding: 4px;
+  }
+}
