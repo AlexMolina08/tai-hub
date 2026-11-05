@@ -83,6 +83,21 @@ export class DriveFixture {
         })) } }
       } } } }`,
     }))
+    await context.route('https://accounts.google.com/o/oauth2/v2/auth?**', route => {
+      const auth = new URL(route.request().url()).searchParams
+      const target = new URL(auth.get('redirect_uri')!)
+      target.hash = new URLSearchParams({
+        state: auth.get('state')!,
+        access_token: 'fixture-token',
+        token_type: 'Bearer',
+        expires_in: '3600',
+        scope: driveScope,
+      }).toString()
+      return route.fulfill({
+        contentType: 'text/html',
+        body: `<!doctype html><script>location.replace(${JSON.stringify(target.href)})</script>`,
+      })
+    })
     await context.route('https://www.googleapis.com/**', route => this.route(route))
     await context.route(`https://drive.google.com/file/d/${this.videoId}/view`, route => route.fulfill({
       contentType: 'text/html',

@@ -15,7 +15,12 @@ import { ResourceView } from './components/ResourceView'
 
 const PdfReader = lazy(() => import('./components/PdfReader'))
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
-const session = new GoogleSession(clientId)
+const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+const session = new GoogleSession(clientId, {
+  redirectUri: new URL(import.meta.env.BASE_URL, window.location.origin).href,
+  useRedirect: ios,
+})
 const library = new DriveLibrary(session)
 const emptyStudy: StudyState = { favorites: {}, positions: {}, annotations: {} }
 const subscribeIdle = () => () => {}
@@ -63,6 +68,8 @@ export default function App() {
   const study = useSyncExternalStore(sync ? fn => sync.subscribe(fn) : subscribeIdle, sync ? () => sync.snapshot() : getEmptyStudy)
   const studyStatus = useSyncExternalStore(sync?.subscribe ?? subscribeIdle, sync?.status ?? (() => 'idle'))
   const accountId = account?.id
+  const current = view.page === 'resource' ? resources.find(item => item.id === view.id) : undefined
+  const readingPdf = current?.kind === 'pdf'
 
   useEffect(() => { if (clientId) void session.prepare().catch(() => {}) }, [])
   useEffect(() => {
@@ -97,15 +104,14 @@ export default function App() {
     setError('')
     window.scrollTo({ top: 0 })
   }
-  function connect(switchAccount = false) {
+  function connect(sameTab?: boolean) {
     setError('')
     if (auth.status === 'error') {
       void session.prepare().then(() => {
         if (session.snapshot().status === 'ready') setNotice('Pulsa Conectar Drive para abrir la ventana de Google.')
       })
     }
-    if (switchAccount) clearPrivate()
-    void session.connect({ switchAccount }).catch(showError)
+    void session.connect({ sameTab }).catch(showError)
   }
   function clearPrivate() {
     setAccount(undefined)
@@ -155,6 +161,7 @@ export default function App() {
     if (!index) return
     const abort = new AbortController()
     setIndexWorking(false)
+    if (readingPdf) return
     setIndexError('')
     let live = true
     void (async () => {
@@ -180,7 +187,7 @@ export default function App() {
       if (live) setIndexError('El índice no se pudo completar. Puedes reintentar.')
     })
     return () => { live = false; abort.abort() }
-  }, [index, indexDocuments, connected, network, indexRun])
+  }, [index, indexDocuments, connected, network, indexRun, readingPdf])
 
   function apply(patch: StudyPatch) {
     void sync?.apply(patch).catch(showError)
@@ -235,7 +242,6 @@ export default function App() {
     finally { setWorking(false) }
   }
   const sourceNames = useMemo(() => [...new Set(resources.map(item => item.source))].sort((a, b) => a.localeCompare(b, 'es')), [resources])
-  const current = view.page === 'resource' ? resources.find(item => item.id === view.id) : undefined
   const topic = view.page === 'topic' ? topicById.get(view.id) : undefined
   const block = view.page === 'block' ? blocks.find(item => item.id === view.id) : topic?.block
   const recent = useMemo(() => resources.filter(item => study.positions[item.id])
@@ -311,6 +317,7 @@ export default function App() {
         {account && !connected && <div className="banner"><CloudOff size={18} /><span>Renueva el acceso a Drive para abrir archivos y sincronizar.</span><button className="button" disabled={auth.status === 'connecting'} onClick={() => connect()}>Reconectar</button></div>}
         {(error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
           {connected && !account && <button className="button" disabled={working} onClick={() => void refresh()}>Reintentar</button>}
+          {!ios && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
           {error && <button className="icon-button" aria-label="Cerrar aviso" onClick={() => setError('')}><X size={17} /></button>}
         </div>}
         {notice && <div className="banner success" role="status"><span>{notice}</span><button className="icon-button" aria-label="Cerrar aviso" onClick={() => setNotice('')}><X size={17} /></button></div>}
@@ -525,9 +532,9 @@ function PdfPane({ resource, initialPage, query, annotations, onPage, apply, dow
   onPage: (page: number) => void; apply: (patch: StudyPatch) => void; download: () => void; reconnect: () => void
 }) {
   const source = useMemo(() => {
-    try { return library.pdfSource(resource.id) }
+    try { return { ...library.pdfSource(resource.id), byteLength: resource.size } }
     catch { return undefined }
-  }, [resource.id, resource.version])
+  }, [resource.id, resource.version, resource.size])
   if (!source) return <div className="empty"><CloudOff size={24} /><p>Renueva el acceso a Drive para abrir el PDF.</p><button className="button" onClick={reconnect}>Reconectar</button></div>
   return <Suspense fallback={<div className="empty" role="status">Abriendo lector…</div>}>
     <PdfReader source={source} initialPage={initialPage} initialQuery={query} annotations={annotations} originalUrl={driveLink(resource)}

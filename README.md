@@ -8,7 +8,7 @@ La aplicación estática se aloja en [GitHub Pages](https://alexmolina08.github.
 
 1. Usa Node.js 22.13 o posterior.
 2. Copia `.env.example` como `.env.local` y rellena `VITE_GOOGLE_CLIENT_ID` con el identificador público del cliente web.
-3. En Google Cloud, activa Drive API y autoriza `http://localhost:5173` y `https://alexmolina08.github.io` como orígenes JavaScript. Si la audiencia es externa y está en pruebas, la cuenta necesita estar en la lista de usuarios de prueba.
+3. En Google Cloud, activa Drive API y autoriza `http://localhost:5173` y `https://alexmolina08.github.io` como orígenes JavaScript. Autoriza también `http://localhost:5173/tai-hub/` y `https://alexmolina08.github.io/tai-hub/` como URI de retorno. iOS conecta en la misma pestaña. Si la audiencia es externa y está en pruebas, la cuenta necesita estar en la lista de usuarios de prueba.
 4. Ejecuta `npm ci` y `npm run dev`. Abre `http://localhost:5173/tai-hub/`.
 5. Ejecuta `npm test`, `npm run build` y `npm run audit:public` antes de publicar. Para las pruebas de navegador instala Chromium y WebKit con `npx playwright install chromium webkit` y ejecuta `npm run test:e2e`.
 

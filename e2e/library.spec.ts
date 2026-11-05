@@ -59,6 +59,7 @@ test('opens exact PDF results, downloads original and syncs notes to an independ
   const first = page.getByRole('button', { name: /Documento de prueba General · Página 2/ })
   const second = page.getByRole('button', { name: /Segundo documento General · Página 1/ })
   await expect(second).toBeVisible()
+  await expect.poll(() => drive.savedIndexes()).toHaveLength(3)
   await first.click()
   await expect(page.getByRole('img', { name: 'Página 2 del PDF' })).toBeVisible()
   await expect(page.locator('.pdf-search-mark').first()).toBeVisible()
@@ -67,7 +68,6 @@ test('opens exact PDF results, downloads original and syncs notes to an independ
   await page.getByRole('textbox', { name: 'Nota de la página 2' }).fill(sampleNote)
   await page.getByRole('button', { name: 'Guardar nota' }).click()
   await expect.poll(() => drive.savedStudy()).toContain(sampleNote)
-  await expect.poll(() => drive.savedIndexes()).toHaveLength(3)
   const downloadEvent = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Descargar original' }).click()
   const downloaded = await downloadEvent
@@ -112,7 +112,8 @@ test('opens large video in Drive without fetching bytes and recovers an expired 
   await page.getByRole('button', { name: 'Actualizar', exact: true }).click()
   await expect(page.getByText('Acceso caducado', { exact: false }).first()).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Conectar Drive', exact: true }).click()
-  await expect(page.getByRole('dialog').getByText(/Cuenta de prueba · Conectado/)).toBeVisible()
+  if (browserName === 'webkit') await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  else await expect(page.getByRole('dialog').getByText(/Cuenta de prueba · Conectado/)).toBeVisible()
 })
 
 test('replaces and reindexes a PDF while retaining its previous original', async ({ page, context, browserName }) => {
@@ -121,8 +122,8 @@ test('replaces and reindexes a PDF while retaining its previous original', async
   await connect(page)
   const search = page.getByRole('textbox', { name: 'Buscar en la biblioteca' })
   await search.fill('observacion objetivo')
-  await page.getByRole('button', { name: /Documento de prueba General · Página 2/ }).click()
   await expect.poll(() => drive.savedIndexes()).toHaveLength(3)
+  await page.getByRole('button', { name: /Documento de prueba General · Página 2/ }).click()
   await page.getByRole('button', { name: 'Editar', exact: true }).click()
   const form = page.getByRole('dialog', { name: 'Editar recurso' })
   await form.getByLabel('Elegir nueva versión').setInputFiles({
