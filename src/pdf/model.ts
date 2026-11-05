@@ -17,11 +17,13 @@ export interface PdfAnnotation {
 export type PdfSource = {
   url: string
   httpHeaders?: Record<string, string>
+  byteLength?: number
   data?: never
 } | {
   data: ArrayBuffer | Uint8Array
   url?: never
   httpHeaders?: never
+  byteLength?: never
 }
 
 export interface IndexDocument {

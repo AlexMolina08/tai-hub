@@ -1,14 +1,18 @@
 import { getDocument, GlobalWorkerOptions, VerbosityLevel } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import type { PDFDocumentLoadingTask } from 'pdfjs-dist/types/src/display/api'
+import type { DocumentInitParameters, PDFDocumentLoadingTask } from 'pdfjs-dist/types/src/display/api'
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import type { IndexedPdf, PdfSource } from './model'
+import { openRangePdf, pdfAccessDenied } from './range'
 import { isTextItem, textRuns } from './text'
 
 GlobalWorkerOptions.workerSrc = workerUrl
 
-export function openPdf(source: PdfSource): PDFDocumentLoadingTask {
+export function openPdf(
+  source: PdfSource,
+  onRangeFailure?: (error: unknown) => void,
+): Pick<PDFDocumentLoadingTask, 'promise' | 'destroy'> {
   const base = `${import.meta.env.BASE_URL}pdfjs/`
-  return getDocument({
+  const options: DocumentInitParameters = {
     ...source,
     cMapUrl: `${base}cmaps/`,
     iccUrl: `${base}iccs/`,
@@ -18,14 +22,17 @@ export function openPdf(source: PdfSource): PDFDocumentLoadingTask {
     enableXfa: false,
     stopAtErrors: false,
     verbosity: VerbosityLevel.ERRORS,
-  })
+  }
+  if (onRangeFailure && source.url && source.byteLength && Number.isSafeInteger(source.byteLength)
+    && source.byteLength > 8 * 1024 * 1024) {
+    return openRangePdf(source.url, source.httpHeaders, source.byteLength, options, onRangeFailure)
+  }
+  return getDocument(options)
 }
 
 export function pdfErrorMessage(error: unknown) {
+  if (pdfAccessDenied(error)) return 'Drive ha rechazado el acceso. Vuelve a conectar tu cuenta o abre el PDF en Drive.'
   if (error && typeof error === 'object') {
-    if ('status' in error && (error.status === 401 || error.status === 403)) {
-      return 'Drive ha rechazado el acceso. Vuelve a conectar tu cuenta o abre el PDF en Drive.'
-    }
     if ('name' in error) {
       if (error.name === 'PasswordException') return 'El PDF está protegido con contraseña. Ábrelo en Drive o descarga el original.'
       if (error.name === 'InvalidPDFException') return 'El archivo no se reconoce como PDF.'

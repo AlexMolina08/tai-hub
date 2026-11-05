@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Bookmark, ChevronLeft, ChevronRight, CornerDownLeft, Download, ExternalLink, Highlighter, Maximize2, Minus, Plus, Search, StickyNote, Trash2, X } from 'lucide-react'
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api'
 import { openPdf, pdfErrorMessage } from '../pdf/document'
+import { pdfAccessDenied } from '../pdf/range'
 import type { PdfAnnotation, PdfSource } from '../pdf/model'
 import { PageCanvas } from '../pdf/PageCanvas'
 import type { PdfSelection } from '../pdf/PageCanvas'
@@ -36,6 +37,7 @@ export default function PdfReader({
   const [pdf, setPdf] = useState<PDFDocumentProxy>()
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const [streamFallback, setStreamFallback] = useState(false)
   const [page, setPage] = useState(initialPage)
   const [pageInput, setPageInput] = useState(String(initialPage))
   const [zoom, setZoom] = useState(1)
@@ -58,6 +60,7 @@ export default function PdfReader({
   const scroll = useRef<HTMLDivElement>(null)
   const url = source.url
   const data = source.data
+  const byteLength = source.byteLength
   const headerKey = JSON.stringify(source.httpHeaders ?? {})
 
   useEffect(() => {
@@ -68,18 +71,29 @@ export default function PdfReader({
     setSearching(false)
     setMatches([])
     setSearchStatus('')
-    const task = openPdf(url ? { url, httpHeaders: JSON.parse(headerKey) } : { data: data!.slice(0) })
+    let recovering = false
+    const task = openPdf(url ? { url, httpHeaders: JSON.parse(headerKey), byteLength } : { data: data!.slice(0) },
+      streamFallback ? undefined : cause => {
+        if (!active) return
+        if (pdfAccessDenied(cause)) {
+          setPdf(undefined)
+          setError(pdfErrorMessage(cause))
+        } else {
+          recovering = true
+          setStreamFallback(true)
+        }
+      })
     void task.promise.then(document => {
       if (!active) return
       setPdf(document)
       setPage(current => Math.max(1, Math.min(document.numPages, current)))
-    }, cause => { if (active) setError(pdfErrorMessage(cause)) })
+    }, cause => { if (active && !recovering) setError(pdfErrorMessage(cause)) })
     return () => {
       active = false
       searchRun.current++
       void task.destroy().catch(() => {})
     }
-  }, [url, data, headerKey, attempt])
+  }, [url, data, byteLength, headerKey, attempt, streamFallback])
 
   useEffect(() => {
     setPageInput(String(page))
@@ -344,7 +358,10 @@ export default function PdfReader({
     <div className="pdf-scroll" ref={scroll} role="region" aria-label="Página del PDF" tabIndex={0}>
       {error && <div className="pdf-reader-state" role="alert">
         <p>{error}</p>
-        <button type="button" onClick={() => setAttempt(value => value + 1)}>Reintentar</button>
+        <button type="button" onClick={() => {
+          setStreamFallback(false)
+          setAttempt(value => value + 1)
+        }}>Reintentar</button>
         {onReconnect && <button type="button" onClick={onReconnect}>Reconectar Drive</button>}
       </div>}
       {!error && !pdf && <p className="pdf-reader-state" role="status">Abriendo PDF…</p>}
