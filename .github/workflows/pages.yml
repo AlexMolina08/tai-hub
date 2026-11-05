@@ -1,16 +1,13 @@
-name: GitHub Pages
+name: Build and verify
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -27,19 +24,3 @@ jobs:
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
       - run: npm run audit:public
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/deploy-pages@v4
-        id: deployment

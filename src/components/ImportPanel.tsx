@@ -3,7 +3,9 @@ import type { DriveLibrary, Resource } from '../drive'
 import { bytes, kindFor } from '../resources'
 import { importPath, parseManifest, type ImportEntry } from '../imports'
 
-export function ImportPanel({ library, onChange }: { library: DriveLibrary; onChange: () => Promise<void> }) {
+export function ImportPanel({ library, onChange, connected, reconnect }: {
+  library: DriveLibrary; onChange: () => Promise<void>; connected: boolean; reconnect: () => void
+}) {
   const [entries, setEntries] = useState<ImportEntry[]>([])
   const [files, setFiles] = useState<Map<string, File>>(new Map())
   const [progress, setProgress] = useState('')
@@ -13,7 +15,7 @@ export function ImportPanel({ library, onChange }: { library: DriveLibrary; onCh
   useEffect(() => () => { stop.current = true }, [])
   const absent = entries.filter(entry => files.get(entry.path)?.size !== entry.size)
   async function run() {
-    if (!entries.length || absent.length) return
+    if (!connected || !entries.length || absent.length) return
     setBusy(true)
     setError('')
     stop.current = false
@@ -22,39 +24,62 @@ export function ImportPanel({ library, onChange }: { library: DriveLibrary; onCh
     try {
       const [current, account] = await Promise.all([library.list(), library.account()])
       const imported = new Map(current.filter(item => item.importKey).map(item => [item.importKey, item]))
-      const needed = entries.filter(entry => !imported.has(entry.key)).reduce((total, entry) => total + entry.size, 0)
+      const pending: { entry: ImportEntry; ordinal: number }[] = []
+      function verify(entry: ImportEntry, item: Resource, ordinal: number) {
+        if (item.size !== entry.size || (entry.md5 && item.md5Checksum?.toLowerCase() !== entry.md5.toLowerCase())) {
+          throw new Error(`La comprobación de integridad falló en el archivo ${ordinal}. Revisa el original y la copia de Drive.`)
+        }
+      }
+      for (const [index, entry] of entries.entries()) {
+        const existing = imported.get(entry.key)
+        if (existing) {
+          verify(entry, existing, index + 1)
+          finished++
+        } else {
+          pending.push({ entry, ordinal: index + 1 })
+        }
+      }
+      const needed = pending.reduce((total, { entry }) => total + entry.size, 0)
       if (account.storage.limit !== undefined && account.storage.limit - account.storage.usage < needed) {
         throw new Error(`Drive necesita ${bytes(needed)} libres para completar esta importación.`)
       }
-      function verify(entry: ImportEntry, item: Resource) {
-        if (item.size !== entry.size || (entry.md5 && item.md5Checksum?.toLowerCase() !== entry.md5.toLowerCase())) {
-          throw new Error(`La comprobación de integridad falló en el archivo ${finished + 1}. Revisa el original y la copia de Drive.`)
-        }
+      let next = 0
+      let sent = 0
+      let failed = false
+      const active = new Map<string, number>()
+      const report = () => {
+        const transferred = sent + [...active.values()].reduce((total, value) => total + value, 0)
+        const percentage = needed ? Math.floor(transferred / needed * 100) : 100
+        setProgress(`${finished} de ${entries.length} verificados · ${percentage} % de la carga pendiente`)
       }
-      for (const entry of entries) {
-        if (stop.current) break
-        const existing = imported.get(entry.key)
-        if (existing) {
-          verify(entry, existing)
-        } else {
-          setProgress(`Subiendo ${finished + 1} de ${entries.length}…`)
-          const item = await library.create({
-            title: entry.title, kind: kindFor(entry.mimeType, entry.path), source: entry.source,
-            topicId: entry.topicId, tags: entry.tags, needsReview: entry.needsReview,
-            relatedTopicIds: entry.relatedTopicIds, sourcePath: entry.path,
-          }, files.get(entry.path), (done, total) => {
-            setProgress(`Archivo ${finished + 1} de ${entries.length} · ${total ? Math.floor(done / total * 100) : 0} %`)
-          }, entry.key)
-          verify(entry, item)
-          if (item.importKey !== entry.key || item.topicId !== entry.topicId || item.source !== entry.source ||
-            item.tags.join('\0') !== entry.tags.join('\0') || !!item.needsReview !== !!entry.needsReview ||
-            (item.relatedTopicIds ?? []).join('\0') !== (entry.relatedTopicIds ?? []).join('\0')) {
-            throw new Error(`Drive guardó una organización distinta en el archivo ${finished + 1}. Revisa su ficha antes de continuar.`)
+      async function worker() {
+        while (!stop.current && !failed && next < pending.length) {
+          const { entry, ordinal } = pending[next++]
+          try {
+            const item = await library.create({
+              title: entry.title, kind: kindFor(entry.mimeType, entry.path), source: entry.source,
+              topicId: entry.topicId, tags: entry.tags, needsReview: entry.needsReview,
+              relatedTopicIds: entry.relatedTopicIds, sourcePath: entry.path,
+            }, files.get(entry.path), done => { active.set(entry.key, done); report() }, entry.key)
+            verify(entry, item, ordinal)
+            if (item.importKey !== entry.key || item.topicId !== entry.topicId || item.source !== entry.source ||
+              item.tags.join('\0') !== entry.tags.join('\0') || !!item.needsReview !== !!entry.needsReview ||
+              (item.relatedTopicIds ?? []).join('\0') !== (entry.relatedTopicIds ?? []).join('\0')) {
+              throw new Error(`Drive guardó una organización distinta en el archivo ${ordinal}. Revisa su ficha antes de continuar.`)
+            }
+            active.delete(entry.key)
+            sent += entry.size
+            added++
+            finished++
+            report()
+          } catch (failure) {
+            if (!failed) setError(failure instanceof Error ? failure.message : 'La importación se interrumpió. Puedes reintentar.')
+            failed = true
           }
-          added++
         }
-        finished++
       }
+      report()
+      await Promise.all(Array.from({ length: Math.min(4, pending.length) }, worker))
       setProgress(finished === entries.length
         ? `${finished} recursos verificados. ${added} incorporados en esta sesión.`
         : `Pausa en ${finished} de ${entries.length}. Puedes continuar con los mismos archivos.`)
@@ -90,7 +115,8 @@ export function ImportPanel({ library, onChange }: { library: DriveLibrary; onCh
     </p>}
     {progress && <p role="status" className="form-hint">{progress}</p>}
     {error && <p role="alert" className="form-error">{error}</p>}
-    {busy ? <button className="button" onClick={() => { stop.current = true; setProgress('Pausa solicitada al terminar el archivo actual…') }}>Pausar</button>
-      : <button className="button primary" onClick={run} disabled={!entries.length || absent.length > 0}>Confirmar subida privada</button>}
+    {busy ? <button className="button" onClick={() => { stop.current = true; setProgress('Pausa solicitada al terminar las transferencias activas…') }}>Pausar</button>
+      : !connected ? <button className="button primary" onClick={reconnect}>Reconectar Drive</button>
+        : <button className="button primary" onClick={run} disabled={!entries.length || absent.length > 0}>Confirmar subida privada</button>}
   </div>
 }

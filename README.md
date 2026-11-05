@@ -12,7 +12,7 @@ La aplicación estática se aloja en [GitHub Pages](https://alexmolina08.github.
 4. Ejecuta `npm ci` y `npm run dev`. Abre `http://localhost:5173/tai-hub/`.
 5. Ejecuta `npm test`, `npm run build` y `npm run audit:public` antes de publicar. Para las pruebas de navegador instala Chromium y WebKit con `npx playwright install chromium webkit` y ejecuta `npm run test:e2e`.
 
-La acción de GitHub Pages compila al recibir cambios en `main`. El Client ID de producción procede de la variable de repositorio `VITE_GOOGLE_CLIENT_ID`. Configura únicamente el identificador público. Guarda materiales e inventarios fuera del repositorio.
+GitHub Actions verifica los cambios de `main`. GitHub Pages publica la rama `gh-pages`. Para actualizarla, confirma el código y ejecuta `sh scripts/publish-pages.sh` con el Client ID público en `.env.local`. El script compila, audita y publica solo `dist`. Guarda materiales e inventarios fuera del repositorio.
 
 ## Uso
 

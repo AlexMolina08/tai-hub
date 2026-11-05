@@ -30,8 +30,8 @@ export function locationName(id: string | null) {
 export function bytes(value: number) {
   if (!value) return ''
   const units = ['B', 'KB', 'MB', 'GB']
-  const order = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)))
-  return new Intl.NumberFormat('es', { maximumFractionDigits: 1 }).format(value / 1024 ** order) + ' ' + units[order]
+  const order = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1000)))
+  return new Intl.NumberFormat('es', { maximumFractionDigits: 1 }).format(value / 1000 ** order) + ' ' + units[order]
 }
 
 export function safeLink(value?: string) {

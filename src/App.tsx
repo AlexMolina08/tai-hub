@@ -393,7 +393,7 @@ export default function App() {
       add: 'Añadir recurso', edit: 'Editar recurso', trash: 'Enviar a la papelera', versions: 'Versiones del original', import: 'Importar biblioteca', settings: 'Ajustes',
     })[modal.kind]} onClose={() => { if (modal.kind === 'import') void refresh(); setModal(undefined) }}>
       {(modal.kind === 'add' || modal.kind === 'edit') && <ResourceForm resource={modal.resource} initialTopic={topic?.id ?? null} sources={sourceNames} save={save} />}
-      {modal.kind === 'import' && <ImportPanel library={library} onChange={refresh} />}
+      {modal.kind === 'import' && <ImportPanel library={library} onChange={refresh} connected={connected} reconnect={() => connect()} />}
       {modal.kind === 'trash' && <div className="settings-panel"><p>¿Enviar «{modal.resource?.title}» a la papelera de Drive? Puedes recuperarlo desde Drive.</p>
         {error && <p role="alert" className="form-error">{error}</p>}
         <div className="actions"><button className="button" onClick={() => setModal(undefined)}>Cancelar</button><button className="button danger" disabled={working} onClick={trash}>Enviar a papelera</button></div></div>}
