@@ -303,10 +303,14 @@ export class GoogleSession {
     if (!['access_token', 'token_type', 'error'].some(field => fragment.has(field))) return;
 
     // Drop the callback fragment before loading GIS or rendering the application.
+    const clean = new URL(window.location.href);
+    clean.hash = '';
     try {
-      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+      window.history.replaceState(window.history.state, '', clean.href);
     } catch {
-      window.location.replace(window.location.pathname + window.location.search);
+      this.#useRedirect = true;
+      this.#publish('error', INVALID_REDIRECT);
+      window.location.replace(clean.href);
       return;
     }
 

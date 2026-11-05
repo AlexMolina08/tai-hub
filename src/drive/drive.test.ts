@@ -143,7 +143,7 @@ describe('Same-tab Google OAuth', () => {
       return getItem(key);
     };
     const returned = newSession({ redirectUri: CALLBACK, useRedirect: true });
-    expect(history.replaceState).toHaveBeenCalledWith(null, '', '/tai-hub/');
+    expect(history.replaceState).toHaveBeenCalledWith(null, '', CALLBACK);
     expect(location.hash).toBe('');
     expect(returned.access().token).toBe(TEST_TOKEN);
     expect(sessionData.size).toBe(0);
@@ -155,6 +155,20 @@ describe('Same-tab Google OAuth', () => {
     expect(replay.snapshot().status).toBe('error');
     expect(location.hash).toBe('');
     expect(() => replay.access()).toThrow(SessionExpiredError);
+  });
+
+  it('falls back to a same-origin clean URL when history replacement is blocked', async () => {
+    const { location, history } = mockRedirectBrowser();
+    const options = { redirectUri: CALLBACK };
+    await newSession(options).connect({ sameTab: true });
+    const state = new URL(location.assign.mock.calls[0][0]).searchParams.get('state')!;
+    returnedToken(location, state);
+    history.replaceState.mockImplementationOnce(() => { throw new DOMException('blocked', 'SecurityError'); });
+    const returned = newSession(options);
+    expect(location.replace).toHaveBeenCalledWith(CALLBACK);
+    expect(() => returned.access()).toThrow(SessionExpiredError);
+    await returned.prepare();
+    expect(returned.snapshot().status).toBe('error');
   });
 
   it('supports explicit same-tab fallback before GIS becomes available', async () => {
