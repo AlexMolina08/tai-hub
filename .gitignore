@@ -147,3 +147,18 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Private library inputs and output
+.DS_Store
+/private/
+/imports/
+/playwright-report/
+/test-results/
+*.pdf
+*.zip
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.m4v
+*.avi
