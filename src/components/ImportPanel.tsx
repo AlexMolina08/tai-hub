@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { DriveLibrary, Resource } from '../drive'
 import { bytes, kindFor } from '../resources'
 import { importPath, parseManifest, type ImportEntry } from '../imports'
@@ -10,6 +10,7 @@ export function ImportPanel({ library, onChange }: { library: DriveLibrary; onCh
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const stop = useRef(false)
+  useEffect(() => () => { stop.current = true }, [])
   const absent = entries.filter(entry => files.get(entry.path)?.size !== entry.size)
   async function run() {
     if (!entries.length || absent.length) return
@@ -45,6 +46,11 @@ export function ImportPanel({ library, onChange }: { library: DriveLibrary; onCh
             setProgress(`Archivo ${finished + 1} de ${entries.length} · ${total ? Math.floor(done / total * 100) : 0} %`)
           }, entry.key)
           verify(entry, item)
+          if (item.importKey !== entry.key || item.topicId !== entry.topicId || item.source !== entry.source ||
+            item.tags.join('\0') !== entry.tags.join('\0') || !!item.needsReview !== !!entry.needsReview ||
+            (item.relatedTopicIds ?? []).join('\0') !== (entry.relatedTopicIds ?? []).join('\0')) {
+            throw new Error(`Drive guardó una organización distinta en el archivo ${finished + 1}. Revisa su ficha antes de continuar.`)
+          }
           added++
         }
         finished++

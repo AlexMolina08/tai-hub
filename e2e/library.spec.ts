@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { readFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { blocks } from '../src/syllabus'
 import { DriveFixture, fixturePdf } from './fixtures'
 
@@ -143,4 +146,40 @@ test('replaces and reindexes a PDF while retaining its previous original', async
   await search.fill('observacion objetivo')
   await expect(page.getByRole('button', { name: /Segundo documento General · Página 1/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Documento actualizado.*Página 2/ })).toHaveCount(0)
+})
+
+test('imports a manifest, verifies bytes and skips a completed import on retry', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture()
+  await drive.install(context, browserName === 'webkit')
+  await connect(page)
+  const directory = await mkdtemp(join(tmpdir(), 'tai-hub-fixture-'))
+  try {
+    const name = 'práctica.txt'
+    const body = Buffer.from('Material sintético para verificar la incorporación.')
+    await writeFile(join(directory, name.normalize('NFD')), body)
+    const manifest = { version: 1, resources: [{
+      key: createHash('sha256').update(body).digest('hex'),
+      md5: createHash('md5').update(body).digest('hex'),
+      path: name, title: 'Práctica importada', source: 'Fuente sintética', topicId: 'b1t1',
+      relatedTopicIds: ['b1t2'], tags: ['prueba'], mimeType: 'text/plain', size: body.length,
+    }] }
+    await page.getByRole('button', { name: 'Cuenta y ajustes' }).click()
+    await page.getByRole('button', { name: 'Importar carpeta' }).click()
+    const panel = page.getByRole('dialog', { name: 'Importar biblioteca' })
+    await panel.getByLabel('Manifiesto').setInputFiles({
+      name: 'manifest.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(manifest)),
+    })
+    const confirm = panel.getByRole('button', { name: 'Confirmar subida privada' })
+    await expect(confirm).toBeDisabled()
+    await panel.getByLabel('Carpeta de originales').setInputFiles(directory)
+    await confirm.click()
+    await expect(panel.getByRole('status')).toContainText('1 incorporados')
+    await confirm.click()
+    await expect(panel.getByRole('status')).toContainText('0 incorporados')
+    await panel.getByRole('button', { name: 'Cerrar', exact: true }).click()
+    await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('Práctica importada')
+    await expect(page.getByRole('button', { name: /Práctica importada I.1/ })).toHaveCount(1)
+  } finally {
+    await rm(directory, { recursive: true })
+  }
 })

@@ -1,6 +1,6 @@
 # TAI Hub
 
-Biblioteca privada para el ingreso libre en Técnicos Auxiliares de Informática de la AGE. El programa sigue los cuatro bloques y 33 temas del [anexo V del BOE](https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26262#a5).
+Biblioteca privada para el ingreso libre en Técnicos Auxiliares de Informática de la AGE. El programa sigue los cuatro bloques y 33 temas del [anexo V del BOE](https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26262).
 
 La aplicación estática se aloja en [GitHub Pages](https://alexmolina08.github.io/tai-hub/). Google Drive guarda los originales, los metadatos, las revisiones de PDF, los índices y el progreso. Google Identity Services concede únicamente `drive.file`, limitado a los archivos que gestiona TAI Hub. El token caduca y vive en memoria. Al recargar o cuando caduque, vuelve a pulsar **Conectar Drive**.
 

@@ -1,4 +1,4 @@
-export const syllabusSource = "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26262#a5";
+export const syllabusSource = "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26262";
 
 export const blocks = [
   {

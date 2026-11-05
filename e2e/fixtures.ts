@@ -133,12 +133,15 @@ export class DriveFixture {
     })
     if (path === '/files/generateIds') return json({ ids: [`generated-${this.nextId++}`] })
     if (path === '/files' && method === 'GET') {
-      const kind = url.searchParams.get('q')?.match(/key='taiHub' and value='([^']+)'/)?.[1]
+      const query = url.searchParams.get('q') ?? ''
+      const kind = query.match(/key='taiHub' and value='([^']+)'/)?.[1]
+      const importKey = query.match(/key='importKey' and value='([^']+)'/)?.[1]
       if (kind === 'resource' && this.rejectToken) {
         this.rejectToken = false
         return json({ error: {} }, 401)
       }
-      return json({ files: [...this.files.values()].filter(file => !file.trashed && file.appProperties.taiHub === kind) })
+      return json({ files: [...this.files.values()].filter(file => !file.trashed && file.appProperties.taiHub === kind
+        && (!importKey || file.appProperties.importKey === importKey)) })
     }
     const revision = path.match(/^\/files\/([^/]+)\/revisions(?:\/([^/]+))?$/)
     if (revision) {
