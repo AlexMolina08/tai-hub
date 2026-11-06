@@ -80,7 +80,10 @@ export function ResourceForm({ resource, initialTopic, sources, save }: {
         <label>Etiquetas<input maxLength={400} value={tags} onChange={event => setTags(event.target.value)} placeholder="Separadas por comas" /></label>
       </div>
       <datalist id="resource-sources">{sources.map(item => <option key={item} value={item} />)}</datalist>
-      {resource?.needsReview && <label className="checkbox"><input type="checkbox" checked={review} onChange={event => setReview(event.target.checked)} /> Requiere revisión</label>}
+      {resource && <div>
+        <label className="checkbox"><input type="checkbox" checked={review} onChange={event => setReview(event.target.checked)} /> Pendiente de revisión</label>
+        {(review || resource.needsReview) && <p className="form-hint">Desmarca esta casilla y guarda para quitar el recurso de Por revisar.</p>}
+      </div>}
     </fieldset>
     {error && <p role="alert" className="form-error">{error}</p>}
     {busy && progress !== undefined && <progress value={progress} max={1} />}

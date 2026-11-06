@@ -1,6 +1,6 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
-  ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock3, Cloud, CloudOff, Download, Ellipsis,
+  ArrowLeft, ArrowRight, BookOpen, ChevronRight, ClipboardList, Clock3, Cloud, CloudOff, Download, Ellipsis,
   ExternalLink, FileSearch, FolderOpen, LayoutGrid, LibraryBig, List, LockKeyhole, LogOut,
   Menu, Moon, Plus, RefreshCw, Search, Settings2, Star, Sun, Trash2, Upload, X,
 } from 'lucide-react'
@@ -45,7 +45,8 @@ const mainNav = [
   { page: 'favorites', label: 'Favoritos', icon: Star },
   { page: 'recent', label: 'Recientes', icon: Clock3 },
 ] as const
-const tones = ['green', 'blue', 'violet', 'ochre']
+const tones = ['cobalt', 'slate', 'violet', 'ochre']
+const tailabsUrl = 'https://tailabs.es/app/exams/tailabs'
 const emptyFilters = { kind: '', source: '', tag: '' }
 const searchBatch = 80
 const initialSearchLimits = { resources: searchBatch, pages: searchBatch }
@@ -100,6 +101,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     try { localStorage.setItem('tai-theme', theme) } catch { /* Browser storage unavailable. */ }
+    const preference = matchMedia('(prefers-color-scheme: dark)')
+    const tintBrowser = () => document.querySelector('meta[name="theme-color"]')?.setAttribute('content',
+      getComputedStyle(document.documentElement).getPropertyValue('--bg').trim())
+    tintBrowser()
+    preference.addEventListener('change', tintBrowser)
+    return () => preference.removeEventListener('change', tintBrowser)
   }, [theme])
   useEffect(() => {
     const toggle = () => setNetwork(navigator.onLine)
@@ -393,7 +400,8 @@ export default function App() {
       <nav className="nav-primary">
         {mainNav.map(({ page, label, icon: Icon }) => <button key={page} aria-current={view.page === page ? 'page' : undefined}
           onClick={() => navigate({ page })}><Icon size={18} /> {label}</button>)}
-        {reviewCount > 0 && <button aria-current={view.page === 'review' ? 'page' : undefined} onClick={() => navigate({ page: 'review' })}><List size={18} /> Por revisar <span className="nav-count">{reviewCount}</span></button>}
+        {(reviewCount > 0 || view.page === 'review') && <button aria-current={view.page === 'review' ? 'page' : undefined} onClick={() => navigate({ page: 'review' })}><List size={18} /> Por revisar <span className="nav-count">{reviewCount}</span></button>}
+        <a href={tailabsUrl} target="_blank" rel="noreferrer" onClick={() => setDrawer(false)}><ClipboardList size={18} /> Tests de Tailabs <ExternalLink className="nav-external" size={14} /></a>
       </nav>
       <div className="nav-heading">Temario oficial <span>33 temas</span></div>
       <nav className="nav-blocks">
@@ -454,6 +462,11 @@ export default function App() {
             </div>
             <HeroArt />
           </section>
+          <div className="study-links" aria-label="Accesos de estudio">
+            <a className="shortcut" href={tailabsUrl} target="_blank" rel="noreferrer">
+              <ClipboardList size={19} /><span>Tests de Tailabs</span><ExternalLink size={15} />
+            </a>
+          </div>
           <section className="section" id="temario">
             <div className="section-head"><div><h2>Temario oficial</h2><p>4 bloques · 33 temas</p></div>
               <a href={syllabusSource} target="_blank" rel="noreferrer" className="text-link">Ver convocatoria <ExternalLink size={15} /></a></div>
@@ -499,7 +512,7 @@ export default function App() {
             <h1>{title}</h1><p>{topic?.description ?? (block ? `${block.topics.length} temas del programa oficial` :
               view.page === 'general' ? 'Convocatorias, exámenes y materiales transversales.' :
               view.page === 'favorites' ? 'Recursos que has guardado para volver a consultar.' :
-              view.page === 'review' ? 'Material que aún necesita confirmar su ubicación.' : 'Últimos recursos que has consultado.')}</p></div>
+              view.page === 'review' ? 'Aquí aparecen los recursos marcados como pendientes de revisión. Abre la ficha para comprobar su ubicación y quitar la marca.' : 'Últimos recursos que has consultado.')}</p></div>
           {view.page === 'block' && block ? <div className="topic-list">
             {block.topics.map(item => <button key={item.id} onClick={() => openLocation(item.id)}>
               <span className={`block-number ${tones[blocks.indexOf(block)]}`}>{item.number}</span>
@@ -507,7 +520,9 @@ export default function App() {
             </button>)}
           </div> : loadingLibrary ? <div className="empty" role="status"><Cloud size={24} /><p>{libraryStatus}</p></div>
             : <ResourceList items={visible} filters={filters} setFilters={setFilters} {...listProps}
-              empty={account ? 'Todavía no hay recursos en esta sección.' : showConnect && !retryLibrary ? 'Conecta Google Drive para ver tus recursos.' : libraryStatus}
+              empty={account ? view.page === 'review' ? 'No quedan recursos pendientes de revisión.' : 'Todavía no hay recursos en esta sección.'
+                : showConnect && !retryLibrary ? 'Conecta Google Drive para ver tus recursos.' : libraryStatus}
+              review={view.page === 'review' ? resource => setModal({ kind: 'edit', resource }) : undefined}
               onEmpty={showConnect && clientId ? () => retryLibrary ? void refresh() : connect() : connected && (topic || view.page === 'general') ? () => setModal({ kind: 'add' }) : undefined}
               emptyAction={showConnect ? retryLibrary ? 'Reintentar' : 'Conectar Drive' : 'Añadir recurso'} />}
         </>}
@@ -570,7 +585,7 @@ function HeroArt() {
     <defs><pattern id="hero-grid" width="21" height="21" patternUnits="userSpaceOnUse"><path d="M21 0H0v21" stroke="currentColor" opacity=".2"/></pattern></defs>
     <path d="M32 0h388v250H32z" fill="url(#hero-grid)" />
     <g stroke="currentColor" strokeWidth="1.5" opacity=".8" strokeLinejoin="round">
-      <path d="M106 107l111-59 123 66-112 66z" fill="#225744" />
+      <path d="M106 107l111-59 123 66-112 66z" fill="var(--accent-soft)" />
       <path d="M106 123l122 72 112-66M106 140l122 72 112-66M106 157l122 72 112-66" />
       <path d="M145 102l73-40 79 42-74 42zM176 99l45-24m-27 35 43-24m-26 34 42-24m-27 34 44-25" />
       <path d="M78 85h37l37-22m129-19 27-16h58m-13 129h26v39h37M50 170h38l23-13m168 47h43v29h43" opacity=".7"/>
@@ -587,9 +602,10 @@ type ListProps = {
   index?: PdfIndex
   connected: boolean
 }
-function ResourceList({ items, open, favorite, study, index, filters, setFilters, empty, onEmpty, emptyAction }: ListProps & {
+function ResourceList({ items, open, favorite, study, index, connected, filters, setFilters, empty, onEmpty, emptyAction, review }: ListProps & {
   items: Resource[]; empty: string; onEmpty?: () => void; emptyAction: string
   filters: typeof emptyFilters; setFilters: (filters: typeof emptyFilters) => void
+  review?: (resource: Resource) => void
 }) {
   const { kind, source, tag } = filters
   const filtered = items.filter(item => (!kind || item.kind === kind) && (!source || item.source === source) && (!tag || item.tags.includes(tag)))
@@ -610,8 +626,13 @@ function ResourceList({ items, open, favorite, study, index, filters, setFilters
       return <article className="resource-row" key={item.id}>
         <button className="row-main" onClick={() => open(item)}><span className={`file-icon kind-${item.kind}`}><Icon size={20} /></span>
           <span><strong>{item.title}</strong><small>{[item.source, kinds[item.kind].label, bytes(item.size), status === 'no-text' ? 'Sin texto extraíble' : '', item.needsReview ? 'Por revisar' : ''].filter(Boolean).join(' · ')}</small>
+            {review && <span className="review-reason">{item.tags.some(tag => fold(tag) === 'gsi')
+              ? 'Material de GSI. Confirma qué parte te sirve para TAI.'
+              : item.tags.some(tag => fold(tag) === 'transversal') ? 'Cubre varios temas. Confirma su ubicación.'
+                : 'Confirma el tema y los datos de la ficha.'}</span>}
             {item.tags.length > 0 && <span className="tag-list">{item.tags.map(label => <span key={label}>{label}</span>)}</span>}</span></button>
-        <button className="icon-button" aria-pressed={!!study.favorites[item.id]} aria-label={study.favorites[item.id] ? 'Quitar de favoritos' : 'Guardar en favoritos'} onClick={() => favorite(item)}><Star size={19} className={study.favorites[item.id] ? 'filled' : ''} /></button>
+        {review ? <button className="button review-button" disabled={!connected} aria-label={`Revisar ficha de ${item.title}`} onClick={() => review(item)}>Revisar ficha</button>
+          : <button className="icon-button" aria-pressed={!!study.favorites[item.id]} aria-label={study.favorites[item.id] ? 'Quitar de favoritos' : 'Guardar en favoritos'} onClick={() => favorite(item)}><Star size={19} className={study.favorites[item.id] ? 'filled' : ''} /></button>}
       </article>
     })}</div> : <div className="empty"><FileSearch size={25} /><p>No hay recursos con estos filtros.</p><button className="button" onClick={() => setFilters(emptyFilters)}>Quitar filtros</button></div>}
   </>

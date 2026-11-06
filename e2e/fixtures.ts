@@ -124,6 +124,11 @@ export class DriveFixture {
 
   rejectNextAuthRequest() { this.rejectToken = true }
 
+  markForReview(id: string, tags: string[]) {
+    const file = this.files.get(id)!
+    file.description = JSON.stringify({ ...JSON.parse(file.description!), needsReview: true, tags })
+  }
+
   savedStudy() {
     return [...this.files.values()].filter(file => file.appProperties.taiHub === 'study')
       .map(file => this.media.get(file.id)?.toString('utf8') ?? '').join('\n')
