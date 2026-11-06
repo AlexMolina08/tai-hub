@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 
 import { Bookmark, ChevronLeft, ChevronRight, CornerDownLeft, Download, ExternalLink, Highlighter, Maximize2, Minus, Plus, Search, StickyNote, Trash2, X } from 'lucide-react'
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api'
 import { openPdf, pdfErrorMessage } from '../pdf/document'
+import { uncoveredHighlightRects } from '../pdf/highlights'
 import { pdfAccessDenied } from '../pdf/range'
 import type { PdfAnnotation, PdfSource } from '../pdf/model'
 import { PdfPages } from '../pdf/PdfPages'
@@ -31,7 +32,7 @@ interface LocalMatch {
   text: string
 }
 
-type AnnotationChange = { annotation: PdfAnnotation; added: boolean }
+type AnnotationChange = { annotations: PdfAnnotation[]; added: boolean }
 const annotationNames = { bookmark: 'marcador', note: 'nota', highlight: 'subrayado' }
 
 export default function PdfReader({
@@ -51,7 +52,6 @@ export default function PdfReader({
   const [selection, setSelection] = useState<PdfSelection>()
   const [readingMode, setReadingMode] = useState(false)
   const [highlightHelp, setHighlightHelp] = useState(false)
-  const [activeMark, setActiveMark] = useState<string>()
   const [editFeedback, setEditFeedback] = useState('')
   const [history, setHistory] = useState<{ undo: AnnotationChange[]; redo: AnnotationChange[] }>({ undo: [], redo: [] })
   const [query, setQuery] = useState(initialQuery)
@@ -72,7 +72,7 @@ export default function PdfReader({
   const downloadButton = useRef<HTMLButtonElement>(null)
   const restoreModeFocus = useRef(false)
   const scroll = useRef<HTMLDivElement>(null)
-  const pointerStart = useRef<{ x: number; y: number } | null>(null)
+  const pointerStart = useRef<{ x: number; y: number; type: string; at: number } | null>(null)
   const navigation = useRef<PdfPageNavigation>(null)
   const activePage = useRef(initialPage)
   const reportPage = useRef(onPageChange)
@@ -213,16 +213,16 @@ export default function PdfReader({
     const target = Math.max(1, Math.min(pdf.numPages, Math.trunc(number)))
     setPageInput(String(target))
     setSelection(undefined)
-    setActiveMark(undefined)
     window.getSelection()?.removeAllRanges()
     navigation.current?.jump(target)
     changePage(target)
   }
 
   function applyChange(change: AnnotationChange, forward: boolean) {
-    if (change.added === forward) onAnnotationAdd(change.annotation)
-    else onAnnotationRemove(change.annotation.id)
-    setActiveMark(undefined)
+    for (const annotation of change.annotations) {
+      if (change.added === forward) onAnnotationAdd(annotation)
+      else onAnnotationRemove(annotation.id)
+    }
   }
 
   function recordChange(change: AnnotationChange, feedback: string) {
@@ -234,7 +234,8 @@ export default function PdfReader({
   function replay(redo: boolean) {
     const change = (redo ? history.redo : history.undo).at(-1)
     if (!change) return
-    if (annotations.some(annotation => annotation.id === change.annotation.id) === (change.added === redo)) {
+    const shouldExist = change.added !== redo
+    if (change.annotations.some(changed => annotations.some(annotation => annotation.id === changed.id) !== shouldExist)) {
       const stack = redo ? 'redo' : 'undo'
       setHistory({ ...history, [stack]: history[stack].slice(0, -1) })
       setEditFeedback('La marca ya cambió en otra sesión')
@@ -280,41 +281,42 @@ export default function PdfReader({
     replay(redo)
   }
 
-  function selectSavedHighlight(event: MouseEvent<HTMLDivElement>) {
-    if (event.detail !== 1) return
-    if (!(event.target instanceof Element) || event.target.closest('button, a')) return
+  function tapHighlight(event: MouseEvent<HTMLDivElement>) {
     const start = pointerStart.current
     pointerStart.current = null
-    const hit = (rect: DOMRect) => event.clientX >= rect.left && event.clientX <= rect.right
-      && event.clientY >= rect.top && event.clientY <= rect.bottom
+    if (event.detail !== 1 || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
+    if (!(event.target instanceof Element) || event.target.closest('button, a')) return
+    if (start && (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
+      || (start.type === 'touch' && performance.now() - start.at > 500))) return
+    const hit = (rect: DOMRect) => event.clientX >= rect.left && event.clientX < rect.right
+      && event.clientY >= rect.top && event.clientY < rect.bottom
     const nativeSelection = window.getSelection()
     if (nativeSelection?.isCollapsed === false) {
-      const dragged = start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
-      if (dragged || Array.from(nativeSelection.getRangeAt(0).getClientRects()).some(hit)) return
+      if (Array.from(nativeSelection.getRangeAt(0).getClientRects()).some(hit)) return
       nativeSelection.removeAllRanges()
     }
     setSelection(undefined)
     const sheet = event.target.closest('.pdf-sheet')
-    const marks = Array.from(sheet?.querySelectorAll<HTMLElement>('[data-highlight-id]') ?? []).reverse()
-    const mark = marks.find(element => hit(element.getBoundingClientRect()))
-    setActiveMark(mark?.dataset.highlightId)
-    setEditFeedback('')
-    if (mark) scroll.current?.focus({ preventScroll: true })
+    const marks = Array.from(sheet?.querySelectorAll<HTMLElement>('[data-highlight-id]') ?? [])
+    const ids = new Set(marks.filter(mark => hit(mark.getBoundingClientRect())).map(mark => mark.dataset.highlightId))
+    const removed = annotations.filter(annotation => ids.has(annotation.id))
+    if (!removed.length) {
+      setEditFeedback('')
+      return
+    }
+    recordChange({ annotations: removed, added: false }, 'Subrayado quitado')
+    setHighlightHelp(false)
+    scroll.current?.focus({ preventScroll: true })
   }
-
-  const selectText = useCallback((value?: PdfSelection) => {
-    setSelection(value)
-    if (value) setActiveMark(undefined)
-  }, [])
 
   function add(kind: PdfAnnotation['kind'], target = page, text?: string, rects?: PdfAnnotation['rects']) {
     const annotation = { id: crypto.randomUUID(), page: target, kind, text, rects, createdAt: new Date().toISOString() }
-    recordChange({ annotation, added: true }, kind === 'note' ? 'Nota guardada' : kind === 'bookmark' ? 'Marcador guardado' : 'Subrayado añadido')
+    recordChange({ annotations: [annotation], added: true }, kind === 'note' ? 'Nota guardada' : kind === 'bookmark' ? 'Marcador guardado' : 'Subrayado añadido')
   }
 
   function remove(annotation: PdfAnnotation) {
     if (annotation.kind !== 'highlight' && !window.confirm(`¿Eliminar ${annotation.kind === 'note' ? 'esta nota' : 'este marcador'}?`)) return
-    recordChange({ annotation, added: false }, annotation.kind === 'note' ? 'Nota eliminada'
+    recordChange({ annotations: [annotation], added: false }, annotation.kind === 'note' ? 'Nota eliminada'
       : annotation.kind === 'bookmark' ? 'Marcador eliminado' : 'Subrayado quitado')
     scroll.current?.focus({ preventScroll: true })
   }
@@ -324,7 +326,11 @@ export default function PdfReader({
       setHighlightHelp(value => !value)
       return
     }
-    add('highlight', selection.page, selection.text, selection.rects)
+    const existing = annotations.flatMap(annotation => annotation.kind === 'highlight' && annotation.page === selection.page
+      ? annotation.rects ?? [] : [])
+    const rects = uncoveredHighlightRects(selection.rects, existing)
+    if (rects.length) add('highlight', selection.page, selection.text, rects)
+    else setEditFeedback('El texto ya está subrayado')
     setHighlightHelp(false)
     window.getSelection()?.removeAllRanges()
     setSelection(undefined)
@@ -398,7 +404,6 @@ export default function PdfReader({
   }
 
   const currentBookmark = annotations.find(annotation => annotation.kind === 'bookmark' && annotation.page === page)
-  const selectedMark = annotations.find(annotation => annotation.id === activeMark && annotation.kind === 'highlight')
   const sortedAnnotations = [...annotations].sort((first, second) => first.page - second.page)
 
   return <section ref={reader} className={readingMode ? 'pdf-reader pdf-reader--focus' : 'pdf-reader'}
@@ -437,7 +442,7 @@ export default function PdfReader({
             ? remove(currentBookmark)
             : add('bookmark')}><Bookmark /></button>
         <button type="button" className="pdf-highlight-button" aria-label="Subrayar texto seleccionado"
-          title="Selecciona texto para subrayarlo" aria-expanded={selection ? undefined : highlightHelp}
+          title="Selecciona texto para subrayar. Toca un subrayado para quitarlo." aria-expanded={selection ? undefined : highlightHelp}
           data-selected={!!selection} disabled={!pdf}
           onMouseDown={event => event.preventDefault()} onClick={addHighlight}><Highlighter /> <span>Subrayar</span></button>
         <button type="button" ref={notesToggle} aria-label="Notas, marcadores y subrayados" aria-expanded={showNotes} disabled={!pdf}
@@ -527,9 +532,10 @@ export default function PdfReader({
       </ul>}
     </div>}
 
-    <div className="pdf-scroll" ref={scroll} role="region" aria-label="Página del PDF" tabIndex={0} onClick={selectSavedHighlight}
-      onPointerDown={event => { pointerStart.current = { x: event.clientX, y: event.clientY } }}
-      onScroll={() => setActiveMark(undefined)}>
+    <div className="pdf-scroll" ref={scroll} role="region" aria-label="Página del PDF" tabIndex={0} onClick={tapHighlight}
+      onPointerDown={event => {
+        pointerStart.current = { x: event.clientX, y: event.clientY, type: event.pointerType, at: performance.now() }
+      }}>
       {error && <div className="pdf-reader-state" role="alert">
         <p>{error}</p>
         <button type="button" onClick={() => {
@@ -541,19 +547,13 @@ export default function PdfReader({
       {!error && !pdf && <p className="pdf-reader-state" role="status">Abriendo PDF…</p>}
       {pdf && width > 0 && <PdfPages pdf={pdf} initialPage={page} width={width} zoom={zoom}
         query={activeQuery} annotations={annotations} selectedPage={selection?.page} hostRef={scroll} navigationRef={navigation}
-        onPageChange={changePage} onSelection={selectText} />}
+        onPageChange={changePage} onSelection={setSelection} />}
     </div>
-    {(selectedMark || editFeedback) && <div className="pdf-annotation-feedback">
-      <span role="status" title={selectedMark?.text}>{selectedMark?.text ? `«${selectedMark.text}»`
-        : selectedMark ? `Subrayado de la página ${selectedMark.page}` : editFeedback}</span>
-      {selectedMark
-        ? <button type="button" onClick={() => remove(selectedMark)}>Quitar subrayado</button>
-        : <>
-          {history.undo.length > 0 && <button type="button" onClick={() => replay(false)}>Deshacer</button>}
-          {history.redo.length > 0 && <button type="button" onClick={() => replay(true)}>Rehacer</button>}
-        </>}
+    {editFeedback && <div className="pdf-annotation-feedback">
+      <span role="status">{editFeedback}</span>
+      {history.undo.length > 0 && <button type="button" onClick={() => replay(false)}>Deshacer</button>}
+      {history.redo.length > 0 && <button type="button" onClick={() => replay(true)}>Rehacer</button>}
       <button type="button" aria-label="Cerrar acciones de marcas" onClick={() => {
-        setActiveMark(undefined)
         setEditFeedback('')
         scroll.current?.focus({ preventScroll: true })
       }}><X size={17} /></button>

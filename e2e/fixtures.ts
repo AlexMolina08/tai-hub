@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { BrowserContext, Route } from '@playwright/test'
+import type { PdfAnnotation } from '../src/pdf/model'
 
 interface MockFile {
   id: string
@@ -65,6 +66,22 @@ export class DriveFixture {
 
   addPdf(id: string, title: string, pages: string[], size?: { width: number; height: number }) {
     this.resource(id, title, 'pdf', fixturePdf(pages, size))
+  }
+
+  seedPdfAnnotations(resourceId: string, annotations: PdfAnnotation[]) {
+    const version = this.files.get(resourceId)?.md5Checksum
+    if (!version) throw new Error('Missing PDF fixture')
+    const id = `seed-study-${resourceId}`
+    const operations = annotations.map((value, index) => ({
+      id: `${id}-${index}`, clock: index + 1,
+      patch: { kind: 'annotation', resourceId, version, annotationId: value.id, value },
+    }))
+    const body = Buffer.from(JSON.stringify({ schema: 1, operations }))
+    this.files.set(id, {
+      id, name: id, mimeType: 'application/json', size: String(body.byteLength), ownedByMe: true,
+      headRevisionId: '1', appProperties: { taiHub: 'study', writer: id },
+    })
+    this.media.set(id, body)
   }
 
   addVideo(id: string, title: string, format: 'mp4' | 'mkv' = 'mp4') {

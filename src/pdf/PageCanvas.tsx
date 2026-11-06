@@ -137,8 +137,10 @@ export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, que
   return <div className="pdf-sheet" ref={surface} aria-busy={status === 'loading'}>
     <div className="pdf-canvas" ref={canvasHost} />
     <div className="pdf-highlights" aria-hidden="true">
-      {annotations.flatMap(annotation => (annotation.rects ?? []).map((rect, index) =>
-        <Overlay key={`${annotation.id}-${index}`} rect={rect} highlightId={annotation.id} />))}
+      {!!annotations.length && <div className="pdf-user-marks">
+        {annotations.flatMap(annotation => (annotation.rects ?? []).map((rect, index) =>
+          <Overlay key={`${annotation.id}-${index}`} rect={rect} highlightId={annotation.id} />))}
+      </div>}
       {matches.map((rect, index) => <Overlay key={index} rect={rect} match />)}
     </div>
     <div className="textLayer" ref={textHost} />
