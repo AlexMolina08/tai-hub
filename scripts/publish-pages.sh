@@ -24,7 +24,13 @@ touch "$stage/.nojekyll"
 
 # Cached HTML and open tabs can still request a chunk from an earlier release.
 (cd dist && find assets -type f | LC_ALL=C sort) > "$stage/.tai-assets"
-for release in $(git -C "$stage" rev-list --first-parent --max-count=3 HEAD); do
+retained_releases=$(
+  {
+    git -C "$stage" rev-list --first-parent --max-count=3 HEAD
+    git -C "$stage" rev-list --first-parent --since='7 days ago' --max-count=20 HEAD
+  } | awk '!seen[$0]++'
+)
+for release in $retained_releases; do
   if git -C "$stage" cat-file -e "$release:.tai-assets" 2>/dev/null; then
     git -C "$stage" show "$release:.tai-assets" > "$stage/.tai-retain"
   else
