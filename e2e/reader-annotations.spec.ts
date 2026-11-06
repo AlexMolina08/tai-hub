@@ -71,6 +71,17 @@ test('clears a cancelled selection and keeps keyboard shortcuts local to the rea
   await expect(reader.locator('.pdf-user-mark')).toHaveCount(1)
 })
 
+test('does not turn a collapsed native selection into a highlight', async ({ page, context, browserName }) => {
+  await new DriveFixture().install(context, browserName === 'webkit')
+  const reader = await openPdf(page)
+  await selectText(page)
+  await page.evaluate(() => window.getSelection()?.collapseToEnd())
+  const highlight = reader.getByRole('button', { name: 'Subrayar texto seleccionado' })
+  await expect(highlight).toHaveAttribute('data-selected', 'false')
+  await highlight.click()
+  await expect(reader.locator('.pdf-user-mark')).toHaveCount(0)
+})
+
 test('removes a saved highlight from the page and synchronizes its restoration', async ({ page, context, browser, browserName, isMobile }) => {
   const drive = new DriveFixture()
   await drive.install(context, browserName === 'webkit')

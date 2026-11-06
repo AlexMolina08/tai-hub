@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api'
-import { PageCanvas } from './PageCanvas'
+import { PageCanvas, readPdfSelection } from './PageCanvas'
 import type { PdfSelection } from './PageCanvas'
 import type { PdfAnnotation } from './model'
 
@@ -167,6 +167,14 @@ export function PdfPages({
     if (selectedPage && (selectedPage - 1 < first || selectedPage - 1 > last)) onSelection(undefined)
   }, [first, last, onSelection, selectedPage])
 
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    const selectionChanged = () => onSelection(readPdfSelection(host))
+    document.addEventListener('selectionchange', selectionChanged)
+    return () => document.removeEventListener('selectionchange', selectionChanged)
+  }, [hostRef, onSelection])
+
   return <div className="pdf-pages" style={{
     width: pageWidth,
     height: Math.max(layout.end, layout.offsets[pdf.numPages - 1]
@@ -178,7 +186,7 @@ export function PdfPages({
       return <div className="pdf-page-slot" data-pdf-page={page} key={page}
         style={{ top: layout.offsets[index], height: layout.heights[index] }}>
         <PageCanvas pdf={pdf} page={page} width={width} zoom={zoom} query={query}
-          annotations={marksByPage.get(page) ?? noMarks} onSelection={onSelection}
+          annotations={marksByPage.get(page) ?? noMarks}
           onMeasure={recordSize} onPaint={markPainted} />
       </div>
     })}

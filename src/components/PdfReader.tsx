@@ -64,6 +64,9 @@ export default function PdfReader({
   const searchRun = useRef(0)
   const reader = useRef<HTMLElement>(null)
   const modeToggle = useRef<HTMLButtonElement>(null)
+  const searchToggle = useRef<HTMLButtonElement>(null)
+  const notesToggle = useRef<HTMLButtonElement>(null)
+  const searchField = useRef<HTMLInputElement>(null)
   const restoreModeFocus = useRef(false)
   const scroll = useRef<HTMLDivElement>(null)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
@@ -113,6 +116,10 @@ export default function PdfReader({
   useEffect(() => {
     setPageInput(String(page))
   }, [page])
+
+  useLayoutEffect(() => {
+    if (showSearch) searchField.current?.focus({ preventScroll: true })
+  }, [showSearch])
 
   useLayoutEffect(() => {
     const host = scroll.current!
@@ -238,12 +245,31 @@ export default function PdfReader({
     scroll.current?.focus({ preventScroll: true })
   }
 
-  function handleAnnotationKeys(event: ReactKeyboardEvent<HTMLElement>) {
-    if (event.defaultPrevented || event.repeat || event.altKey || (!event.ctrlKey && !event.metaKey)) return
+  function handleReaderKeys(event: ReactKeyboardEvent<HTMLElement>) {
+    if (event.defaultPrevented || event.repeat) return
+    if (event.key === 'Escape' && (showSearch || showNotes)) {
+      event.preventDefault()
+      if (showSearch) {
+        setShowSearch(false)
+        searchToggle.current?.focus({ preventScroll: true })
+      } else {
+        setShowNotes(false)
+        notesToggle.current?.focus({ preventScroll: true })
+      }
+      return
+    }
+    if (event.altKey || (!event.ctrlKey && !event.metaKey)) return
+    const key = event.key.toLowerCase()
+    if (key === 'f' && !event.shiftKey && pdf) {
+      event.preventDefault()
+      setShowSearch(true)
+      setShowNotes(false)
+      searchField.current?.focus({ preventScroll: true })
+      return
+    }
     const target = event.target
     if (target instanceof HTMLElement && (target.closest('input, textarea, select') || target.isContentEditable)) return
     if (window.getSelection()?.isCollapsed === false) return
-    const key = event.key.toLowerCase()
     const redo = (key === 'z' && event.shiftKey) || (key === 'y' && event.ctrlKey && !event.shiftKey)
     if (key !== 'z' && !redo) return
     if (!(redo ? history.redo : history.undo).length) return
@@ -306,13 +332,17 @@ export default function PdfReader({
     event.preventDefault()
     if (!pdf || !query.trim()) return
     const terms = queryWords(query)
-    if (!terms.length) return
+    if (!terms.length) {
+      setSearchStatus('Escribe alguna palabra o número para buscar.')
+      return
+    }
     const run = ++searchRun.current
     setActiveQuery(query)
     setSearching(true)
     setMatches([])
     setSearchStatus('Buscando en el PDF…')
     const results: LocalMatch[] = []
+    let published = 0
     let textPages = 0
     let failedPages = 0
     try {
@@ -321,6 +351,7 @@ export default function PdfReader({
         try {
           const item = await pdf.getPage(current)
           const content = await item.getTextContent()
+          if (run !== searchRun.current) return
           const text = textRuns(content.items.filter(isTextItem)).text.replace(/\s+/gu, ' ').trim()
           const words = (text.match(/[\p{L}\p{M}\p{N}]+/gu) ?? []).map(foldWord)
           if (words.length) textPages++
@@ -330,7 +361,11 @@ export default function PdfReader({
         } catch {
           failedPages++
         }
-        if (current % 15 === 0 && run === searchRun.current) {
+        if (run === searchRun.current && (current % 10 === 0 || (results.length > 0 && !published))) {
+          if (results.length > published) {
+            setMatches([...results])
+            published = results.length
+          }
           setSearchStatus(`Buscando… ${current} de ${pdf.numPages} páginas`)
         }
       }
@@ -352,7 +387,7 @@ export default function PdfReader({
 
   return <section ref={reader} className={readingMode ? 'pdf-reader pdf-reader--focus' : 'pdf-reader'}
     role={readingMode ? 'dialog' : undefined} aria-modal={readingMode || undefined}
-    aria-label={readingMode ? 'Modo lectura PDF' : 'Lector PDF'} onKeyDown={handleAnnotationKeys}>
+    aria-label={readingMode ? 'Modo lectura PDF' : 'Lector PDF'} onKeyDown={handleReaderKeys}>
     <div className="pdf-toolbar">
       <div className="pdf-tools" role="group" aria-label="Navegación de páginas">
         <button type="button" aria-label="Página anterior" disabled={!pdf || page <= 1} onClick={() => jump(page - 1)}><ChevronLeft /></button>
@@ -379,7 +414,7 @@ export default function PdfReader({
           onClick={() => setZoom(value => Math.min(3, value + 0.25))}><Plus /></button>
       </div>
       <div className="pdf-tools pdf-tools-actions" role="group" aria-label="Herramientas">
-        <button type="button" aria-label="Buscar en este PDF" aria-expanded={showSearch} disabled={!pdf}
+        <button type="button" ref={searchToggle} aria-label="Buscar en este PDF" aria-expanded={showSearch} disabled={!pdf}
           onClick={() => { setShowSearch(value => !value); setShowNotes(false) }}><Search /></button>
         <button type="button" aria-label={currentBookmark ? 'Quitar marcador' : 'Marcar página'} aria-pressed={Boolean(currentBookmark)}
           disabled={!pdf} onClick={() => currentBookmark
@@ -389,7 +424,7 @@ export default function PdfReader({
           title="Selecciona texto para subrayarlo" aria-expanded={selection ? undefined : highlightHelp}
           data-selected={!!selection} disabled={!pdf}
           onMouseDown={event => event.preventDefault()} onClick={addHighlight}><Highlighter /> <span>Subrayar</span></button>
-        <button type="button" aria-label="Notas, marcadores y subrayados" aria-expanded={showNotes} disabled={!pdf}
+        <button type="button" ref={notesToggle} aria-label="Notas, marcadores y subrayados" aria-expanded={showNotes} disabled={!pdf}
           onClick={() => { setShowNotes(value => !value); setShowSearch(false) }}><StickyNote /></button>
         <button type="button" aria-label="Descargar original" onClick={onDownload}><Download /></button>
         {originalUrl && <a href={originalUrl} target="_blank" rel="noopener noreferrer" aria-label="Abrir PDF en Drive"><ExternalLink /></a>}
@@ -408,16 +443,14 @@ export default function PdfReader({
 
     {showSearch && <div className="pdf-panel">
       <form onSubmit={event => void find(event)} className="pdf-panel-form">
-        <input type="search" aria-label="Texto para buscar dentro del PDF" placeholder="Buscar en el documento"
+        <input ref={searchField} type="search" aria-label="Texto para buscar dentro del PDF" placeholder="Buscar en el documento"
           value={query} onChange={event => {
             setQuery(event.target.value)
-            if (!event.target.value) {
-              searchRun.current++
-              setSearching(false)
-              setActiveQuery('')
-              setMatches([])
-              setSearchStatus('')
-            }
+            searchRun.current++
+            setSearching(false)
+            setActiveQuery('')
+            setMatches([])
+            setSearchStatus('')
           }} />
         <button type="submit" disabled={!pdf || !query.trim() || searching}>Buscar</button>
       </form>
@@ -455,7 +488,11 @@ export default function PdfReader({
       {!sortedAnnotations.length && <p className="pdf-feedback">Tus notas, marcadores y subrayados aparecerán aquí.</p>}
       {!!sortedAnnotations.length && <ul className="pdf-panel-list">
         {sortedAnnotations.map(annotation => <li key={annotation.id} className="pdf-annotation-row">
-          <button type="button" onClick={() => jump(annotation.page)}>
+          <button type="button" onClick={() => {
+            jump(annotation.page)
+            setShowNotes(false)
+            scroll.current?.focus({ preventScroll: true })
+          }}>
             <strong>Pág. {annotation.page}</strong> {annotation.text || 'Marcador'}
           </button>
           <button type="button" className="pdf-remove" aria-label={`Eliminar ${annotationNames[annotation.kind]} de la página ${annotation.page}`}

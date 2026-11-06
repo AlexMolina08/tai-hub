@@ -17,12 +17,11 @@ interface Props {
   zoom: number
   query: string
   annotations: PdfAnnotation[]
-  onSelection: (selection: PdfSelection) => void
   onMeasure: (page: number, ratio: number) => void
   onPaint: () => void
 }
 
-export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, query, annotations, onSelection, onMeasure, onPaint }: Props) {
+export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, query, annotations, onMeasure, onPaint }: Props) {
   const surface = useRef<HTMLDivElement>(null)
   const canvasHost = useRef<HTMLDivElement>(null)
   const textHost = useRef<HTMLDivElement>(null)
@@ -135,22 +134,6 @@ export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, que
     setMatches(rects)
   }, [textLayer, query])
 
-  useEffect(() => {
-    function selectionChanged() {
-      const selection = window.getSelection()
-      const sheet = surface.current
-      const layer = textHost.current
-      if (!selection || !selection.rangeCount || selection.isCollapsed || !sheet || !layer) return
-      const range = selection.getRangeAt(0)
-      if (!layer.contains(range.startContainer) || !layer.contains(range.endContainer)) return
-      const text = selection.toString().trim()
-      const rects = normalizeRects(range.getClientRects(), sheet.getBoundingClientRect())
-      if (text && rects.length) onSelection({ page, text: text.slice(0, 2000), rects: rects.slice(0, 200) })
-    }
-    document.addEventListener('selectionchange', selectionChanged)
-    return () => document.removeEventListener('selectionchange', selectionChanged)
-  }, [onSelection, page])
-
   return <div className="pdf-sheet" ref={surface} aria-busy={status === 'loading'}>
     <div className="pdf-canvas" ref={canvasHost} />
     <div className="pdf-highlights" aria-hidden="true">
@@ -163,6 +146,21 @@ export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, que
     {status === 'error' && <p className="pdf-sheet-status" role="status">Esta página no se ha podido renderizar.</p>}
   </div>
 })
+
+export function readPdfSelection(host: HTMLElement): PdfSelection | undefined {
+  const selection = window.getSelection()
+  if (!selection?.rangeCount || selection.isCollapsed) return
+  const range = selection.getRangeAt(0)
+  const start = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement
+  const layer = start?.closest('.textLayer')
+  if (!layer || !host.contains(layer) || !layer.contains(range.endContainer)) return
+  const sheet = layer.closest('.pdf-sheet')
+  const page = Number(sheet?.closest('[data-pdf-page]')?.getAttribute('data-pdf-page'))
+  if (!sheet || !Number.isSafeInteger(page) || page < 1) return
+  const text = selection.toString().trim()
+  const rects = normalizeRects(range.getClientRects(), sheet.getBoundingClientRect())
+  if (text && rects.length) return { page, text: text.slice(0, 2000), rects: rects.slice(0, 200) }
+}
 
 function Overlay({ rect, match, highlightId }: { rect: PdfRect; match?: boolean; highlightId?: string }) {
   return <span className={match ? 'pdf-search-mark' : 'pdf-user-mark'} data-highlight-id={highlightId} style={{
