@@ -196,7 +196,7 @@ export class DriveLibrary {
       const id = data.user?.permissionId;
       if (!id) throw new Error('Google Drive no ha identificado la cuenta.');
       client.signal.throwIfAborted();
-      this.#session.rememberAccount(data.user?.emailAddress);
+      this.#session.rememberAccount(data.user?.emailAddress, id);
       return {
         id,
         name: data.user?.displayName || 'Google Drive',

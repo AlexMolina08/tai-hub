@@ -1,14 +1,17 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const origin = 'http://localhost:5189'
-const outDir = 'node_modules/.cache/tai-hub-e2e'
+const port = Number(process.env.TAI_E2E_PORT ?? 5189)
+if (!Number.isInteger(port) || port < 1024 || port > 65_535) throw new Error('TAI_E2E_PORT is not a valid port')
+const origin = `http://localhost:${port}`
+const outDir = `node_modules/.cache/tai-hub-e2e-${port}`
 
 export default defineConfig({
   testDir: './e2e',
+  outputDir: `test-results/${port}`,
   fullyParallel: true,
   use: { baseURL: origin, trace: 'retain-on-failure' },
   webServer: {
-    command: `npm run build -- --outDir ${outDir} && npm run preview -- --outDir ${outDir} --port 5189 --strictPort`,
+    command: `npm run build -- --outDir ${outDir} && npm run preview -- --outDir ${outDir} --port ${port} --strictPort`,
     env: { VITE_GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com' },
     url: `${origin}/tai-hub/`,
     timeout: 90_000,

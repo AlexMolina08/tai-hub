@@ -29,6 +29,11 @@ const getEmptyStudy = () => emptyStudy
 type View = { page: 'home' | 'general' | 'favorites' | 'recent' | 'review' | 'search' }
   | { page: 'block' | 'topic'; id: string }
   | { page: 'resource'; id: string; initialPage?: number; query?: string }
+type ListLocation = { view: View; scroll: number }
+type ReaderLocation = {
+  accountId: string; view: Extract<View, { page: 'resource' }>; version: string;
+  back: ListLocation; filters: typeof emptyFilters; query: string;
+}
 type Modal = { kind: 'add' | 'import' | 'settings'; resource?: never }
   | { kind: 'edit' | 'manage' | 'trash' | 'versions'; resource: Resource }
 type Revision = Awaited<ReturnType<DriveLibrary['revisions']>>[number]
@@ -46,7 +51,8 @@ const emptyPageResults = { query: '', documents: '', hits: [] as PdfSearchHit[] 
 
 export default function App() {
   const auth = useSyncExternalStore(session.subscribe, session.snapshot)
-  const connected = auth.status === 'connected'
+  const [verifiedAccess, setVerifiedAccess] = useState<AbortSignal>()
+  const connected = auth.status === 'connected' && !!verifiedAccess && !verifiedAccess.aborted
   const [account, setAccount] = useState<Awaited<ReturnType<DriveLibrary['account']>>>()
   const [resources, setResources] = useState<Resource[]>([])
   const [sync, setSync] = useState<StudySync>()
@@ -57,7 +63,7 @@ export default function App() {
   const [indexRun, setIndexRun] = useState(0)
   const [network, setNetwork] = useState(navigator.onLine)
   const [view, setView] = useState<View>({ page: 'home' })
-  const [back, setBack] = useState<{ view: View; scroll: number }>({ view: { page: 'home' }, scroll: 0 })
+  const [back, setBack] = useState<ListLocation>({ view: { page: 'home' }, scroll: 0 })
   const [filters, setFilters] = useState(emptyFilters)
   const [query, setQuery] = useState('')
   const [searchLimits, setSearchLimits] = useState(initialSearchLimits)
@@ -75,6 +81,8 @@ export default function App() {
   })
   const search = useRef<HTMLInputElement>(null)
   const nextScroll = useRef(0)
+  const verifiedAccount = useRef<string | undefined>(undefined)
+  const pendingRefresh = useRef<AbortSignal | undefined>(undefined)
   const study = useSyncExternalStore(sync ? fn => sync.subscribe(fn) : subscribeIdle, sync ? () => sync.snapshot() : getEmptyStudy)
   const studyStatus = useSyncExternalStore(sync?.subscribe ?? subscribeIdle, sync?.status ?? (() => 'idle'))
   const accountId = account?.id
@@ -83,7 +91,9 @@ export default function App() {
   const searching = view.page === 'search'
   const cleanQuery = query.trim()
 
-  useEffect(() => { if (clientId) void session.prepare().catch(() => {}) }, [])
+  useEffect(() => {
+    if (clientId && !session.resume()) void session.prepare()
+  }, [])
   useLayoutEffect(() => { window.scrollTo({ top: nextScroll.current, behavior: 'instant' }) }, [view])
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -123,33 +133,83 @@ export default function App() {
   }
   function connect(sameTab?: boolean) {
     setError('')
-    if (auth.status === 'error') {
-      void session.prepare().then(() => {
-        if (session.snapshot().status === 'ready') setNotice('Pulsa Conectar Drive para abrir la ventana de Google.')
-      })
-    }
-    void session.connect({ sameTab }).catch(showError)
+    const returnTo: ReaderLocation | undefined = accountId && current && view.page === 'resource' ? {
+      accountId, version: current.version, back, filters, query,
+      view: {
+        ...view, initialPage: study.positions[current.id]?.version === current.version
+          ? study.positions[current.id].page : view.initialPage,
+      },
+    } : undefined
+    void session.connect({ sameTab, returnTo: returnTo && JSON.stringify(returnTo) }).catch(showError)
   }
-  function clearPrivate() {
+  const clearPrivate = useCallback(() => {
+    verifiedAccount.current = undefined
+    setVerifiedAccess(undefined)
     setAccount(undefined)
     setResources([])
-    changeQuery('')
+    setQuery('')
+    setSearchLimits(initialSearchLimits)
     setPageResults(emptyPageResults)
     setModal(undefined)
-    navigate({ page: 'home' })
-  }
+    setFilters(emptyFilters)
+    setBack({ view: { page: 'home' }, scroll: 0 })
+    nextScroll.current = 0
+    setView({ page: 'home' })
+    setDrawer(false)
+    setError('')
+    setNotice('')
+  }, [])
   const refresh = useCallback(async () => {
+    let signal: AbortSignal | undefined
+    try { signal = session.access().signal }
+    catch (failure) { showError(failure); return }
+    if (pendingRefresh.current === signal) return
+    pendingRefresh.current = signal
     setWorking(true)
     try {
       const user = await library.account()
+      signal.throwIfAborted()
+      if (verifiedAccount.current && verifiedAccount.current !== user.id) clearPrivate()
       const items = await library.list()
+      signal.throwIfAborted()
+      verifiedAccount.current = user.id
       setAccount(user)
       setResources(items)
+      setVerifiedAccess(signal)
       setError('')
-    } catch (failure) { showError(failure) }
-    finally { setWorking(false) }
-  }, [])
-  useEffect(() => { if (connected) void refresh() }, [connected, refresh])
+      const returnTo = session.takeReturnLocation()
+      if (returnTo) {
+        const saved = JSON.parse(returnTo) as ReaderLocation
+        const resource = items.find(item => item.id === saved.view?.id)
+        if (saved.accountId === user.id && saved.view?.page === 'resource' && resource) {
+          setView(saved.version === resource.version ? saved.view : { page: 'resource', id: resource.id })
+          setBack(saved.back)
+          setFilters(saved.filters)
+          setQuery(saved.query)
+        }
+      }
+    } catch (failure) {
+      if (!signal.aborted) showError(failure)
+    } finally {
+      if (pendingRefresh.current === signal) {
+        pendingRefresh.current = undefined
+        setWorking(false)
+      }
+    }
+  }, [clearPrivate])
+  useEffect(() => {
+    if (auth.status === 'connected' && network && !connected) void refresh()
+    if (auth.status === 'ready' && verifiedAccount.current) clearPrivate()
+    if (auth.status === 'expired' && !verifiedAccount.current) session.resume()
+  }, [auth.status, connected, network, refresh, clearPrivate])
+  useEffect(() => {
+    if (view.page !== 'home' || modal) return
+    const resumeOnReturn = () => {
+      if (document.visibilityState === 'visible' && session.snapshot().status === 'expired') session.resume()
+    }
+    document.addEventListener('visibilitychange', resumeOnReturn)
+    return () => document.removeEventListener('visibilitychange', resumeOnReturn)
+  }, [view.page, modal])
 
   useEffect(() => {
     if (!accountId) { setSync(undefined); setIndex(undefined); return }
@@ -351,9 +411,12 @@ export default function App() {
 
       <main className={current ? 'content content-reader' : 'content'} id="main" tabIndex={-1}>
         {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. Las operaciones de Drive se reanudarán al volver a conectar.</div>}
-        {account && !connected && <div className="banner"><CloudOff size={18} /><span>Renueva el acceso a Drive para abrir archivos y sincronizar.</span><button className="button" disabled={auth.status === 'connecting'} onClick={() => connect()}>Reconectar</button></div>}
+        {account && !connected && <div className="banner" role="status"><CloudOff size={18} />
+          <span>{auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Renueva el acceso a Drive para abrir archivos y sincronizar.'}</span>
+          <button className="button" disabled={!network || auth.status === 'connecting' || working}
+            onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{auth.status === 'connected' ? 'Reintentar' : 'Reconectar'}</button></div>}
         {(error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
-          {connected && !account && <button className="button" disabled={working} onClick={() => void refresh()}>Reintentar</button>}
+          {auth.status === 'connected' && !account && <button className="button" disabled={working} onClick={() => void refresh()}>Reintentar</button>}
           {!ios && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
           {error && <button className="icon-button" aria-label="Cerrar aviso" onClick={() => setError('')}><X size={17} /></button>}
         </div>}
@@ -370,7 +433,7 @@ export default function App() {
               {account && recent[0] ? <button className="hero-button" onClick={() => open(recent[0])}>Abrir último recurso <ArrowRight size={17} /></button>
                 : account ? <button className="hero-button" disabled={!connected} onClick={() => setModal({ kind: 'add' })}><Plus size={17} /> Añadir recurso</button>
                   : <button className="hero-button" disabled={!clientId || ['loading', 'connecting', 'connected'].includes(auth.status)} onClick={() => connect()}><Cloud size={18} />
-                    {auth.status === 'connecting' ? 'Conectando…' : connected || working ? 'Cargando biblioteca…' : 'Conectar Google Drive'}<ArrowRight size={17} /></button>}
+                    {auth.status === 'connecting' ? 'Conectando…' : auth.status === 'connected' || working ? 'Cargando biblioteca…' : 'Conectar Google Drive'}<ArrowRight size={17} /></button>}
               {!clientId && <p className="hero-note">Falta configurar el Client ID público.</p>}
             </div>
             <HeroArt />
@@ -405,13 +468,12 @@ export default function App() {
             <p className="context-label">{locationName(current.topicId)}</p><h1>{current.title}</h1>
             <p>{[current.source, kinds[current.kind].label, bytes(current.size)].filter(Boolean).join(' · ')}</p>
           </div>
-          {current.kind === 'pdf' ? connected
-            ? <PdfPane key={`${current.id}:${current.version}`} resource={current} initialPage={study.positions[current.id]?.version === current.version
+          {current.kind === 'pdf'
+            ? <PdfPane key={`${current.id}:${current.version}`} resource={current} access={verifiedAccess} initialPage={study.positions[current.id]?.version === current.version
                 ? study.positions[current.id].page : view.initialPage} query={view.query}
               annotations={study.annotations[current.id]?.[current.version] ?? []}
               onPage={page => markOpened(current, page)}
               apply={apply} reconnect={() => connect()} download={() => download(current)} />
-            : <div className="empty"><CloudOff size={24} /><p>Conecta Drive para cargar el PDF.</p></div>
             : <ResourceView key={`${current.id}:${current.version}`} resource={current} library={library} download={() => download(current)} />}
         </> : <>
           {block && <button className="text-link back-link" onClick={() => navigate(topic ? { page: 'block', id: block.id } : { page: 'home' })}>
@@ -469,8 +531,10 @@ export default function App() {
           <div className="actions">{connected && account ? <>
             <button className="button" disabled={working} onClick={() => { void refresh(); void sync?.refresh().catch(showError) }}><RefreshCw size={16} /> Actualizar</button>
             <button className="button" onClick={() => setModal({ kind: 'import' })}><Upload size={16} /> Importar carpeta</button>
-            <button className="button" onClick={() => { session.disconnect(); clearPrivate() }}><LogOut size={16} /> Desconectar</button>
-          </> : <button className="button primary" disabled={!clientId || auth.status === 'loading' || auth.status === 'connecting'} onClick={() => connect()}><Cloud size={17} /> Conectar Drive</button>}</div>
+          </> : <button className="button primary" disabled={!clientId || !network || auth.status === 'loading' || auth.status === 'connecting' || working}
+            onClick={() => auth.status === 'connected' ? void refresh() : connect()}><Cloud size={17} /> {auth.status === 'connected' ? 'Reintentar' : 'Conectar Drive'}</button>}
+            {(account || auth.status === 'connected') && <button className="button" onClick={() => { session.disconnect(); clearPrivate() }}><LogOut size={16} /> Desconectar</button>}
+          </div>
         </section>
         {account && <section><h3>Índice de búsqueda</h3><p>{indexStats.indexed} PDF indexados · {indexStats['no-text']} sin texto extraíble · {indexStats.pending} pendientes</p>
           {!!(indexStats.error || indexStats.partial) && <p>{indexStats.error} con error · {indexStats.partial} parcialmente indexados</p>}
@@ -564,15 +628,18 @@ function SearchResults({ query, pageResults, error, resources, limits, loadMore,
 }
 
 type ReaderAnnotations = StudyState['annotations'][string][string]
-function PdfPane({ resource, initialPage, query, annotations, onPage, apply, download, reconnect }: {
+function PdfPane({ resource, access, initialPage, query, annotations, onPage, apply, download, reconnect }: {
   resource: Resource; initialPage?: number; query?: string; annotations: ReaderAnnotations
+  access?: AbortSignal
   onPage: (page: number) => void; apply: (patch: StudyPatch) => void; download: () => void; reconnect: () => void
 }) {
   const source = useMemo(() => {
+    if (!access || access.aborted) return undefined
     try { return { ...library.pdfSource(resource.id), byteLength: resource.size } }
     catch { return undefined }
-  }, [resource.id, resource.version, resource.size])
-  if (!source) return <div className="empty"><CloudOff size={24} /><p>Renueva el acceso a Drive para abrir el PDF.</p><button className="button" onClick={reconnect}>Reconectar</button></div>
+  }, [access, resource.id, resource.version, resource.size])
+  if (!source) return <div className="empty"><CloudOff size={24} /><p>Renueva el acceso a Drive para abrir el PDF.</p>
+    <a className="button" href={library.viewUrl(resource)} target="_blank" rel="noreferrer"><ExternalLink size={17} /> Abrir en Drive</a></div>
   return <Suspense fallback={<div className="empty" role="status">Abriendo lector…</div>}>
     <PdfReader source={source} initialPage={initialPage} initialQuery={query} annotations={annotations} originalUrl={driveLink(resource)}
       onPageChange={onPage} onDownload={download} onReconnect={reconnect}

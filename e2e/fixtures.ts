@@ -44,6 +44,8 @@ export function fixturePdf(pages: string[], size = { width: 320, height: 440 }) 
 
 export class DriveFixture {
   readonly mediaReads: string[] = []
+  readonly redirectPrompts: (string | null)[] = []
+  requireInteractiveLogin = false
   private files = new Map<string, MockFile>()
   private media = new Map<string, Buffer>()
   private nextId = 1
@@ -96,8 +98,12 @@ export class DriveFixture {
     }))
     await context.route('https://accounts.google.com/o/oauth2/v2/auth?**', route => {
       const auth = new URL(route.request().url()).searchParams
+      const prompt = auth.get('prompt')
+      this.redirectPrompts.push(prompt)
       const target = new URL(auth.get('redirect_uri')!)
-      target.hash = new URLSearchParams({
+      target.hash = new URLSearchParams(prompt === 'none' && this.requireInteractiveLogin
+        ? { state: auth.get('state')!, error: 'interaction_required' }
+        : {
         state: auth.get('state')!,
         access_token: 'fixture-token',
         token_type: 'Bearer',
@@ -144,7 +150,7 @@ export class DriveFixture {
     const url = new URL(request.url())
     const method = request.method()
     const cors = {
-      'access-control-allow-origin': 'http://localhost:5189',
+      'access-control-allow-origin': `http://localhost:${process.env.TAI_E2E_PORT ?? 5189}`,
       'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS',
       'access-control-allow-headers': 'authorization,content-type,range',
       'access-control-expose-headers': 'accept-ranges,content-length,content-range',
@@ -154,7 +160,7 @@ export class DriveFixture {
     if (request.headers().authorization !== 'Bearer fixture-token') return json({ error: {} }, 401)
     const path = url.pathname.replace(/^\/(?:upload\/)?drive\/v3/, '')
     if (path === '/about') return json({
-      user: { permissionId: accountId, displayName: 'Cuenta de prueba' },
+      user: { permissionId: accountId, displayName: 'Cuenta de prueba', emailAddress: 'cuenta@example.test' },
       storageQuota: { limit: '16106127360', usage: '6000000000' },
     })
     if (path === '/files/generateIds') return json({ ids: [`generated-${this.nextId++}`] })

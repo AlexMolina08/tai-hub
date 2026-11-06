@@ -26,13 +26,20 @@ type GoogleOAuth = {
 
 type Access = { token: string; signal: AbortSignal };
 type SessionOptions = { redirectUri?: string; useRedirect?: boolean };
-type RedirectRequest = { state: string; expiresAt: number; redirectUri: string; clientId: string };
+type RedirectRequest = {
+  state: string; expiresAt: number; redirectUri: string; clientId: string;
+  generation?: string; returnTo?: string;
+};
+type BrowserAccount = { clientId: string; id: string; generation: string; hint?: string };
 type GoogleWindow = Window & { google?: { accounts?: { oauth2?: GoogleOAuth } } };
 const oauth = () => (window as GoogleWindow).google?.accounts?.oauth2;
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
 const GOOGLE_AUTHORIZE = 'https://accounts.google.com/o/oauth2/v2/auth';
 const REDIRECT_STATE = 'tai-hub.google-oauth.v1';
+const BROWSER_ACCOUNT = 'tai-hub.google-account.v1';
+const QUIET_RETRY = 'tai-hub.google-resume.v1';
 const REDIRECT_TIMEOUT = 5 * 60 * 1000;
+const TOKEN_PATTERN = /^[a-zA-Z0-9._~+\/-]+=*$/;
 const OAUTH_FIELDS = ['state', 'access_token', 'token_type', 'scope', 'expires_in', 'error'];
 const MISSING_CLIENT = 'Falta configurar el cliente OAuth de TAI Hub.';
 const CANCELLED = 'Se ha cancelado la conexión con Google.';
@@ -42,6 +49,16 @@ const INVALID_REDIRECT = 'La autorización de Google ha caducado o no coincide. 
 const RECONNECT = 'Vuelve a conectar Google Drive para continuar.';
 
 let loadingGoogle: Promise<GoogleOAuth> | undefined;
+
+function readBrowserAccount(clientId: string): BrowserAccount | undefined {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(BROWSER_ACCOUNT) ?? 'null') as BrowserAccount | null;
+    if (value?.clientId === clientId && typeof value.id === 'string' && value.id
+      && typeof value.generation === 'string' && (value.hint === undefined || typeof value.hint === 'string')) return value;
+  } catch {
+    // Private browsing and blocked storage can still use an in-memory session.
+  }
+}
 
 function loadGoogle(): Promise<GoogleOAuth> {
   const loaded = oauth();
@@ -92,12 +109,21 @@ export class GoogleSession {
   #cancelConnect?: () => void;
   #cancelRedirect?: () => void;
   #hint?: string;
+  #browserAccount?: BrowserAccount;
+  #expectedAccount?: string;
+  #redirectReturned = false;
+  #returnTo?: string;
 
   constructor(clientId: string, { redirectUri, useRedirect = false }: SessionOptions = {}) {
     this.#clientId = clientId.trim();
     this.#redirectUri = redirectUri;
     this.#useRedirect = useRedirect;
-    if (typeof window !== 'undefined') this.#consumeRedirect();
+    if (typeof window !== 'undefined') {
+      this.#consumeRedirect();
+      this.#browserAccount = readBrowserAccount(this.#clientId);
+      this.#hint = this.#browserAccount?.hint;
+      window.addEventListener?.('storage', this.#onAccountChange);
+    }
   }
 
   snapshot = (): AuthSnapshot => this.#snapshot;
@@ -125,15 +151,32 @@ export class GoogleSession {
     }
   }
 
-  connect({ switchAccount = false, sameTab = this.#useRedirect }: { switchAccount?: boolean; sameTab?: boolean } = {}): Promise<void> {
+  resume(): boolean {
+    if (!this.#validClient() || !this.#browserAccount || this.#credential || this.#redirectReturned
+      || this.#cancelConnect || this.#cancelRedirect || !navigator.onLine || !this.#callbackUrl()) return false;
+    try {
+      if (Number(window.sessionStorage.getItem(QUIET_RETRY)) > Date.now()) return false;
+      // An interrupted round trip must never cause a reload loop.
+      window.sessionStorage.setItem(QUIET_RETRY, String(Date.now() + REDIRECT_TIMEOUT));
+    } catch {
+      return false;
+    }
+    void this.#startRedirect({ quiet: true }).catch(() => {});
+    return true;
+  }
+
+  takeReturnLocation(): string | undefined {
+    const value = this.#returnTo;
+    this.#returnTo = undefined;
+    return value;
+  }
+
+  connect({ sameTab = this.#useRedirect || !this.#google, returnTo }: { sameTab?: boolean; returnTo?: string } = {}): Promise<void> {
     if (!this.#validClient()) return Promise.reject(new Error(MISSING_CLIENT));
     if (this.#cancelConnect || this.#cancelRedirect) return Promise.reject(new Error('Ya hay una autorización de Google en curso.'));
     if (!sameTab && !this.#google) return Promise.reject(new Error('El acceso de Google aún no está disponible.'));
-    if (switchAccount) {
-      this.#clearAccess();
-      this.#hint = undefined;
-    }
-    if (sameTab) return this.#startRedirect();
+    this.#expectedAccount = undefined;
+    if (sameTab) return this.#startRedirect({ returnTo });
 
     return new Promise<void>((resolve, reject) => {
       let finished = false;
@@ -163,11 +206,12 @@ export class GoogleSession {
           callback: (response) => {
             if (finished) return;
             const expiresIn = Number(response.expires_in);
-            if (response.error || !response.access_token || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+            if (response.error || !response.access_token || !TOKEN_PATTERN.test(response.access_token)
+              || !Number.isSafeInteger(expiresIn) || expiresIn <= 0) {
               fail(response.error === 'access_denied' ? DENIED : FAILED);
               return;
             }
-            if (!response.scope?.split(/\s+/).includes(DRIVE_SCOPE)) {
+            if (response.scope?.trim() !== DRIVE_SCOPE) {
               fail('Autoriza el acceso a los archivos de TAI Hub en la ventana de Google.');
               return;
             }
@@ -193,8 +237,28 @@ export class GoogleSession {
     });
   }
 
-  rememberAccount(email?: string): void {
+  rememberAccount(email?: string, accountId?: string): void {
+    const previous = accountId && readBrowserAccount(this.#clientId);
+    if (this.#expectedAccount && (accountId !== this.#expectedAccount || !previous
+      || previous.generation !== this.#browserAccount?.generation)) {
+      this.expire();
+      throw new SessionExpiredError();
+    }
+    this.#expectedAccount = undefined;
     this.#hint = email;
+    if (!accountId || !this.#credential) return;
+    this.#redirectReturned = false;
+    const account: BrowserAccount = {
+      clientId: this.#clientId, id: accountId, hint: email,
+      generation: previous && previous.id === accountId ? previous.generation : crypto.randomUUID(),
+    };
+    try {
+      window.localStorage.setItem(BROWSER_ACCOUNT, JSON.stringify(account));
+      this.#browserAccount = account;
+      window.sessionStorage.removeItem(QUIET_RETRY);
+    } catch {
+      // The current tab can still use the access held in memory.
+    }
   }
 
   access(): Access {
@@ -208,16 +272,35 @@ export class GoogleSession {
   expire(expectedToken?: string): void {
     if (!this.#credential || (expectedToken && this.#credential.token !== expectedToken)) return;
     this.#clearAccess();
+    this.#expectedAccount = undefined;
     if (!this.#cancelConnect && !this.#cancelRedirect) this.#publish('expired', RECONNECT);
   }
 
   disconnect(): void {
+    try {
+      if (readBrowserAccount(this.#clientId)) window.localStorage.removeItem(BROWSER_ACCOUNT);
+      window.sessionStorage.removeItem(QUIET_RETRY);
+    } catch {
+      // Disconnect in memory even when storage is unavailable.
+    }
+    this.#dropSession();
+  }
+
+  #dropSession(): void {
     this.#cancelConnect?.();
     this.#cancelRedirect?.();
     this.#clearAccess();
     this.#hint = undefined;
-    this.#publish(this.#google || this.#useRedirect ? 'ready' : 'loading');
+    this.#browserAccount = undefined;
+    this.#expectedAccount = undefined;
+    this.#returnTo = undefined;
+    this.#publish('ready');
   }
+
+  #onAccountChange = (event: StorageEvent) => {
+    if ((event.key === BROWSER_ACCOUNT || event.key === null) && this.#browserAccount
+      && readBrowserAccount(this.#clientId)?.generation !== this.#browserAccount.generation) this.#dropSession();
+  };
 
   #validClient(): boolean {
     return /^[\w.-]+\.apps\.googleusercontent\.com$/.test(this.#clientId);
@@ -236,7 +319,7 @@ export class GoogleSession {
     }
   }
 
-  #startRedirect(): Promise<void> {
+  #startRedirect({ quiet = false, returnTo }: { quiet?: boolean; returnTo?: string }): Promise<void> {
     const callback = this.#callbackUrl();
     if (!callback) return Promise.reject(new Error('La dirección de retorno de Google no está configurada.'));
     const state = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
@@ -245,12 +328,14 @@ export class GoogleSession {
       expiresAt: Date.now() + REDIRECT_TIMEOUT,
       redirectUri: callback.href,
       clientId: this.#clientId,
+      generation: quiet ? this.#browserAccount?.generation : undefined,
+      returnTo,
     };
     try {
       window.sessionStorage.setItem(REDIRECT_STATE, JSON.stringify(pending));
     } catch {
       const message = 'Safari necesita permitir el almacenamiento temporal de este sitio para conectar Google Drive.';
-      this.#publish(this.#credential ? 'connected' : 'error', message);
+      this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : message);
       return Promise.reject(new Error(message));
     }
 
@@ -262,7 +347,8 @@ export class GoogleSession {
       scope: DRIVE_SCOPE,
       include_granted_scopes: 'false',
       state,
-      ...(this.#hint ? { login_hint: this.#hint } : { prompt: 'select_account' }),
+      ...(this.#hint ? { login_hint: this.#hint } : {}),
+      ...(quiet ? { prompt: 'none' } : this.#hint ? {} : { prompt: 'select_account' }),
     }).toString();
     const cancel = () => {
       clearTimeout(timeout);
@@ -279,21 +365,22 @@ export class GoogleSession {
     const onReturn = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       cancel();
-      this.#publish(this.#credential ? 'connected' : 'error', CANCELLED);
+      this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : CANCELLED);
     };
     const timeout = window.setTimeout(() => {
       cancel();
-      this.#publish(this.#credential ? 'connected' : 'error', INVALID_REDIRECT);
+      this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : INVALID_REDIRECT);
     }, REDIRECT_TIMEOUT);
     this.#cancelRedirect = cancel;
     window.addEventListener('pageshow', onReturn);
     this.#publish('connecting');
     try {
-      window.location.assign(authorize.href);
+      if (quiet) window.location.replace(authorize.href);
+      else window.location.assign(authorize.href);
       return Promise.resolve();
     } catch {
       cancel();
-      this.#publish(this.#credential ? 'connected' : 'error', FAILED);
+      this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : FAILED);
       return Promise.reject(new Error(FAILED));
     }
   }
@@ -301,6 +388,7 @@ export class GoogleSession {
   #consumeRedirect(): void {
     const fragment = new URLSearchParams(window.location?.hash.slice(1));
     if (!['access_token', 'token_type', 'error'].some(field => fragment.has(field))) return;
+    this.#redirectReturned = true;
 
     // Drop the callback fragment before loading GIS or rendering the application.
     const clean = new URL(window.location.href);
@@ -333,15 +421,25 @@ export class GoogleSession {
       this.#publish('error', INVALID_REDIRECT);
       return;
     }
+    if (pending.generation) {
+      const account = readBrowserAccount(this.#clientId);
+      if (!account || pending.generation !== account.generation) {
+        this.#publish('ready');
+        return;
+      }
+      this.#expectedAccount = account.id;
+    }
     const error = fragment.get('error');
     if (error) {
-      this.#publish('error', error === 'access_denied' ? DENIED : FAILED);
+      this.#expectedAccount = undefined;
+      if (pending.generation) this.#publish('ready');
+      else this.#publish('error', error === 'access_denied' ? DENIED : FAILED);
       return;
     }
     const token = fragment.get('access_token');
     const scope = fragment.get('scope')?.trim().split(/\s+/);
     const lifetime = Number(fragment.get('expires_in'));
-    if (!token || !/^[a-zA-Z0-9._~+\/-]+=*$/.test(token) || fragment.get('token_type')?.toLowerCase() !== 'bearer'
+    if (!token || !TOKEN_PATTERN.test(token) || fragment.get('token_type')?.toLowerCase() !== 'bearer'
       || !Number.isSafeInteger(lifetime) || lifetime <= 0) {
       this.#publish('error', FAILED);
       return;
@@ -350,6 +448,7 @@ export class GoogleSession {
       this.#publish('error', 'Autoriza solo el acceso a los archivos de TAI Hub en Google Drive.');
       return;
     }
+    this.#returnTo = typeof pending.returnTo === 'string' ? pending.returnTo : undefined;
     this.#acceptToken(token, lifetime);
   }
 

@@ -112,7 +112,7 @@ test('opens large video in Drive without fetching bytes and recovers an expired 
   await page.getByRole('button', { name: 'Actualizar', exact: true }).click()
   await expect(page.getByText('Acceso caducado', { exact: false }).first()).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Conectar Drive', exact: true }).click()
-  if (browserName === 'webkit') await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  if (browserName === 'webkit') await expect(viewer).toBeVisible()
   else await expect(page.getByRole('dialog').getByText(/Cuenta de prueba · Conectado/)).toBeVisible()
 })
 
