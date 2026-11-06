@@ -3,7 +3,7 @@ import type { RefObject } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api'
 import { PageCanvas, readPdfSelection } from './PageCanvas'
 import type { PdfSelection } from './PageCanvas'
-import type { PdfAnnotation } from './model'
+import type { PdfAnnotation, PdfReadingPosition } from './model'
 
 const pageGap = 12
 const noMarks: PdfAnnotation[] = []
@@ -23,11 +23,12 @@ interface Viewport {
 
 export interface PdfPageNavigation {
   jump(page: number): void
+  getPosition(): PdfReadingPosition | undefined
 }
 
 interface Props {
   pdf: PDFDocumentProxy
-  initialPage: number
+  initialPosition: PdfReadingPosition
   width: number
   zoom: number
   query: string
@@ -36,13 +37,16 @@ interface Props {
   hostRef: RefObject<HTMLDivElement | null>
   navigationRef: RefObject<PdfPageNavigation | null>
   onPageChange: (page: number) => void
+  onPositionChange: (position: PdfReadingPosition) => void
   onSelection: (selection?: PdfSelection) => void
 }
 
 export function PdfPages({
-  pdf, initialPage, width, zoom, query, annotations, selectedPage, hostRef, navigationRef, onPageChange, onSelection,
+  pdf, initialPosition, width, zoom, query, annotations, selectedPage, hostRef, navigationRef, onPageChange,
+  onPositionChange, onSelection,
 }: Props) {
-  const startingIndex = useRef(Math.max(0, Math.min(pdf.numPages - 1, initialPage - 1)))
+  const startPosition = useRef(initialPosition)
+  const startingIndex = useRef(Math.max(0, Math.min(pdf.numPages - 1, initialPosition.page - 1)))
   const [measurements, setMeasurements] = useState<{ fallback: number; ratios: Map<number, number> }>(
     () => ({ fallback: Math.SQRT2, ratios: new Map() }),
   )
@@ -101,8 +105,8 @@ export function PdfPages({
     const host = hostRef.current
     if (!host) return
     let index = startingIndex.current
-    let fraction = 0
-    let left = 0
+    let fraction = startPosition.current.offset ?? 0
+    let left = (startPosition.current.horizontal ?? 0) * layout.width
     const previous = committedLayout.current
     if (previous) {
       const top = lastViewport.current.top
@@ -133,13 +137,18 @@ export function PdfPages({
     }
     const resize = new ResizeObserver(update)
     resize.observe(host)
-    host.addEventListener('scroll', update, { passive: true })
+    const onScroll = () => {
+      update()
+      const measured = committedLayout.current
+      if (measured) onPositionChange(readPosition(measured, host))
+    }
+    host.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       cancelAnimationFrame(frame)
       resize.disconnect()
-      host.removeEventListener('scroll', update)
+      host.removeEventListener('scroll', onScroll)
     }
-  }, [hostRef])
+  }, [hostRef, onPositionChange])
 
   useImperativeHandle(navigationRef, () => ({
     jump(page: number) {
@@ -147,8 +156,13 @@ export function PdfPages({
       if (!host) return
       host.scrollTop = layout.offsets[page - 1]
       refreshViewport()
+      onPositionChange(readPosition(layout, host))
     },
-  }), [hostRef, layout, refreshViewport])
+    getPosition() {
+      const host = hostRef.current
+      return host && committedLayout.current ? readPosition(committedLayout.current, host) : undefined
+    },
+  }), [hostRef, layout, refreshViewport, onPositionChange])
 
   const top = committedLayout.current ? viewport.top : layout.offsets[startingIndex.current]
   const first = pageAt(layout, top)
@@ -206,6 +220,17 @@ function pageAt(layout: Layout, position: number) {
 
 function readViewport(host: HTMLDivElement): Viewport {
   return { left: Math.max(0, host.scrollLeft), top: Math.max(0, host.scrollTop), height: host.clientHeight }
+}
+
+function readPosition(layout: Layout, host: HTMLDivElement): PdfReadingPosition {
+  const top = Math.max(0, host.scrollTop)
+  const index = pageAt(layout, top + 1.5)
+  const roundFraction = (value: number) => Math.round(Math.min(1, Math.max(0, value)) * 10_000) / 10_000
+  return {
+    page: index + 1,
+    offset: roundFraction((top - layout.offsets[index]) / layout.heights[index]),
+    horizontal: roundFraction(host.scrollLeft / layout.width),
+  }
 }
 
 function sameViewport(first: Viewport, second: Viewport) {

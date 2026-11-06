@@ -5,7 +5,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api'
 import { openPdf, pdfErrorMessage } from '../pdf/document'
 import { uncoveredHighlightRects } from '../pdf/highlights'
 import { pdfAccessDenied } from '../pdf/range'
-import type { PdfAnnotation, PdfSource } from '../pdf/model'
+import type { PdfAnnotation, PdfReadingPosition, PdfSource } from '../pdf/model'
 import { PdfPages } from '../pdf/PdfPages'
 import type { PdfPageNavigation } from '../pdf/PdfPages'
 import type { PdfSelection } from '../pdf/PageCanvas'
@@ -16,10 +16,10 @@ export type { PdfAnnotation, PdfSource } from '../pdf/model'
 
 export interface PdfReaderProps {
   source: PdfSource
-  initialPage?: number
+  initialPosition?: PdfReadingPosition
   initialQuery?: string
   annotations: PdfAnnotation[]
-  onPageChange: (page: number) => void
+  onPositionChange: (position: PdfReadingPosition) => void
   onAnnotationAdd: (annotation: PdfAnnotation) => void
   onAnnotationRemove: (id: string) => void
   onDownload: () => Promise<void>
@@ -36,7 +36,7 @@ type AnnotationChange = { annotations: PdfAnnotation[]; added: boolean }
 const annotationNames = { bookmark: 'marcador', note: 'nota', highlight: 'subrayado' }
 
 export default function PdfReader({
-  source, initialPage = 1, initialQuery = '', annotations, onPageChange,
+  source, initialPosition = { page: 1 }, initialQuery = '', annotations, onPositionChange,
   onAnnotationAdd, onAnnotationRemove, onDownload, onReconnect, originalUrl,
 }: PdfReaderProps) {
   const [pdf, setPdf] = useState<PDFDocumentProxy>()
@@ -45,12 +45,12 @@ export default function PdfReader({
   const [downloadError, setDownloadError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [streamFallback, setStreamFallback] = useState(false)
-  const [page, setPage] = useState(initialPage)
-  const [pageInput, setPageInput] = useState(String(initialPage))
-  const [zoom, setZoom] = useState(1)
+  const [page, setPage] = useState(initialPosition.page)
+  const [pageInput, setPageInput] = useState(String(initialPosition.page))
+  const [zoom, setZoom] = useState(initialPosition.zoom ?? 1)
   const [width, setWidth] = useState(0)
   const [selection, setSelection] = useState<PdfSelection>()
-  const [readingMode, setReadingMode] = useState(false)
+  const [readingMode, setReadingMode] = useState(initialPosition.readingMode ?? false)
   const [highlightHelp, setHighlightHelp] = useState(false)
   const [editFeedback, setEditFeedback] = useState('')
   const [history, setHistory] = useState<{ undo: AnnotationChange[]; redo: AnnotationChange[] }>({ undo: [], redo: [] })
@@ -74,13 +74,59 @@ export default function PdfReader({
   const scroll = useRef<HTMLDivElement>(null)
   const pointerStart = useRef<{ x: number; y: number; type: string; at: number } | null>(null)
   const navigation = useRef<PdfPageNavigation>(null)
-  const activePage = useRef(initialPage)
-  const reportPage = useRef(onPageChange)
-  useLayoutEffect(() => { reportPage.current = onPageChange }, [onPageChange])
+  const activePage = useRef(initialPosition.page)
+  const position = useRef(initialPosition)
+  const savedPosition = useRef(initialPosition)
+  const saveTimer = useRef<number | undefined>(undefined)
+  const settings = useRef({ zoom, readingMode })
+  const reportPosition = useRef(onPositionChange)
+  useLayoutEffect(() => { reportPosition.current = onPositionChange }, [onPositionChange])
   const url = source.url
   const data = source.data
   const byteLength = source.byteLength
   const headerKey = JSON.stringify(source.httpHeaders ?? {})
+
+  const savePosition = useCallback(() => {
+    clearTimeout(saveTimer.current)
+    const next = position.current
+    if (samePosition(next, savedPosition.current)) return
+    savedPosition.current = next
+    reportPosition.current(next)
+  }, [])
+
+  const moveTo = useCallback((anchor: PdfReadingPosition) => {
+    const next = { ...anchor, ...settings.current }
+    if (samePosition(next, position.current)) return
+    position.current = next
+    clearTimeout(saveTimer.current)
+    saveTimer.current = window.setTimeout(savePosition, 200)
+  }, [savePosition])
+
+  useLayoutEffect(() => {
+    const previous = settings.current
+    settings.current = { zoom, readingMode }
+    if (previous.zoom !== zoom || previous.readingMode !== readingMode) {
+      moveTo(navigation.current?.getPosition() ?? position.current)
+    }
+  }, [moveTo, readingMode, zoom])
+
+  useLayoutEffect(() => {
+    const flush = () => {
+      const anchor = navigation.current?.getPosition()
+      if (anchor) moveTo(anchor)
+      savePosition()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVisibility)
+      flush()
+    }
+  }, [moveTo, savePosition])
 
   useEffect(() => {
     let active = true
@@ -202,7 +248,6 @@ export default function PdfReader({
     if (activePage.current === number) return
     activePage.current = number
     setPage(number)
-    reportPage.current(number)
   }, [])
 
   function jump(number: number) {
@@ -545,9 +590,9 @@ export default function PdfReader({
         {onReconnect && <button type="button" onClick={onReconnect}>Reconectar Drive</button>}
       </div>}
       {!error && !pdf && <p className="pdf-reader-state" role="status">Abriendo PDF…</p>}
-      {pdf && width > 0 && <PdfPages pdf={pdf} initialPage={page} width={width} zoom={zoom}
+      {pdf && width > 0 && <PdfPages pdf={pdf} initialPosition={position.current} width={width} zoom={zoom}
         query={activeQuery} annotations={annotations} selectedPage={selection?.page} hostRef={scroll} navigationRef={navigation}
-        onPageChange={changePage} onSelection={setSelection} />}
+        onPageChange={changePage} onPositionChange={moveTo} onSelection={setSelection} />}
     </div>
     {editFeedback && <div className="pdf-annotation-feedback">
       <span role="status">{editFeedback}</span>
@@ -559,4 +604,11 @@ export default function PdfReader({
       }}><X size={17} /></button>
     </div>}
   </section>
+}
+
+function samePosition(first: PdfReadingPosition, second: PdfReadingPosition) {
+  return first.page === second.page && Math.abs((first.offset ?? 0) - (second.offset ?? 0)) < 0.001
+    && Math.abs((first.horizontal ?? 0) - (second.horizontal ?? 0)) < 0.001
+    && (first.zoom ?? 1) === (second.zoom ?? 1)
+    && !!first.readingMode === !!second.readingMode
 }

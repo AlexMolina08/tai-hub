@@ -1,10 +1,9 @@
-import type { PdfAnnotation } from '../pdf/model';
+import { isPdfReadingPosition, type PdfAnnotation, type PdfReadingPosition } from '../pdf/model';
 import { DriveError } from './client';
 import type { DriveLibrary } from './library';
 
-export type StudyPosition = {
+export type StudyPosition = PdfReadingPosition & {
   version: string;
-  page: number;
   openedAt: string;
 };
 
@@ -75,8 +74,8 @@ function isStudyOperation(value: unknown): value is StudyOperation {
   if (typeof id !== 'string' || !Number.isSafeInteger(clock) || !patch || typeof patch.resourceId !== 'string') return false;
   if (patch.kind === 'favorite') return typeof patch.value === 'boolean';
   if (patch.kind === 'position') {
-    return Boolean(patch.value && typeof patch.value.version === 'string' && Number.isSafeInteger(patch.value.page)
-      && patch.value.page >= 0 && typeof patch.value.openedAt === 'string');
+    return isPdfReadingPosition(patch.value) && typeof patch.value.version === 'string'
+      && typeof patch.value.openedAt === 'string';
   }
   if (patch.kind === 'annotation') {
     return typeof patch.version === 'string' && typeof patch.annotationId === 'string'

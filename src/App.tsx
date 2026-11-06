@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { GoogleSession, DriveLibrary, StudySync, type Resource, type ResourceDraft, type StudyPatch, type StudyState } from './drive'
 import type { PdfIndex, PdfSearchHit } from './pdf/index'
+import { isPdfReadingPosition, type PdfReadingPosition } from './pdf/model'
 import { matchRanges } from './pdf/text'
 import { blocks, syllabusSource, topicById } from './syllabus'
 import { bytes, driveLink, fold, kinds, locationName } from './resources'
@@ -30,11 +31,11 @@ const getEmptyStudy = () => emptyStudy
 
 type View = { page: 'home' | 'general' | 'favorites' | 'recent' | 'review' | 'search' | 'inap' }
   | { page: 'block' | 'topic'; id: string }
-  | { page: 'resource'; id: string; initialPage?: number; query?: string }
+  | { page: 'resource'; id: string; version?: string; initialPage?: number; position?: PdfReadingPosition; query?: string }
 type ListLocation = { view: View; scroll: number }
 type ReaderLocation = {
   accountId: string; view: Extract<View, { page: 'resource' }>; version: string;
-  back: ListLocation; filters: typeof emptyFilters; query: string;
+  back: ListLocation; filters: typeof emptyFilters; query: string; updatedAt?: string;
 }
 type Modal = { kind: 'add' | 'import' | 'settings'; resource?: never }
   | { kind: 'edit' | 'manage' | 'trash' | 'versions'; resource: Resource }
@@ -49,9 +50,21 @@ const mainNav = [
 const tones = ['cobalt', 'slate', 'violet', 'ochre']
 const tailabsUrl = 'https://tailabs.es/app/exams/tailabs'
 const emptyFilters = { kind: '', source: '', tag: '' }
+const readerLocationKey = 'tai-hub.reader-location.v1'
 const searchBatch = 80
 const initialSearchLimits = { resources: searchBatch, pages: searchBatch }
 const emptyPageResults = { query: '', documents: '', hits: [] as PdfSearchHit[] }
+
+function readReaderLocation(returnTo?: string): ReaderLocation | undefined {
+  try {
+    const saved = JSON.parse(returnTo ?? sessionStorage.getItem(readerLocationKey) ?? 'null') as ReaderLocation | null
+    if (saved?.view?.page === 'resource' && typeof saved.view.id === 'string'
+      && typeof saved.accountId === 'string' && typeof saved.version === 'string'
+      && saved.back?.view && Number.isFinite(saved.back.scroll) && saved.filters && typeof saved.query === 'string'
+      && (saved.updatedAt === undefined || (typeof saved.updatedAt === 'string' && Number.isFinite(Date.parse(saved.updatedAt))))
+      && (saved.view.position === undefined || isPdfReadingPosition(saved.view.position))) return saved
+  } catch { /* Browser storage unavailable or the saved reader location is invalid. */ }
+}
 
 export default function App() {
   const official = useOfficialInap()
@@ -88,10 +101,13 @@ export default function App() {
   const nextScroll = useRef(0)
   const verifiedAccount = useRef<string | undefined>(undefined)
   const pendingRefresh = useRef<AbortSignal | undefined>(undefined)
+  const restoreReader = useRef(true)
+  const readerLocation = useRef<ReaderLocation | undefined>(undefined)
   const study = useSyncExternalStore(sync ? fn => sync.subscribe(fn) : subscribeIdle, sync ? () => sync.snapshot() : getEmptyStudy)
   const studyStatus = useSyncExternalStore(sync?.subscribe ?? subscribeIdle, sync?.status ?? (() => 'idle'))
   const accountId = account?.id
   const current = view.page === 'resource' ? resources.find(item => item.id === view.id) : undefined
+  const currentVersion = current?.version
   const readingPdf = current?.kind === 'pdf'
   const searching = view.page === 'search'
   const cleanQuery = query.trim()
@@ -100,6 +116,25 @@ export default function App() {
     if (clientId && !session.resume()) void session.prepare()
   }, [])
   useLayoutEffect(() => { window.scrollTo({ top: nextScroll.current, behavior: 'instant' }) }, [view])
+  const rememberReader = useCallback((location?: ReaderLocation) => {
+    readerLocation.current = location
+    try {
+      if (location) sessionStorage.setItem(readerLocationKey, JSON.stringify(location))
+      else sessionStorage.removeItem(readerLocationKey)
+    } catch { /* StudySync still preserves the reading position. */ }
+  }, [])
+  useLayoutEffect(() => {
+    if (!accountId) return
+    if (view.page !== 'resource' || currentVersion === undefined) {
+      rememberReader()
+      return
+    }
+    const previous = readerLocation.current
+    const sameReader = previous?.accountId === accountId && previous.view.id === view.id && previous.version === currentVersion
+    const position = sameReader ? previous.view.position : view.version === currentVersion ? view.position : undefined
+    rememberReader({ accountId, version: currentVersion, view: { ...view, position }, back, filters, query,
+      updatedAt: sameReader ? previous.updatedAt : undefined })
+  }, [accountId, back, currentVersion, filters, query, rememberReader, view])
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     try { localStorage.setItem('tai-theme', theme) } catch { /* Browser storage unavailable. */ }
@@ -132,6 +167,7 @@ export default function App() {
     setError(failure instanceof Error ? failure.message : 'La operación no se pudo completar.')
   }
   function navigate(next: View, restoreScroll?: number) {
+    restoreReader.current = false
     nextScroll.current = restoreScroll ?? 0
     if (restoreScroll === undefined && next.page !== 'resource') setFilters(emptyFilters)
     setView(next)
@@ -144,17 +180,12 @@ export default function App() {
   }
   function connect(sameTab?: boolean) {
     setError('')
-    const returnTo: ReaderLocation | undefined = accountId && current && view.page === 'resource' ? {
-      accountId, version: current.version, back, filters, query,
-      view: {
-        ...view, initialPage: study.positions[current.id]?.version === current.version
-          ? study.positions[current.id].page : view.initialPage,
-      },
-    } : undefined
+    const returnTo = readerLocation.current
     void session.connect({ sameTab, returnTo: returnTo && JSON.stringify(returnTo) }).catch(showError)
   }
   const clearPrivate = useCallback(() => {
     verifiedAccount.current = undefined
+    rememberReader()
     setVerifiedAccess(undefined)
     setAccount(undefined)
     setResources([])
@@ -169,7 +200,7 @@ export default function App() {
     setDrawer(false)
     setError('')
     setNotice('')
-  }, [])
+  }, [rememberReader])
   const refresh = useCallback(async () => {
     let signal: AbortSignal | undefined
     try { signal = session.access().signal }
@@ -189,16 +220,19 @@ export default function App() {
       setVerifiedAccess(signal)
       setError('')
       const returnTo = session.takeReturnLocation()
-      if (returnTo) {
-        const saved = JSON.parse(returnTo) as ReaderLocation
-        const resource = items.find(item => item.id === saved.view?.id)
-        if (saved.accountId === user.id && saved.view?.page === 'resource' && resource) {
-          setView(saved.version === resource.version ? saved.view : { page: 'resource', id: resource.id })
+      if (returnTo || restoreReader.current) {
+        const saved = readReaderLocation() ?? (returnTo ? readReaderLocation(returnTo) : undefined)
+        const resource = saved && items.find(item => item.id === saved.view.id)
+        if (saved?.accountId === user.id && resource) {
+          if (saved.version === resource.version) rememberReader(saved)
+          setView(saved.version === resource.version ? { ...saved.view, version: resource.version }
+            : { page: 'resource', id: resource.id, version: resource.version })
           setBack(saved.back)
           setFilters(saved.filters)
           setQuery(saved.query)
         }
       }
+      restoreReader.current = false
     } catch (failure) {
       if (!signal.aborted) showError(failure)
     } finally {
@@ -207,7 +241,7 @@ export default function App() {
         setWorking(false)
       }
     }
-  }, [clearPrivate])
+  }, [clearPrivate, rememberReader])
   useEffect(() => {
     if (auth.status === 'connected' && network && !connected) void refresh()
     if (auth.status === 'ready' && verifiedAccount.current) clearPrivate()
@@ -240,8 +274,21 @@ export default function App() {
   }, [accountId])
   useEffect(() => {
     if (!sync || !connected) return
-    void sync.refresh().catch(() => {})
-  }, [sync, connected])
+    let active = true
+    void sync.refresh().then(() => {
+      // An immediate reload can interrupt IndexedDB. Recover the tab's reading point
+      // after checking Drive so an older tab cannot overwrite newer reading progress.
+      const saved = readerLocation.current
+      if (!active || !saved?.updatedAt || saved.accountId !== accountId || !saved.view.position) return
+      const previous = sync.snapshot().positions[saved.view.id]
+      if (!previous || previous.openedAt < saved.updatedAt) {
+        return sync.apply({ kind: 'position', resourceId: saved.view.id, value: {
+          ...saved.view.position, version: saved.version, openedAt: saved.updatedAt,
+        } })
+      }
+    }).catch(() => {})
+    return () => { active = false }
+  }, [sync, connected, accountId])
 
   const pdfVersions = JSON.stringify(resources.filter(resource => resource.kind === 'pdf')
     .map(({ id, version }) => ({ id, version })).sort((a, b) => a.id.localeCompare(b.id)))
@@ -292,16 +339,25 @@ export default function App() {
   function apply(patch: StudyPatch) {
     void sync?.apply(patch).catch(showError)
   }
-  function markOpened(resource: Resource, page: number) {
-    apply({ kind: 'position', resourceId: resource.id, value: { version: resource.version, page, openedAt: new Date().toISOString() } })
+  function markOpened(resource: Resource, position: PdfReadingPosition, openedAt = new Date().toISOString()) {
+    apply({ kind: 'position', resourceId: resource.id, value: { ...position, version: resource.version, openedAt } })
+  }
+  function recordReadingPosition(resource: Resource, position: PdfReadingPosition) {
+    const saved = readerLocation.current
+    const updatedAt = new Date().toISOString()
+    if (saved?.accountId === accountId && saved?.view.id === resource.id && saved.version === resource.version) {
+      rememberReader({ ...saved, view: { ...saved.view, position }, updatedAt })
+    }
+    markOpened(resource, position, updatedAt)
   }
   function open(resource: Resource, page?: number, highlight?: string) {
     search.current?.blur()
     const previous = study.positions[resource.id]
-    const lastPage = previous?.version === resource.version ? previous.page : 1
+    const position: PdfReadingPosition = page !== undefined ? { page }
+      : previous?.version === resource.version && isPdfReadingPosition(previous) ? previous : { page: 1 }
     if (view.page !== 'resource') setBack({ view, scroll: window.scrollY })
-    markOpened(resource, resource.kind === 'pdf' ? page ?? lastPage : 0)
-    navigate({ page: 'resource', id: resource.id, initialPage: page ?? lastPage, query: highlight })
+    markOpened(resource, resource.kind === 'pdf' ? position : { page: 0 })
+    navigate({ page: 'resource', id: resource.id, version: resource.version, position, query: highlight })
   }
   function favorite(resource: Resource) {
     apply({ kind: 'favorite', resourceId: resource.id, value: !study.favorites[resource.id] })
@@ -509,10 +565,10 @@ export default function App() {
             <p>{[current.source, kinds[current.kind].label, bytes(current.size)].filter(Boolean).join(' · ')}</p>
           </div>
           {current.kind === 'pdf'
-            ? <PdfPane key={`${current.id}:${current.version}`} resource={current} access={verifiedAccess} initialPage={study.positions[current.id]?.version === current.version
-                ? study.positions[current.id].page : view.initialPage} query={view.query}
+            ? <PdfPane key={`${current.id}:${current.version}`} resource={current} access={verifiedAccess}
+              position={view.version === current.version ? view.position ?? { page: view.initialPage ?? 1 } : undefined} query={view.query}
               annotations={study.annotations[current.id]?.[current.version] ?? []}
-              onPage={page => markOpened(current, page)}
+              onPosition={position => recordReadingPosition(current, position)}
               apply={apply} reconnect={() => connect()} download={() => library.download(current)} />
             : <ResourceView key={`${current.id}:${current.version}`} resource={current} library={library} connected={connected} download={() => download(current)} />}
         </> : <>
@@ -693,10 +749,11 @@ function SearchSnippet({ hit }: { hit: PdfSearchHit }) {
 }
 
 type ReaderAnnotations = StudyState['annotations'][string][string]
-function PdfPane({ resource, access, initialPage, query, annotations, onPage, apply, download, reconnect }: {
-  resource: Resource; initialPage?: number; query?: string; annotations: ReaderAnnotations
+function PdfPane({ resource, access, position, query, annotations, onPosition, apply, download, reconnect }: {
+  resource: Resource; position?: PdfReadingPosition; query?: string; annotations: ReaderAnnotations
   access?: AbortSignal
-  onPage: (page: number) => void; apply: (patch: StudyPatch) => void; download: () => Promise<void>; reconnect: () => void
+  onPosition: (position: PdfReadingPosition) => void; apply: (patch: StudyPatch) => void
+  download: () => Promise<void>; reconnect: () => void
 }) {
   const source = useMemo(() => {
     if (!access || access.aborted) return undefined
@@ -706,8 +763,8 @@ function PdfPane({ resource, access, initialPage, query, annotations, onPage, ap
   if (!source) return <div className="empty"><CloudOff size={24} /><p>Renueva el acceso a Drive para abrir el PDF.</p>
     <a className="button" href={library.viewUrl(resource)} target="_blank" rel="noreferrer"><ExternalLink size={17} /> Abrir en Drive</a></div>
   return <Suspense fallback={<div className="empty" role="status">Abriendo lector…</div>}>
-    <PdfReader source={source} initialPage={initialPage} initialQuery={query} annotations={annotations} originalUrl={driveLink(resource)}
-      onPageChange={onPage} onDownload={download} onReconnect={reconnect}
+    <PdfReader source={source} initialPosition={position} initialQuery={query} annotations={annotations} originalUrl={driveLink(resource)}
+      onPositionChange={onPosition} onDownload={download} onReconnect={reconnect}
       onAnnotationAdd={value => apply({ kind: 'annotation', resourceId: resource.id, version: resource.version, annotationId: value.id, value })}
       onAnnotationRemove={annotationId => apply({ kind: 'annotation', resourceId: resource.id, version: resource.version, annotationId, value: null })} />
   </Suspense>

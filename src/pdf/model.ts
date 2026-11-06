@@ -14,6 +14,23 @@ export interface PdfAnnotation {
   createdAt: string
 }
 
+export interface PdfReadingPosition {
+  page: number
+  offset?: number
+  horizontal?: number
+  zoom?: number
+  readingMode?: boolean
+}
+
+export function isPdfReadingPosition(value: unknown): value is PdfReadingPosition {
+  if (!value || typeof value !== 'object') return false
+  const { page, offset, horizontal, zoom, readingMode } = value as PdfReadingPosition
+  const fraction = (n?: number) => n === undefined || (Number.isFinite(n) && n >= 0 && n <= 1)
+  return Number.isSafeInteger(page) && page >= 0 && fraction(offset) && fraction(horizontal)
+    && (zoom === undefined || (Number.isFinite(zoom) && zoom >= 0.75 && zoom <= 3))
+    && (readingMode === undefined || typeof readingMode === 'boolean')
+}
+
 export type PdfSource = {
   url: string
   httpHeaders?: Record<string, string>
