@@ -17,6 +17,7 @@ GitHub Actions verifica los cambios de `main`. GitHub Pages publica la rama `gh-
 ## Uso
 
 - **Añadir recurso** admite archivos, enlaces y notas. Desde el recurso puedes editar su tema, fuente y etiquetas, sustituir un PDF o enviar el archivo a la papelera de Drive.
+- **Apuntes ampliados** aparece en cada tema cuando su biblioteca contiene un HTML con esa etiqueta. El lector carga el documento privado desde Drive, conserva texto, tablas e imágenes, permite navegar por su índice y copiar código. El contenido se aísla del resto de la aplicación; se eliminan scripts del archivo y se bloquean recursos externos. La investigación y la preparación de estos documentos se realizan fuera de la aplicación.
 - **Buscar** consulta metadatos y texto por página. Los PDF sin texto extraíble se identifican como tales. La extracción se realiza al conectar Drive y cuando cambia el contenido del PDF. El índice local se guarda en IndexedDB y se sincroniza con Drive.
 - El lector guarda la posición dentro de la página, el zoom y el modo lectura. Al recargar una pestaña con un PDF abierto, recupera ese punto. **Abrir último recurso** y **Recientes** recuperan la última posición sincronizada con Drive.
 - Toca un subrayado para quitarlo. Pulsa **Deshacer** o usa **⌘Z** en Mac y **Ctrl+Z** en otros teclados. También puedes deshacer o rehacer desde el panel de notas mientras el PDF siga abierto.

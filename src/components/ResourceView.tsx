@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Download, ExternalLink, FileQuestion } from 'lucide-react'
 import type { DriveLibrary, Resource } from '../drive'
 import { safeLink } from '../resources'
+import { HtmlReader } from './HtmlReader'
 
 const images = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif', 'image/bmp'])
 const audio = new Set(['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav'])
@@ -38,6 +39,8 @@ export function ResourceView({ resource, library, connected, download }: {
     return () => { live = false; if (url) URL.revokeObjectURL(url) }
   }, [resource.id, resource.version, previewMime, image, sound, text, library, connected, attempt])
 
+  if (resource.kind === 'html' || resource.mimeType === 'text/html') return <HtmlReader
+    resource={resource} library={library} connected={connected} download={download} />
   if (resource.kind === 'note') return <div className="note-preview">{resource.note}</div>
   if (resource.kind === 'link') {
     const link = safeLink(resource.url)

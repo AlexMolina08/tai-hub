@@ -68,6 +68,14 @@ export class DriveFixture {
     this.resource(id, title, 'pdf', fixturePdf(pages, size))
   }
 
+  addHtml(id: string, title: string, content: string, topicId = 'b3t1') {
+    this.resource(id, title, 'html', Buffer.from(content))
+    const file = this.files.get(id)!
+    file.name = `${id}.html`
+    file.mimeType = 'text/html'
+    file.description = JSON.stringify({ schema: 1, title, kind: 'html', source: 'Personal', topicId, tags: ['Apuntes ampliados'] })
+  }
+
   seedPdfAnnotations(resourceId: string, annotations: PdfAnnotation[]) {
     const version = this.files.get(resourceId)?.md5Checksum
     if (!version) throw new Error('Missing PDF fixture')
@@ -155,7 +163,7 @@ export class DriveFixture {
     return [...this.files.values()].filter(file => file.appProperties.taiHub === 'pdfIndex')
   }
 
-  private resource(id: string, title: string, kind: 'pdf' | 'video', body: Buffer, size = body.byteLength) {
+  private resource(id: string, title: string, kind: 'pdf' | 'video' | 'html', body: Buffer, size = body.byteLength) {
     const name = kind === 'pdf' ? `${id}.pdf` : `${id}.mp4`
     const file: MockFile = {
       id, name, size: String(size), mimeType: kind === 'pdf' ? 'application/pdf' : 'video/mp4',

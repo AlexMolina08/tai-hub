@@ -413,6 +413,7 @@ export default function App() {
     : view.page === 'review' ? resources.filter(item => item.needsReview)
     : topic ? resources.filter(item => item.topicId === topic.id || item.relatedTopicIds?.includes(topic.id))
     : []
+  const expandedNotes = topic ? visible.find(item => item.kind === 'html' && item.tags.includes('Apuntes ampliados')) : undefined
   const reviewCount = resources.filter(item => item.needsReview).length
   const indexStats = useMemo(() => {
     const result = { indexed: 0, 'no-text': 0, pending: 0, error: 0, partial: 0 }
@@ -579,6 +580,7 @@ export default function App() {
               view.page === 'general' ? 'Convocatorias, exámenes y materiales transversales.' :
               view.page === 'favorites' ? 'Recursos que has guardado para volver a consultar.' :
               view.page === 'review' ? 'Aquí aparecen los recursos marcados como pendientes de revisión. Abre la ficha para comprobar su ubicación y quitar la marca.' : 'Últimos recursos que has consultado.')}</p></div>
+          {expandedNotes && <div className="actions"><button className="button primary" onClick={() => open(expandedNotes)}>Apuntes ampliados</button></div>}
           {view.page === 'block' && block ? <div className="topic-list">
             {block.topics.map(item => <button key={item.id} onClick={() => openLocation(item.id)}>
               <span className={`block-number ${tones[blocks.indexOf(block)]}`}>{item.number}</span>

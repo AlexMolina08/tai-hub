@@ -1,4 +1,4 @@
-export type ResourceKind = 'pdf' | 'video' | 'image' | 'audio' | 'text' | 'link' | 'note' | 'other';
+export type ResourceKind = 'pdf' | 'html' | 'video' | 'image' | 'audio' | 'text' | 'link' | 'note' | 'other';
 
 export type ResourceDraft = {
   title: string;

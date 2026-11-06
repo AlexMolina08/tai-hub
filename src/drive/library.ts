@@ -12,7 +12,7 @@ const ROOT = appProperty(APP_KEY, 'library');
 const INDEXES = appProperty(APP_KEY, 'pdfIndex');
 const STUDY = appProperty(APP_KEY, 'study');
 const JSON_MIME = 'application/json';
-const KINDS = new Set<ResourceKind>(['pdf', 'video', 'image', 'audio', 'text', 'link', 'note', 'other']);
+const KINDS = new Set<ResourceKind>(['pdf', 'html', 'video', 'image', 'audio', 'text', 'link', 'note', 'other']);
 
 const KNOWN_MIME: Record<string, string> = {
   pdf: 'application/pdf',
@@ -37,6 +37,8 @@ const KNOWN_MIME: Record<string, string> = {
   heic: 'image/heic',
   txt: 'text/plain',
   md: 'text/markdown',
+  html: 'text/html',
+  htm: 'text/html',
   csv: 'text/csv',
 };
 
@@ -50,7 +52,8 @@ export function fileMime(file: FileFormat): string {
 export function resourceKind(file: FileFormat): ResourceKind {
   const mime = fileMime(file);
   if (mime === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf';
-  if (mime === 'image/svg+xml' || mime === 'text/html') return 'other';
+  if (mime === 'text/html' || /\.html?$/i.test(file.name)) return 'html';
+  if (mime === 'image/svg+xml') return 'other';
   for (const kind of ['video', 'image', 'audio', 'text'] as const) {
     if (mime.startsWith(kind + '/')) return kind;
   }

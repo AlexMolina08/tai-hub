@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 const privateFile = /\.(pdf|zip|mp4|mov|mkv|m4v|webm|avi|mp3|aac|flac|epub|docx?|xlsx?|pptx?|csv)$/i
 const privateDirectory = /(^|\/)(private|imports|originales|test-results)(\/|$)/i
+const privateDocument = /<meta\b[^>]*\bname=["']tai-hub-private["']/i
 const sensitiveValue = /(?:GOCSPX-[a-zA-Z0-9_-]{15,}|ya29\.[a-zA-Z0-9_-]{20,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----)/
 const tracked = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean)
 
@@ -17,6 +18,7 @@ async function checkFile(path) {
   checkName(path)
   if (/\.(tsx?|m?js|html|css|json|ya?ml|txt|md|svg|map)$/i.test(path)) {
     const content = await readFile(path, 'utf8')
+    if (privateDocument.test(content)) throw new Error('Documento personal de estudio en el árbol público.')
     if (sensitiveValue.test(content)) throw new Error('Posible credencial en el árbol público.')
   }
 }

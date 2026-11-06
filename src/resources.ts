@@ -4,6 +4,7 @@ import type { Resource } from './drive'
 
 export const kinds = {
   pdf: { label: 'PDF', icon: FileText },
+  html: { label: 'Apuntes HTML', icon: NotebookPen },
   video: { label: 'Vídeo', icon: Film },
   image: { label: 'Imagen', icon: FileImage },
   audio: { label: 'Audio', icon: AudioLines },
