@@ -1,4 +1,5 @@
 import type { PdfAnnotation } from '../pdf/model';
+import { DriveError } from './client';
 import type { DriveLibrary } from './library';
 
 export type StudyPosition = {
@@ -216,18 +217,23 @@ export class StudySync {
 
       const files = await this.#library.listStudyFiles(this.#accountId);
       if (this.#closed) return;
-      const remote: Record<string, StudyReplica> = Object.create(null);
+      // Keep the last verified progress when a replica is missing or unreadable.
+      const remote: Record<string, StudyReplica> = Object.assign(Object.create(null), this.#replicas);
+      let unreadableReplica = false;
       for (let offset = 0; offset < files.length; offset += 6) {
         await Promise.all(files.slice(offset, offset + 6).map(async file => {
           const version = file.headRevisionId ?? file.modifiedTime ?? '';
-          const cachedReplica = this.#replicas[file.id];
-          if (cachedReplica?.version === version) {
-            remote[file.id] = cachedReplica;
-            return;
-          }
-          const payload = await this.#library.readStudyFile<{ schema: number; operations: unknown }>(this.#accountId, file.id);
-          if (payload?.schema === 1 && Array.isArray(payload.operations)) {
-            remote[file.id] = { version, operations: payload.operations.filter(isStudyOperation) };
+          if (remote[file.id]?.version === version) return;
+          try {
+            const payload = await this.#library.readStudyFile<{ schema: number; operations: unknown }>(this.#accountId, file.id);
+            if (payload?.schema === 1 && Array.isArray(payload.operations) && payload.operations.every(isStudyOperation)) {
+              remote[file.id] = { version, operations: payload.operations };
+            } else {
+              unreadableReplica = true;
+            }
+          } catch (error) {
+            if (!(error instanceof SyntaxError) && !(error instanceof DriveError && error.status === 404)) throw error;
+            unreadableReplica = true;
           }
         }));
         if (this.#closed) return;
@@ -250,8 +256,11 @@ export class StudySync {
       } else {
         await localStudy(this.#accountId, state => ({ ...state, replicas: this.#replicas })).catch(() => {});
       }
-      this.#publish(this.#pending.length ? 'pending' : 'idle');
       if (this.#pending.length) this.#schedule();
+      if (unreadableReplica) {
+        throw new Error('No se pudieron leer todas las copias del progreso. Se conservan las últimas copias válidas.');
+      }
+      this.#publish(this.#pending.length ? 'pending' : 'idle');
     } catch (error) {
       this.#publish('error');
       throw error;

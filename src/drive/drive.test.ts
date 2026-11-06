@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DRIVE_SCOPE, GoogleSession, SessionExpiredError } from './auth';
-import { DriveClient } from './client';
+import { DriveClient, DriveError } from './client';
 import { DriveLibrary } from './library';
 import { mergeStudyOperations, studyState, StudySync } from './study';
 import type { StudyOperation } from './study';
@@ -361,6 +361,14 @@ describe('Drive media', () => {
   });
 });
 
+function studyBrowser() {
+  const browser = Object.assign(new EventTarget(), { setTimeout, setInterval });
+  const document = Object.assign(new EventTarget(), { visibilityState: 'visible' });
+  vi.stubGlobal('window', browser);
+  vi.stubGlobal('document', document);
+  vi.stubGlobal('indexedDB', undefined);
+}
+
 describe('Study synchronization', () => {
   it('merges concurrent entities and keeps deleted annotations deleted', () => {
     const resourceId = 'sample';
@@ -388,11 +396,7 @@ describe('Study synchronization', () => {
   });
 
   it('syncs two sessions and retries local edits after a connection failure', async () => {
-    const browser = Object.assign(new EventTarget(), { setTimeout, setInterval });
-    const document = Object.assign(new EventTarget(), { visibilityState: 'visible' });
-    vi.stubGlobal('window', browser);
-    vi.stubGlobal('document', document);
-    vi.stubGlobal('indexedDB', undefined);
+    studyBrowser();
     const remote = new Map<string, { payload: unknown; version: string }>();
     let offline = false;
     const drive = {
@@ -434,4 +438,100 @@ describe('Study synchronization', () => {
       iphone.close();
     }
   });
+
+  it('retains a known annotation deletion when Drive omits its replica', async () => {
+    studyBrowser();
+    const note = { id: 'note', kind: 'note' as const, page: 1, text: 'Nota sintética', createdAt: '2026-11-05T09:00:00Z' };
+    const patch = { kind: 'annotation' as const, resourceId: 'pdf', version: 'revision', annotationId: note.id };
+    const operations: Record<string, StudyOperation[]> = {
+      original: [{ id: 'add', clock: 1, patch: { ...patch, value: note } }],
+      removed: [{ id: 'remove', clock: 2, patch: { ...patch, value: null } }],
+    };
+    let ids = ['original'];
+    const drive = {
+      async listStudyFiles() { return ids.map(id => ({ id, headRevisionId: 'initial' })); },
+      async readStudyFile(_account: string, id: string) { return { schema: 1, operations: operations[id] }; },
+    } as unknown as DriveLibrary;
+    const session = new StudySync(drive, 'account-id');
+    try {
+      await session.refresh();
+      expect(session.snapshot().annotations.pdf?.revision).toEqual([note]);
+      ids = ['original', 'removed'];
+      await session.refresh();
+      expect(session.snapshot().annotations.pdf?.revision).toBeUndefined();
+      ids = ['original'];
+      await session.refresh();
+      expect(session.snapshot().annotations.pdf?.revision).toBeUndefined();
+    } finally {
+      session.close();
+    }
+  });
+
+  it.each([
+    ['unreadable JSON', new SyntaxError('invalid JSON')],
+    ['missing content', new DriveError('not found', 404)],
+    ['invalid schema', undefined],
+  ])('flushes other changes despite %s while retaining a known deletion', async (_reason, readError) => {
+    studyBrowser();
+    const note = { id: 'note', kind: 'note' as const, page: 1, text: 'Nota sintética', createdAt: '2026-11-05T09:00:00Z' };
+    const patch = { kind: 'annotation' as const, resourceId: 'pdf', version: 'revision', annotationId: note.id };
+    const write = vi.fn(async (_account: string, id: string) => ({ id, headRevisionId: 'saved' }));
+    let broken = false;
+    const drive = {
+      async listStudyFiles() {
+        return [{ id: 'original', headRevisionId: 'initial' }, { id: 'removed', headRevisionId: broken ? 'broken' : 'initial' }];
+      },
+      async readStudyFile(_account: string, id: string) {
+        if (id === 'removed' && broken) {
+          if (readError) throw readError;
+          return { schema: 2, operations: [] };
+        }
+        return { schema: 1, operations: [{ id, clock: id === 'original' ? 1 : 2, patch: { ...patch, value: id === 'original' ? note : null } }] };
+      },
+      writeStudyFile: write,
+    } as unknown as DriveLibrary;
+    const session = new StudySync(drive, 'account-id');
+    try {
+      await session.refresh();
+      expect(session.snapshot().annotations.pdf?.revision).toBeUndefined();
+      broken = true;
+      const restore = { ...patch, resourceId: 'another-pdf', value: note };
+      await session.apply(restore);
+      await expect(session.refresh()).rejects.toThrow('copias del progreso');
+      expect(write).toHaveBeenCalledWith('account-id', expect.any(String), {
+        schema: 1, operations: [expect.objectContaining({ patch: restore })],
+      }, undefined);
+      expect(session.snapshot().annotations.pdf?.revision).toBeUndefined();
+      expect(session.snapshot().annotations['another-pdf']?.revision).toEqual([note]);
+      expect(session.status()).toBe('error');
+      broken = false;
+      await session.refresh();
+      expect(write).toHaveBeenCalledTimes(1);
+      expect(session.status()).toBe('idle');
+    } finally {
+      session.close();
+    }
+  });
+
+  it.each([new SessionExpiredError(), new DriveError('connection lost', 0)])(
+    'preserves an authentication or transport error when reading progress: %s',
+    async readError => {
+      studyBrowser();
+      const write = vi.fn();
+      const drive = {
+        async listStudyFiles() { return [{ id: 'remote', headRevisionId: 'first' }]; },
+        async readStudyFile() { throw readError; },
+        writeStudyFile: write,
+      } as unknown as DriveLibrary;
+      const session = new StudySync(drive, 'account-id');
+      try {
+        await session.apply({ kind: 'favorite', resourceId: 'pdf', value: true });
+        await expect(session.refresh()).rejects.toBe(readError);
+        expect(session.snapshot().favorites.pdf).toBe(true);
+        expect(write).not.toHaveBeenCalled();
+      } finally {
+        session.close();
+      }
+    },
+  );
 });
