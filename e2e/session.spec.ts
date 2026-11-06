@@ -51,6 +51,35 @@ test('shows a single reconnect action when Google requires interaction', async (
   await expect(library(page)).toBeVisible()
 })
 
+test('searches the saved PDF index on return without loading the PDF extractor', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture()
+  await drive.install(context, browserName === 'webkit')
+  await page.goto(home)
+  await connectButton(page).click()
+  await expect(library(page)).toBeVisible()
+  async function expectReadyIndex() {
+    await page.getByRole('button', { name: 'Cuenta y ajustes' }).click()
+    const settings = page.getByRole('dialog')
+    await expect(settings.getByText('2 PDF indexados · 1 sin texto extraíble · 0 pendientes')).toBeVisible()
+    await expect(settings.getByText('El índice se guarda en este navegador y en tu Drive.')).toBeVisible()
+    await settings.getByRole('button', { name: 'Cerrar', exact: true }).click()
+  }
+  await expectReadyIndex()
+  await expect.poll(() => drive.savedIndexes()).toHaveLength(3)
+
+  let extractorRequests = 0
+  await page.route('**/assets/document-*.js', route => {
+    extractorRequests++
+    return route.abort()
+  })
+  await page.reload()
+  await expect(library(page)).toBeVisible()
+  await expectReadyIndex()
+  await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('observacion objetivo')
+  await expect(page.getByRole('button', { name: /Documento de prueba General · Página 2/ })).toBeVisible()
+  expect(extractorRequests).toBe(0)
+})
+
 test('leaves an open PDF readable after expiry and returns to the same page after reconnecting', async ({ page, context, browserName }) => {
   const drive = new DriveFixture()
   await drive.install(context, browserName === 'webkit')

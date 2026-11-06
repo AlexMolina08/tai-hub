@@ -102,7 +102,6 @@ export class PdfIndex {
   private async run(documents: IndexDocument[], { source, onProgress, signal }: SyncOptions) {
     signal?.throwIfAborted()
     await this.hydrate(documents)
-    const { extractPdf, pdfErrorMessage } = await import('./document')
     for (const [offset, document] of documents.entries()) {
       signal?.throwIfAborted()
       if (this.failure) throw this.failure
@@ -112,10 +111,8 @@ export class PdfIndex {
       try {
         update('cache')
         const local = await this.request({ type: 'get', account: this.accountId, document })
-        if (local && (local.uploaded || !this.remote)) {
-          update('done')
-          continue
-        }
+        // Hydration already loaded these pages into the worker's search index.
+        if (local === 'uploaded' || (local && !this.remote)) continue
         let entry: IndexCacheEntry | undefined = local ?? undefined
         if (!entry && this.remote) {
           update('drive')
@@ -126,6 +123,8 @@ export class PdfIndex {
           }
         }
         if (!entry) {
+          signal?.throwIfAborted()
+          const { extractPdf } = await import('./document')
           signal?.throwIfAborted()
           update('extract')
           const value = await extractPdf(await source(document.id), signal, (page, pages) => {
@@ -150,6 +149,7 @@ export class PdfIndex {
         if (this.failure) throw this.failure
         signal?.throwIfAborted()
         this.statuses.set(this.key(document), 'error')
+        const { pdfErrorMessage } = await import('./document')
         update('error', { error: pdfErrorMessage(error) })
       }
     }

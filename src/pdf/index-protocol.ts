@@ -9,7 +9,7 @@ export type IndexRequest =
 
 export type IndexResult<T extends IndexRequest> =
   T['type'] extends 'prepare' ? Array<{ document: IndexDocument; status: IndexStatus }> :
-  T['type'] extends 'get' ? IndexCacheEntry | null :
+  T['type'] extends 'get' ? IndexCacheEntry | 'uploaded' | null :
   T['type'] extends 'put' ? boolean :
   T['type'] extends 'search' ? PdfSearchHit[] : never
 

@@ -46,9 +46,12 @@ async function handle(request: IndexRequest) {
       }
       return statuses
     }
-    case 'get':
-      return cache.get(request.document.id)?.version === request.document.version
-        ? cache.get(request.document.id) : await readCache(request.account, request.document)
+    case 'get': {
+      const cached = cache.get(request.document.id)
+      const entry = cached?.version === request.document.version
+        ? cached : await readCache(request.account, request.document)
+      return entry?.uploaded ? 'uploaded' : entry
+    }
     case 'put': {
       if (active.get(request.document.id) !== request.document.version) return false
       if (cache.get(request.document.id)?.version !== request.entry.version) search.put(request.document, request.entry.value)
