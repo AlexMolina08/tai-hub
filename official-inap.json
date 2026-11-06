@@ -1,0 +1,2815 @@
+{
+  "schema": 1,
+  "calls": [
+    {
+      "year": 2025,
+      "label": "Ingreso libre",
+      "url": "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2025",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 18 de diciembre de 2025",
+              "url": "https://boe.es/boe/dias/2025/12/22/pdfs/BOE-A-2025-26262.pdf"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2025-12/TAILI.pdf"
+            },
+            {
+              "label": "Inscripción",
+              "url": "https://ips.redsara.es/IPSC/secure/buscarConvocatorias"
+            },
+            {
+              "label": "Guía para la inscripción",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2025-12/Gu%C3%ADa%20para%20la%20inscripci%C3%B3n.pdf"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2025-12/Cronograma%20CPS%202025_2025_12_19_1.pdf"
+            },
+            {
+              "label": "Nota de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/CronogramaCPS2025_2026_07_27_6BS0SFBILS_154AB89SD658.pdf"
+            },
+            {
+              "label": "Nota de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/Cronograma%20CPS%202025_2026_09_29.pdf"
+            }
+          ]
+        },
+        {
+          "title": "Listado de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 12 de marzo de 2026 del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/BOE-A-2026-6249.pdf"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-L-ADM-PROVIS-SA-ALF_GEN_JLA7CDALD5_154AB89SD658.pdf"
+            },
+            {
+              "label": "Cupo Norma común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-L-ADM-PROVIS-SA-ALF_CRD_V2_VPZ67JBA74_154AB89SD658.pdf"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-L-EXC-PROVIS-BOE_4X5O6XCN86_154AB89SD658.pdf"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-L-Causasdeexclusin_CTFYTWC0B7_154AB89SD658.pdf"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/INSTRUCCIONES%20SUBSANACION%20CPS%20OEP%202025.pdf"
+            },
+            {
+              "label": "Nota informativa sobre adaptación de tiempo y medios",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/Nota%20informativa%20sobre%20adaptaci%C3%B3n%20tiempo%20y%20medios_0.pdf"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/NOTA%20INFORMATIVA%20DE%20LA%20COMISI%C3%93N%20PERMANENTE%20DE%20SELECCI%C3%93N%20RELATIVA%20A%20LA%20PARTICIPACI%C3%93N%20DE%20PERSONAS%20CON%20INCAPACIDAD%20PERMANENTE%20EN%20EL%20TURNO%20DE%20PERSONAS%20CON%20DISCAPACIDAD.pdf"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/report_RESOLUCION%20DEFINITIVA%20ADMITIDOS%20Y%20EXCLUIDOS%20CPS%20%281%29.pdf"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_GEN.pdf"
+            },
+            {
+              "label": "Cupo Norma Común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_CRD.PDF"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L-EXC.PDF"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/report_Resoluci%C3%B3n%20CPS%20Instrucciones%20desarrollo%20ejercicio.pdf"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/report_Resoluci%C3%B3n_adaptaciones_CPS_2025.pdf"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/report_CORRECCION%20RESOLUCION%20DEFINITIVA%20CPS%20OEP2025.pdf"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/A%20CORU%C3%91A_TAI-LI_GEN-CRD.pdf"
+            },
+            {
+              "label": "Álava/Araba",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/ALAVA%20Aulario%20TAI_L.pdf"
+            },
+            {
+              "label": "Alicante/Alacant",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/C1_TAI_L_ALICANTE.pdf"
+            },
+            {
+              "label": "Asturias",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/ASTURIAS%2003-TAI%20LI.pdf"
+            },
+            {
+              "label": "Badajoz",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_libre_Badajoz.pdf"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI-L_GE_Y_CRD_ALFABETICO%20BCN.pdf"
+            },
+            {
+              "label": "Plano acceso UPF",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/UPF_EDIFICIOS_SABADO_23-05-26_INAP.pdf"
+            },
+            {
+              "label": "Cádiz",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/CUERPO%20DE%20TECNICOS%20DE%20INFORMATICA%20DE%20LA%20ADMINISTRACION%20DEL%20ESTADO%20TURNO%20LIBRE%20GENERAL%20Y%20CRD.pdf"
+            },
+            {
+              "label": "Cantabria",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI%20L%20CANTABRIA.pdf"
+            },
+            {
+              "label": "Ceuta",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_CEUTA.pdf"
+            },
+            {
+              "label": "Córdoba",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/CORDOBA_TAI_L.pdf"
+            },
+            {
+              "label": "Granada",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Listado%20TAI%20Libre_Granada.pdf"
+            },
+            {
+              "label": "Illes Balears",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_BALEARES.pdf"
+            },
+            {
+              "label": "La Rioja",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_LA%20RIOJA.pdf"
+            },
+            {
+              "label": "Las Palmas GC",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/LAS%20PALMAS_T%C3%89CNICO%20AUX.%20INFORM%C3%81TICA%20%20INGRESO%20LIBRE.pdf"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAILI%20Distribuci%C3%B3n%20aulas%20Madrid_0.pdf"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Listado%20T%C3%A9cnicos%20Auxiliares%20Inform%C3%A1tica%20AGE%2C%20libre%2C%20Gral%20y%20CRD_0.pdf"
+            },
+            {
+              "label": "Plano acceso",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/M%C3%81LAGA%20SEDES%20EXAMEN.pdf"
+            },
+            {
+              "label": "Melilla",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAIS_ACCESO%20LIBRE_MELILLA.pdf"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_GE_MURCIA.pdf"
+            },
+            {
+              "label": "Norma común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_CRD_MURCIA.pdf"
+            },
+            {
+              "label": "Navarra",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/NAVARRA_TAI%20LIBRE.pdf"
+            },
+            {
+              "label": "Pontevedra",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Pontevedra%20TAI-L.pdf"
+            },
+            {
+              "label": "Santa Cruz de Tenerife",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_S.C.%20DE%20TENERIFE.pdf"
+            },
+            {
+              "label": "Sevilla",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/SEVILLA_TAI_L.pdf"
+            },
+            {
+              "label": "Toledo",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_L_GE_CRD_0.pdf"
+            },
+            {
+              "label": "Plano acceso IES María Pacheco",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TOLEDO_IES%20MARIA%20PACHECO_PLANOS%20ACCESOS.pdf"
+            },
+            {
+              "label": "Valencia/València",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Valencia_DISTR_OPO_TAI-L.pdf"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/UCL2_VALLADOLID_TAI-LI-GE-CRD.pdf"
+            },
+            {
+              "label": "Zaragoza",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Distribucion_TAI-L_ZARAGOZA.pdf"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI%20LI%202025.pdf"
+            },
+            {
+              "label": "Nota informativa de acceso a Facultades.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/nota%20informativa%20transporte%202026.pdf"
+            },
+            {
+              "label": "Cuestionario modelo A.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Cuestionario%20TAI-L-ModeloA.pdf"
+            },
+            {
+              "label": "Cuestionario modelo B",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Cuestionario%20TAI-L-ModeloB.pdf"
+            },
+            {
+              "label": "Plantilla provisional modelo A. (actualizada)",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Plantilla%20respuestas%20TAI-L-A_act.pdf"
+            },
+            {
+              "label": "Plantilla provisional modelo B. (actualizada)",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Plantilla%20respuestas%20TAI-L-B_act.pdf"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/2026_05_25_Nota%20informativa%20alegaciones_0.pdf"
+            },
+            {
+              "label": "Nota informativa sobre la ampliación del plazo de presentación de alegaciones a las plantillas correctoras provisionales",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/2026_05_28_Ampliacinplazoalegaciones_AI278HMNLD_154AB89SD658.pdf"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-06/2026_05_23_NotainformativaPRESENTADOS_SM6O28WIR9_154AB89SD658.pdf"
+            },
+            {
+              "label": "Resolución por la que se publica el llamamiento extraordinario",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/report_RESOLUCION%20CONJUNTA%20EXTRAORDINARIOS.pdf"
+            },
+            {
+              "label": "Resolución por la que se corrigen errores detectados en la resolución por la que se publica el llamamiento extraordinario",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/RESOLUCION_EXTRAORDINARIO_correccion_TB9KJELZO1_154AB89SD658.pdf"
+            },
+            {
+              "label": "Distribución de opositores convocados al llamamiento extraordinario (corrección errores)",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/ASIGNACION_AULAS_correccion_MFMGQVRGSE_154AB89SD658.pdf"
+            },
+            {
+              "label": "Cuestionario: llamamiento extraordinario",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/cuestionario_TAI-L_ext_9QVS9NM8ER_154AB89SD658.pdf"
+            },
+            {
+              "label": "Plantilla provisional de respuestas: llamamiento extraordinario",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/Plantilla_respuestas_prov_TAI-L_ext_2Y6UHS3CF2_154AB89SD658.pdf"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/2026_07_27_Notainformativaalegaciones_AM20WK2QMS_154AB89SD658.pdf"
+            },
+            {
+              "label": "Resolución por la que se aprueba la relación de opositores que han superado el ejercicio único",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/report_ResolucinsuperanejercicionicoTAI-L_5FN3RJTE9F_154AB89SD658.pdf"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/1-TAI-L-DM-SUP_GEN_L7J51UGQT0_154AB89SD658.pdf"
+            },
+            {
+              "label": "Cupo Norma Común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/1-TAI-L-DM-SUP_CRD_QD3UDYL412_154AB89SD658.pdf"
+            },
+            {
+              "label": "Plantilla definitiva modelo A",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/PlantillarespuestasDefTAI-L-A_G4WN8WY1M8_154AB89SD658.pdf"
+            },
+            {
+              "label": "Plantilla definitiva modelo B",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/PlantillarespuestasDefTAI-L-B_35JU78W1JX_154AB89SD658.pdf"
+            },
+            {
+              "label": "Plantilla definitiva llamamiento extraordinario",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/PlantillarespuestasDefTAI-L-EXTRAORDINARIO_1E0IFRJ3RK_154AB89SD658.pdf"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/PUNTUACIONESMINIMASEJERUNICOTAIL_9YTKWZN8GR_154AB89SD658.pdf"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-10/NotainformativaFrmulaTransformada_K7X8VISMG4_154AB89SD658.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "56b73119fe2dc022710802edc83a9e4ee51820fae27c8f5f6fda4be7cda754ed"
+    },
+    {
+      "year": 2025,
+      "label": "Promoción interna",
+      "url": "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-promocion-interna-convocatoria-2025",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 18 de diciembre de 2025",
+              "url": "https://boe.es/boe/dias/2025/12/22/pdfs/BOE-A-2025-26262.pdf"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2025-12/TAIPI.pdf"
+            },
+            {
+              "label": "Inscripción",
+              "url": "https://ips.redsara.es/IPSC/secure/buscarConvocatorias"
+            },
+            {
+              "label": "Guía para la inscripción",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2025-12/Gu%C3%ADa%20para%20la%20inscripci%C3%B3n.pdf"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2025-12/Cronograma%20CPS%202025_2025_12_19_1.pdf"
+            },
+            {
+              "label": "Nota de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-07/CronogramaCPS2025_2026_07_27_6BS0SFBILS_154AB89SD658.pdf"
+            },
+            {
+              "label": "Nota de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/Cronograma%20CPS%202025_2026_09_29.pdf"
+            }
+          ]
+        },
+        {
+          "title": "Listado de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 12 de marzo de 2026 del Instituto Nacional de Administración Pública,",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/BOE-A-2026-6249.pdf"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-P-ADM-PROVIS-SA-ALF_GEN_39U7YOL8YG_154AB89SD658.pdf"
+            },
+            {
+              "label": "Cupo Norma común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-P-ADM-PROVIS-SA-ALF_CRD_V2_54HXHBHIRR_154AB89SD658.pdf"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-P-EXC-PROVIS-BOE_BMUPRU15VY_154AB89SD658.pdf"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/TAI-P-Causasdeexclusin_45O5H22T4B_154AB89SD658.pdf"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/INSTRUCCIONES%20SUBSANACION%20CPS%20OEP%202025.pdf"
+            },
+            {
+              "label": "Nota informativa sobre adaptación de tiempo y medios",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/Nota%20informativa%20sobre%20adaptaci%C3%B3n%20tiempo%20y%20medios_0.pdf"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-03/NOTA%20INFORMATIVA%20DE%20LA%20COMISI%C3%93N%20PERMANENTE%20DE%20SELECCI%C3%93N%20RELATIVA%20A%20LA%20PARTICIPACI%C3%93N%20DE%20PERSONAS%20CON%20INCAPACIDAD%20PERMANENTE%20EN%20EL%20TURNO%20DE%20PERSONAS%20CON%20DISCAPACIDAD.pdf"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/report_RESOLUCION%20DEFINITIVA%20ADMITIDOS%20Y%20EXCLUIDOS%20CPS%20%281%29.pdf"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_P_GEN.PDF"
+            },
+            {
+              "label": "Cupo Norma Común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_P_CRD.PDF"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI-P_EXC.PDF"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/report_Resoluci%C3%B3n%20CPS%20Instrucciones%20desarrollo%20ejercicio.pdf"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/report_Resoluci%C3%B3n_adaptaciones_CPS_2025.pdf"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/A%20CORU%C3%91A_TAI-PI_GEN-CRD.pdf"
+            },
+            {
+              "label": "Alicante/Alacant",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/C1_TAI_P_ALICANTE.pdf"
+            },
+            {
+              "label": "Asturias",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/ASTURIAS%2004-TAI%20P.pdf"
+            },
+            {
+              "label": "Badajoz",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_P_Badajoz.pdf"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI-P_GE%20BCN.pdf"
+            },
+            {
+              "label": "Plano acceso UPF",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/UPF_EDIFICIOS_SABADO_23-05-26_INAP.pdf"
+            },
+            {
+              "label": "Cádiz",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/CUERPO%20DE%20TECNICOS%20DE%20INFORMATICA%20DE%20LA%20ADMINISTRACION%20DEL%20ESTADO%20PROMOCION%20INTERNA%20GENERAL%20Y%20CRD.pdf"
+            },
+            {
+              "label": "Cantabria",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI%20PI%20CANTABRIA.pdf"
+            },
+            {
+              "label": "Ceuta",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_P_CEUTA.pdf"
+            },
+            {
+              "label": "Córdoba",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/CORDOBA_TAI_P.pdf"
+            },
+            {
+              "label": "Granada",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Listado%20TAI%20Promoci%C3%B3n_Granada.pdf"
+            },
+            {
+              "label": "Illes Balears",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/BALEARES_TAI-PINT.pdf"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAIPI%20Distribuci%C3%B3n%20aulas%20Madrid.pdf"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Listado%20T%C3%A9cnicos%20Auxiliares%20Inform%C3%A1tica%20AGE%20Promoci%C3%B3n%20Interna%2C%20Gral%20y%20CRD_0.pdf"
+            },
+            {
+              "label": "Plano acceso",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/M%C3%81LAGA%20SEDES%20EXAMEN.pdf"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI_P_PG_MURCIA.pdf"
+            },
+            {
+              "label": "Pontevedra",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Pontevedra%20TAI-P.pdf"
+            },
+            {
+              "label": "Sevilla",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/SEVILLA_TAI_P.pdf"
+            },
+            {
+              "label": "Valencia/València",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Valencia_DISTR_OPO_TAI-P.pdf"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/UCL2_VALLADOLID_TAI-PI-GE-CRD.pdf"
+            },
+            {
+              "label": "Zaragoza",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Distribucion_TAI-P_ZARAGOZA.pdf"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/TAI%20PI%202025.pdf"
+            },
+            {
+              "label": "Nota informativa de acceso a Facultades.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/nota%20informativa%20transporte%202026.pdf"
+            },
+            {
+              "label": "Cuestionario modelo A.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Cuestionario%20TAI-P-ModeloA.pdf"
+            },
+            {
+              "label": "Cuestionario modelo B.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Cuestionario%20TAI-P-ModeloB.pdf"
+            },
+            {
+              "label": "Plantilla provisional modelo A.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Plantilla%20respuestas%20TAI-P-ModeloA.pdf"
+            },
+            {
+              "label": "Plantilla provisional modelo B.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/Plantilla%20respuestas%20TAI-P-ModeloB.pdf"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales.",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/2026_05_25_Nota%20informativa%20alegaciones_0.pdf"
+            },
+            {
+              "label": "Nota informativa sobre la ampliación del plazo de presentación de alegaciones a las plantillas correctoras provisionales",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-05/2026_05_28_Ampliacinplazoalegaciones_AI278HMNLD_154AB89SD658.pdf"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-06/2026_05_23_NotainformativaPRESENTADOS_SM6O28WIR9_154AB89SD658.pdf"
+            },
+            {
+              "label": "Resolución por la que se aprueba la relación de opositores que han superado el ejercicio único",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/report_Resoluci%C3%B3n%20superan%20ejercicio%20%C3%BAnico%20TAI-P.pdf"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/1-TAI-P-DM-SUP_GEN.pdf"
+            },
+            {
+              "label": "Cupo Norma Común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/1-TAI-P-DM-SUP_CRD.pdf"
+            },
+            {
+              "label": "Plantilla definitiva modelo A",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/Plantilla%20respuestas%20Def%20TAI-P-A.pdf"
+            },
+            {
+              "label": "Plantilla definitiva modelo B",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/Plantilla%20respuestas%20Def%20TAI-P-B.pdf"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/PUNTUACIONES%20MINIMAS%20EJER%20UNICO%20TAI%20PI.pdf"
+            },
+            {
+              "label": "Nota informativa:",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/Nota%20informativa%20F%C3%B3rmula%20Transformada%20%282%29.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "f2368b6dfd6c09c760b6e84486ea08db1dc90834e3268355ae6574a5a9f78a1f"
+    },
+    {
+      "year": 2024,
+      "label": "Ingreso libre",
+      "url": "https://sede.inap.gob.es/es/tail-2024",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 09 de julio de 2024",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/BOE-A-2024-14098_ZBX2PGBG1O_154AB89SD658.pdf/098ce3ef-0a55-426d-81ec-b58b5a85093b"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/2364148/BASESCOMUNES_49VAIONTIT_154AB89SD658.pdf/17a1ecdb-6c10-d507-9b6c-8f8d83a66441"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/BASESESPECIFICASTAI-LI_51H3QBEZK9_154AB89SD658.pdf/2e2ff648-af5a-712d-6720-91d1777dfdc3"
+            },
+            {
+              "label": "Inscripciones",
+              "url": "https://ips.redsara.es/IPSC/secure/buscarConvocatorias"
+            },
+            {
+              "label": "Resolución de 22 de julio de 2024",
+              "url": "https://boe.es/boe/dias/2024/07/27/pdfs/BOE-A-2024-15528.pdf"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/documents/10136/1679185/CronogramaCPS2024_T13E4PK5FH_154AB89SD658.pdf/96509c65-e5f8-dca3-5d9c-a6bbadbab12b"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Cronograma+CPS+2024+MODIFICACION.pdf/67b14925-6548-6ca1-d047-e432cf27b63f"
+            }
+          ]
+        },
+        {
+          "title": "Listado de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 15 de octubre de 2024 del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/BOE-A-2024-21333-CPSprovisional_TR4CLS6R77_154AB89SD658.pdf/2bda9169-2f37-776c-f890-2966e353d59c"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-L-ADM-PROVIS-SA-ALF_GE_51IACSG8V8_154AB89SD658.pdf/6652b5f8-823b-1b27-b95a-f5e0f0d2f396"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-L-ADM-PROVIS-SA-ALF_CRD_U3RD4PHX47_154AB89SD658.pdf/5a829583-00cb-e927-2694-7905ec081d50"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-L-EXC-PROVIS-BOE_QSKZDBS0CU_154AB89SD658.pdf/82d794f3-1edf-f221-26be-41885c2cd720"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/05-Causas+de+exclusi%C3%B3n+ANEXO+V+TAI-L.pdf/5ddd044f-010c-affa-54f7-0c9181982934"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/INSTRUCCIONESSUBSANACIONCPSOEP2024_03FXQAN6GZ_154AB89SD658.pdf/c31684c9-43b1-fd5b-a819-48213dca44c4"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/documents/59312/2364380/NotainformativaRENTAparasubsanacin_IU47QGGQEA_154AB89SD658.pdf/607f2af0-5ecd-e566-b981-440f74ff4342"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2364380/report_RESOLUCION+DEFINITIVA+ADMITIDOS+Y+EXCLUIDOS+CPS.pdf/f7b0f2e8-edd8-225d-f83d-42f8ac71f120"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI_L_GE_3Z36RPWPAL_154AB89SD658.pdf/2ca6c9e9-c33f-6ab6-6f6c-bcc0be41d38c"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI_L_CRD_D9N7K5R7CK_154AB89SD658.pdf/f285fc46-06e9-94f7-7107-ef1b79246cdb"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-L-EXC_QTYFOFV86P_154AB89SD658.pdf/d5963c5c-0ecb-6fb4-8abe-c9bf305507f8"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/CORRECCIONRESOLUCIONDEFINITIVACPS_KGHUILOHV7_154AB89SD658.pdf/2446f7c9-1500-a9ac-3fbe-2a8e51e0d9d5"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único.",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-L_9WZE0RA3JP_154AB89SD658.pdf/b7977468-4899-21bd-335a-fd7c195bbebb"
+            },
+            {
+              "label": "Alicante",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-LI+Alicante_UCL1_TAI-L_WNOYSM1KYC_154AB89SD658.pdf/35f94b50-427d-d28a-408b-ff66304e445d"
+            },
+            {
+              "label": "Asturias",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAIL_VNUWAG6XCT_154AB89SD658.pdf/414f9f7f-1f3a-607a-f2e1-a22f8e598358"
+            },
+            {
+              "label": "Badajoz",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-LBADAJOZ2024_QN8XTERH7D_154AB89SD658.pdf/54e496a6-3bca-6de7-2cca-6bdabe05e5ce"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/BARCELONA_TAI_L_GE_CRD_OZW4J2EPPZ_154AB89SD658.pdf/2afa17da-7e49-1685-7755-a5963fa977e3"
+            },
+            {
+              "label": "Plano acceso 1",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/BARCELONA_FACULTADDERECHOUBEDIFICIOSSABADO_AIW4LNPS2C_154AB89SD658.pdf/faa3370f-d44a-c1cc-414b-a521e602d268"
+            },
+            {
+              "label": "Plano acceso 2",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/BARCELONA_FACULTADECONOMIAYEMPUBEDIFICIOS690Y696_32QPEIW1ZI_154AB89SD658.pdf/58540f96-3bc5-1562-b315-0c2a80372058"
+            },
+            {
+              "label": "Cádiz",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-LI+CADIZ_CUERPODETECNICOSDEINFORMATICADELAADMINISTRACIONDELESTADOTURNOLIBREGENERALYCRD_K306MEXRBT_154AB89SD658.pdf/3ae908b7-5cdf-de8c-2072-8013c5c47ed3"
+            },
+            {
+              "label": "Córdoba",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/CRDOBATAI-L_KF7II6BE6L_154AB89SD658.pdf/d721aa9f-b17d-68da-cadb-45e535d97171"
+            },
+            {
+              "label": "Granada",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/LISTADOINAPTAIL-GEYCRD-GRANADA_I0M29Z1KQ5_154AB89SD658.pdf/b33388a2-c80f-9939-9970-cd8ff0ab7a3f"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-LI-GEN+LLESBALEARS_F1AIPBDN3E_154AB89SD658.pdf/6c0f4b81-7624-94fa-de20-a50d8402ee24"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-LI-CRD+ILLESBALEARS_82D24B78HA_154AB89SD658.pdf/fd8a18be-9f69-db3b-9d1b-b184de465274"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/LasPalmasGC_TAI_Libre_General_IL0FRL1KZD_154AB89SD658.pdf/f6282df3-a082-c315-9cae-e43eff846198"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/LasPalmasGC_TAI_Libre_CRD_V6P53V8KNP_154AB89SD658.pdf/a3034b7e-ecce-4d1b-e267-a2b3b2033231"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/MADRID_listado_PUBLICAR_WEB_COMPLETO_1_TAI-LI_J8H60E2VPW_154AB89SD658.pdf/d2bdc601-a890-bf8f-db61-5ad9ffe4c673"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/MALAGA_TAILIBREPARAPUBLICAR_2A7VN3VGBN_154AB89SD658.pdf/2d1e73c7-d65a-9a8e-defd-bf0edeb9c717"
+            },
+            {
+              "label": "Nota informativa:",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/1.+MALAGA_NOTAINFORMATIVA_NFW33IMNBN_154AB89SD658.pdf/5c96a301-a00f-2353-1a0d-01ecdcca0055"
+            },
+            {
+              "label": "Plano acceso Málaga.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/2.+PLANOSEDES+malaga_JX139FM0N9_154AB89SD658.pdf/3141c5aa-e346-cd03-c6ca-38b5dbb5303d"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI_L_GE_MURCIA_AMOM2CAEP2_154AB89SD658.pdf/a23deacd-7c8d-8c28-d25e-6a96b9593e75"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI_L_CRD_MURCIA_5FINPGPZXG_154AB89SD658.pdf/aad5d3e7-ce4f-64d6-25d8-731dc69a9ea6"
+            },
+            {
+              "label": "Pontevedra",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/PontevedraTAI-L_LYWVU813L6_154AB89SD658.pdf/5c24e700-15e6-c88f-3e06-f52191b81e74"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/LISTADOINAPTAILIBREGENERAL_62NLWGJV1A_154AB89SD658.pdf/0dee6ede-76d5-74fd-ce22-767d69fa6fa2"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/LISTADOINAPTAILIBRECRD_9F39VPUKIZ_154AB89SD658.pdf/98c24f0e-efc7-40de-e14f-c1aa88ff3f7e"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI_L_SCDETENERIFE_HM35WC3JFP_154AB89SD658.pdf/52d6088b-22d2-bd0c-930f-c7d94929bee6"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI_L_CRD_SCDETENERIFE_0VNF1T3467_154AB89SD658.pdf/3ea0ed80-cc5b-1421-8dd5-7083e8104aaa"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TOLEDOTAILIBRE_PAD39UESCW_154AB89SD658.pdf/a0e99230-8e5d-5735-37a7-1f7919638c94"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TOLEDOTAILIBRECRD_UPZ2R65AN1_154AB89SD658.pdf/a0b6a6cc-83ac-9963-2088-b23136248817"
+            },
+            {
+              "label": "Plano acceso.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/PLANOAULASIESELGRECOToledo_3GX8XH9ODN_154AB89SD658.pdf/743f8d52-554f-ed0b-3946-482602728070"
+            },
+            {
+              "label": "Valencia",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Valencia_DISTR_OPO_TAI-L_0BAC6TVIUW_154AB89SD658.pdf/ca3b0fc4-5aa5-5ce2-8c25-b8204cf2a436"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/VALLADOLID_UCL2_TAI-LI-GE-CRD_TLA9M7AVFV_154AB89SD658.pdf/ce6d971a-e3ee-ee81-85f7-0d50bf45df0f"
+            },
+            {
+              "label": "Vitoria",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/ALAVA_AularioTAI_L_OHPTJUS4Q4_154AB89SD658.pdf/3c628207-3c6e-535f-ec7c-c0557c6f779d"
+            },
+            {
+              "label": "Zaragoza",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Distribucin_TAI-LI_ZARAGOZAdocx_QRDZTBE2N2_154AB89SD658.pdf/8dc52798-55f9-7ace-dd35-133733e7aded"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI+LI+2024.pdf/22c390b8-b596-7cee-ec54-9635b085ad94"
+            },
+            {
+              "label": "Nota informativa de acceso a Facultades",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/nota+informativa+transporte+2024.pdf/be8c6b27-6f41-e857-f3b4-81e8a4f174df"
+            },
+            {
+              "label": "Nota informativa: direcciones sedes examen.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364306/PROCESOSSELECTIVOS003_VZJ12LA6RX_154AB89SD658.pdf/c8c470ae-1101-e731-6221-7910cc1f97bc"
+            },
+            {
+              "label": "Cuestionario modelo A.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Cuestionario_TAI_LI_2024_A_M8L91VL1CL_154AB89SD658.pdf/43a5d8c6-3f74-dbca-8452-c00408125ff8"
+            },
+            {
+              "label": "Cuestionario modelo B.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Cuestionario_TAI_LI_2024_B_DNFGFEK45R_154AB89SD658.pdf/f20d579c-5036-0013-4a90-ba7e24fc9bf9"
+            },
+            {
+              "label": "Plantilla provisional modelo A.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Plantilla_Respuestas_PROV_TAI_LI_2024_A_6J5MFQ8OEN_154AB89SD658.pdf/542eb6eb-73d7-4612-06bf-ce245160fd5c"
+            },
+            {
+              "label": "Plantilla provisional modelo B.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Plantilla_Respuestas_PROV_TAI_LI_2024_B_JQE95HBC1R_154AB89SD658.pdf/e20b81c2-21ef-fac1-32f1-e93e838ab792"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364152/Notainformativaalegaciones_AOL0DI676V_154AB89SD658.pdf/310bd285-4424-9276-ca2d-9ca31be0a477"
+            },
+            {
+              "label": "Datos provisionales de presentados.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/NOTA+CPS+DICIEMBRE+DATOS+PRESENTADOS.pdf/9f8d788b-11f6-5364-3347-f6ea77427b63"
+            },
+            {
+              "label": "Resolución por la que se aprueba la relación de opositores que han superado el ejercicio único",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/report_ResolucinsuperanprimerejercicioTAI-L_RMPXOCCWKJ_154AB89SD658.pdf/bfaceea9-06cb-1185-ba9f-b7dae5d1bc09"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/1-TAI-L-DM-SUP_GEN_59DH1ZAVDM_154AB89SD658.pdf/5dcc61e5-31fa-1842-118b-2859706c343e"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/1-TAI-L-DM-SUP_CRD_5VTIO1GM43_154AB89SD658.pdf/2a16a143-ffea-c5d8-a513-0f88705c3eff"
+            },
+            {
+              "label": "Plantilla definitiva modelo A",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Plantilla+Cuestionario_TAI_LI_2024_A_definitiva.pdf/927bb295-6199-2a83-20e1-8cf970aa177e"
+            },
+            {
+              "label": "Plantilla definitiva modelo B",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Plantilla+Cuestionario_TAI_LI_2024_B_definitiva.pdf/e70c5182-f819-860d-3b9c-2a67b4547146"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/PUNTUACIONESMINIMASEJERUNICOTAIL_NNSVF2SJLX_154AB89SD658.pdf/22610a7c-da9d-a9bb-95fc-a480ebf8ac18"
+            },
+            {
+              "label": "Nota informativa:",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Nota+informativa+F%C3%B3rmula+Transformada.pdf/b9f32071-ea95-e408-85cf-7af976608917"
+            }
+          ]
+        },
+        {
+          "title": "Final del proceso",
+          "links": [
+            {
+              "label": "Resolución de 11 de junio de 2025, de la Secretaría de Estado de Función Pública",
+              "url": "https://www.boe.es/boe/dias/2025/06/17/pdfs/BOE-A-2025-12232.pdf"
+            },
+            {
+              "label": ",",
+              "url": "https://www.boe.es/boe/dias/2025/05/19/pdfs/BOE-A-2025-9840.pdf"
+            },
+            {
+              "label": "Resolución de 4 de diciembre de 2025, de la Secretaría de Estado de Función Pública",
+              "url": "https://boe.es/boe/dias/2025/12/10/pdfs/BOE-A-2025-25155.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "db05f123e1de0fb32c779507ab0953a8df9ec885bca29b5d19e587861b51f032"
+    },
+    {
+      "year": 2024,
+      "label": "Promoción interna",
+      "url": "https://sede.inap.gob.es/es/taipi-2024",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 9 de julio de 2024",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/BOE-A-2024-14098_ZBX2PGBG1O_154AB89SD658.pdf/4500e660-e7d6-f5d8-cdf0-e7a3cb9866fa"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/BASESCOMUNES_49VAIONTIT_154AB89SD658.pdf/d9415e61-99d3-a1b5-57f3-f3d124663501"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/BASESESPECIFICASTAI-PI_CTXA1R5ABV_154AB89SD658.pdf/3bb08fff-3fd6-f29a-7ac5-b0065aa20221"
+            },
+            {
+              "label": "Inscripciones",
+              "url": "https://ips.redsara.es/IPSC/secure/buscarConvocatorias"
+            },
+            {
+              "label": "Resolución de 22 de julio de 2024",
+              "url": "https://boe.es/boe/dias/2024/07/27/pdfs/BOE-A-2024-15528.pdf"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/documents/10136/1679185/CronogramaCPS2024_T13E4PK5FH_154AB89SD658.pdf/96509c65-e5f8-dca3-5d9c-a6bbadbab12b"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/Cronograma+CPS+2024+MODIFICACION.pdf/67b14925-6548-6ca1-d047-e432cf27b63f"
+            }
+          ]
+        },
+        {
+          "title": "Listado de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 15 de octubre de 2024 del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/BOE-A-2024-21333-CPSprovisional_TR4CLS6R77_154AB89SD658.pdf/2bda9169-2f37-776c-f890-2966e353d59c"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI-ADM-PROVIS-SA-ALF_PG_RM36MPAH3M_154AB89SD658.pdf/9d65e889-8388-0f30-86cb-fcc0ad0c9185"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI-ADM-PROVIS-SA-ALF_CRD_LUGZMWNBO8_154AB89SD658.pdf/8e07ba24-8aca-7822-a7de-3187affa2a2d"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI-EXC-PROVIS-BOE_EAKFLNILPP_154AB89SD658.pdf/1fe12813-3530-1331-c9ce-a0002c780945"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/06-Causas+de+exclusi%C3%B3n+ANEXO+VI+TAI-P.pdf/20135f36-f76a-942f-ae4f-8aa3f82026e0"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/INSTRUCCIONESSUBSANACIONCPSOEP2024_03FXQAN6GZ_154AB89SD658.pdf/c31684c9-43b1-fd5b-a819-48213dca44c4"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/documents/59312/2364380/NotainformativaRENTAparasubsanacin_IU47QGGQEA_154AB89SD658.pdf/607f2af0-5ecd-e566-b981-440f74ff4342"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2364380/report_RESOLUCION+DEFINITIVA+ADMITIDOS+Y+EXCLUIDOS+CPS.pdf/f7b0f2e8-edd8-225d-f83d-42f8ac71f120"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI_P_PG_DSPZDQ8E8M_154AB89SD658.pdf/fc50ccbb-fada-3c97-51bb-f41a2ddea7bd"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI_P_CRD_CF8M67ZXK4_154AB89SD658.pdf/bfdf3f0d-1efd-802d-18c6-7ed9007db6e9"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI-EXC_Z99ZG8F11M_154AB89SD658.pdf/ddf989bf-c249-5280-3722-9e0a2a5add66"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/CORRECCIONRESOLUCIONDEFINITIVACPS_KGHUILOHV7_154AB89SD658.pdf/2446f7c9-1500-a9ac-3fbe-2a8e51e0d9d5"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único.",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-PI_YNNM6EGTQZ_154AB89SD658.pdf/0a970629-8142-fbab-e1b4-627edc8a7b36"
+            },
+            {
+              "label": "Alicante",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-PI+Alicante_UCL1_TAI-P_X4QGB6K9RO_154AB89SD658.pdf/2613b88f-0ba0-a092-4ffc-595b256023f2"
+            },
+            {
+              "label": "Asturias",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAIP_AGO87N9A40_154AB89SD658.pdf/35550c7d-95da-9dee-7b6a-804531ca60c3"
+            },
+            {
+              "label": "Badajoz",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/TAI-PBADAJOZ2024_EH2922ACCS_154AB89SD658.pdf/4630f463-7026-7e07-d1c0-6c7227740e09"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/BARCELONA_TAI_P_GE_LJ472CCB40_154AB89SD658.pdf/4fcb3192-30a1-ac63-65e6-eb6838cf420d"
+            },
+            {
+              "label": "Plano acceso 1",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/BARCELONA_FACULTADDERECHOUBEDIFICIOSSABADO_AIW4LNPS2C_154AB89SD658.pdf/faa3370f-d44a-c1cc-414b-a521e602d268"
+            },
+            {
+              "label": "Plano acceso 2",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/BARCELONA_FACULTADECONOMIAYEMPUBEDIFICIOS690Y696_32QPEIW1ZI_154AB89SD658.pdf/58540f96-3bc5-1562-b315-0c2a80372058"
+            },
+            {
+              "label": "Cádiz",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI-PI+CADIZ_CUERPODETECNICOSDEINFORMATICADELAADMINISTRACIONDELESTADOPROMOCIONINTERNAGENERALYCRD_NU2WSRCB09_154AB89SD658.pdf/c29c9259-030e-1920-2fa5-1e1c338a9f39"
+            },
+            {
+              "label": "Córdoba",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/CRDOBATAI-P_RO6GFIRR0K_154AB89SD658.pdf/7cb5ad48-3cd5-99be-9536-38f5fcb88bca"
+            },
+            {
+              "label": "Granada",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/LISTADOINAPTAIPGENOHAYCRD-GRANADA_3C3JWNH4Y0_154AB89SD658.pdf/8866df54-7a39-24f0-a7ce-70b33f3456cc"
+            },
+            {
+              "label": "Las Palmas de Gran Canaria",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/LasPalmasGC_TAI_PI_General_FE6E9U5MMQ_154AB89SD658.pdf/a7e54be3-581c-5cb3-8c64-9f599d01fc44"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/MADRID_listado_PUBLICAR_WEB_COMPLETO_1_TAI-PI_VKDTQDI2DR_154AB89SD658.pdf/3608c982-e6b0-c71b-f250-d92c765126ad"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/MALAGA_TAIPROMINTPARAPUBLICAR_VMMIPFA9N2_154AB89SD658.pdf/cda877bb-500f-c631-adaa-bde7090cca36"
+            },
+            {
+              "label": "Nota informativa:",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/1.+MALAGA_NOTAINFORMATIVA_NFW33IMNBN_154AB89SD658.pdf/5c96a301-a00f-2353-1a0d-01ecdcca0055"
+            },
+            {
+              "label": "Plano acceso Málaga.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/2.+PLANOSEDES+malaga_JX139FM0N9_154AB89SD658.pdf/3141c5aa-e346-cd03-c6ca-38b5dbb5303d"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI_P_GE_MURCIA_54JJK619VL_154AB89SD658.pdf/767b9319-1450-0bbf-fa52-1611506b66a3"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI_P_CRD_MURCIA_7JVGK8KS4J_154AB89SD658.pdf/62638f27-348b-3c4d-b015-8399f425b64d"
+            },
+            {
+              "label": "Pontevedra",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/PontevedraTAI-P_UKIUEUIBK2_154AB89SD658.pdf/c8bf55b7-2a07-bc2c-931c-ec8ed82df57f"
+            },
+            {
+              "label": "Sevilla",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/LISTADOINAPTAIPROMOCIONINTERNAGENERAL_72N0NHIR6J_154AB89SD658.pdf/aaf38456-4a00-ad6e-4a45-bad0c1167335"
+            },
+            {
+              "label": "Toledo",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TOLEDOTAIPROMOCININTERNA_EZE8EK2JUR_154AB89SD658.pdf/6d884de5-06f8-61a6-1dd0-b1f598b59651"
+            },
+            {
+              "label": "Plano acceso.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/PLANOAULASIESELGRECOToledo_3GX8XH9ODN_154AB89SD658.pdf/244c2bad-2966-74f3-4405-e710b47bc36a"
+            },
+            {
+              "label": "Valencia",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Valencia_DISTR_OPO_TAI-P_OJL914B1G0_154AB89SD658.pdf/dd09022b-b558-8bed-879d-92a63e23fdcb"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/VALLADOLID_UCL2_TAI-PI-GE-CRD_7ZSRUKMD0I_154AB89SD658.pdf/0ceabf1d-9eb8-e4c0-665b-06fbcfea4662"
+            },
+            {
+              "label": "Vitoria",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/ALAVA_AularioTAI_P_PYTTNXCJ8Z_154AB89SD658.pdf/22f88ab9-5198-e679-4a3d-255c66f9fde9"
+            },
+            {
+              "label": "Zaragoza",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Distribucin_TAI-PI_ZARAGOZAdocx_ZTNGOKYTQL_154AB89SD658.pdf/39a347f1-b11d-7471-e3a1-9563833ceab0"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI+PI+2024.pdf/0ee5a809-a983-258b-aab2-38603947124d"
+            },
+            {
+              "label": "Nota informativa de acceso a Facultades",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/nota+informativa+transporte+2024.pdf/be8c6b27-6f41-e857-f3b4-81e8a4f174df"
+            },
+            {
+              "label": "Nota informativa: direcciones sedes examen.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364306/PROCESOSSELECTIVOS003_VZJ12LA6RX_154AB89SD658.pdf/c8c470ae-1101-e731-6221-7910cc1f97bc"
+            },
+            {
+              "label": "Cuestionario modelo A.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Cuestionario_TAI_PI_2024_A_3GZ5F829JV_154AB89SD658.pdf/1b2e81f9-779b-c97a-580e-0dd1da24ad18"
+            },
+            {
+              "label": "Cuestionario modelo B.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Cuestionario_TAI_PI_2024_B_IBTCZNPEKW_154AB89SD658.pdf/d479daaa-bc84-ef5d-19fe-43058b64e7e9"
+            },
+            {
+              "label": "Plantilla provisional modelo A.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Plantilla_Respuestas_PROV_TAI_PI_2024_A_OIGFE7ZBA4_154AB89SD658.pdf/3ca3a976-2c9f-8975-395d-f3c9ca1ce1d0"
+            },
+            {
+              "label": "Plantilla provisional modelo B.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Plantilla_Respuestas_PROV_TAI_PI_2024_B_5MPW0HO7B0_154AB89SD658.pdf/b9a0427f-f370-321c-1c22-52c8959e24fa"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364152/Notainformativaalegaciones_AOL0DI676V_154AB89SD658.pdf/310bd285-4424-9276-ca2d-9ca31be0a477"
+            },
+            {
+              "label": "Datos provisionales de presentados.",
+              "url": "https://sede.inap.gob.es/documents/59312/2364268/NOTA+CPS+DICIEMBRE+DATOS+PRESENTADOS.pdf/9f8d788b-11f6-5364-3347-f6ea77427b63"
+            },
+            {
+              "label": "Resolución por la que se aprueba la relación de opositores que han superado el ejercicio único",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/report_ResolucinsuperanprimerejercicioTAI-P_IWE5ADFF2W_154AB89SD658.pdf/19ab38f4-ba54-2cdf-2480-773e969daed3"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/1-TAI-P-DM-SUP_GEN_078PJ4A4WN_154AB89SD658.pdf/58c75291-d07c-baee-7b4a-f923c8f665e5"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/1-TAI-P-DM-SUP_CRD_8B5384MN7R_154AB89SD658.pdf/2229149b-ef4d-339c-498d-a42e5b66a81a"
+            },
+            {
+              "label": "Plantilla definitiva modelo A",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Plantilla+Cuestionario_TAI_PI_2024_A_definitiva.pdf/31d14516-c3c6-9852-7d7c-94345641fb3e"
+            },
+            {
+              "label": "Plantilla definitiva modelo B",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Plantilla+Cuestionario_TAI_PI_2024_B_definitiva.pdf/a36bbe4a-bef1-bf10-358d-61a4548e799e"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/PUNTUACIONES+MINIMAS+EJER+UNICO+TAI+PI.pdf/7ed869ab-b224-7b87-d1a2-aae153c7aa6d"
+            },
+            {
+              "label": "Nota informativa:",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/Nota+informativa+F%C3%B3rmula+Transformada.pdf/571ffebf-d403-cdfa-790d-cd37867b582b"
+            },
+            {
+              "label": "Nota informativa ampliación de plazo",
+              "url": "https://sede.inap.gob.es/documents/59312/2364306/Nota_informativa_ampliacion_plazo_concurso_IDVKXM3XWC_154AB89SD658.pdf/2397774f-a8a0-8d25-cf15-b4dc80c7caf1"
+            }
+          ]
+        },
+        {
+          "title": "Fase de concurso",
+          "links": [
+            {
+              "label": "Resolución de 27 de mayo de 2025, de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/report_ResolucinprovisionalfaseconcursoTAIPI_ZBU7G36KUA_154AB89SD658.pdf/3c472ef0-3824-4f87-192e-9433d2464db8"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-PFC-AL_GEN_8LHYFE23M1_154AB89SD658.pdf/ac2df5f7-1510-5217-c7fd-2a7ea0f0f6af"
+            },
+            {
+              "label": "Cupo base específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-PFC-AL_CRD_99NQMJA6SE_154AB89SD658.pdf/35bdfec2-0ec9-2351-a6aa-c4f4b9bb8781"
+            },
+            {
+              "label": "Listado de aspirantes que no cumplen los requisitos",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/ListadoaspirantesnocumplenrequisitosTAIPI_M3U46J7CG6_154AB89SD658.pdf/93f1fb88-ef1d-8b17-2a51-31c3d0c41c7f"
+            },
+            {
+              "label": "Resolución de 25 de junio de 2025 de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/report_TAI-P_RESOLUCINMRITOSDEF_K0U6MLPU1E_154AB89SD658.pdf/6d751d00-2d5c-103f-a2cf-56cce7df3346"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-PFC-D-AL_GEN_U0GUNUEF0M_154AB89SD658.pdf/8d02bf6d-f9ea-53a0-d477-4429306b55ef"
+            },
+            {
+              "label": "Cupo base específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-PFC-D-AL_CRD_4BIFB7OY3I_154AB89SD658.pdf/35c1c17b-ba9c-a2be-a5a6-922bf98eb9d1"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/TAI-P_RESOLUCINEXCLUIDOSDEF_firmada_8O8TLRDYXB_154AB89SD658.pdf/cc221f20-00b6-a871-57d6-d2fb95cede7b"
+            }
+          ]
+        },
+        {
+          "title": "Suma fase de oposición y concurso.",
+          "links": [
+            {
+              "label": "Resolución de 30 de junio de 2025 de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/report_SUMAFASEDEOPOSICIONYCONCURSOTAIPI_2GNOE3XVOS_154AB89SD658.pdf/5bdcac57-52b3-3fe3-6ea4-b78e24292543"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-SUFC-AL_GEN-PDF_UT72O3NZAB_154AB89SD658.pdf/9a109e99-6272-b307-4149-98fc02558e32"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-SUFC-AL_CRD-PDF_TBAL3AP64N_154AB89SD658.pdf/2c4d29ca-54c1-c432-0a6c-74aba9f84ecf"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-SUFC-PT_GEN-PDF_7RKNI20716_154AB89SD658.pdf/82b038a1-fe95-25a9-37b5-2b3c8e81d4a8"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2364118/2-TAI-P-SUFC-PT_CRD-PDF_LHJXREZL6B_154AB89SD658.pdf/46f75fb1-76d0-5710-ff21-56ebcb3e9a58"
+            }
+          ]
+        },
+        {
+          "title": "Final del proceso.",
+          "links": [
+            {
+              "label": "Resolución de 15 de julio de 2025",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2025-07/BOE-A-2025-14913_GC6ZE3H33S_154AB89SD658.pdf"
+            },
+            {
+              "label": "Resolución de 4 de diciembre de 2025",
+              "url": "https://boe.es/boe/dias/2025/12/10/pdfs/BOE-A-2025-25154.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "1efe9aa86723821e2d1b9c90d9aa9fa433a31b5bbbb25a5806e00bae5e8e868a"
+    },
+    {
+      "year": 2022,
+      "label": "Ingreso libre",
+      "url": "https://sede.inap.gob.es/tail-oep-2020-2021-2022",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 20 de enero de 2023",
+              "url": "https://www.boe.es/boe/dias/2023/01/27/pdfs/BOE-A-2023-2175.pdf"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/BasesEspecificas_SV2ISR4BUL_154AB89SD658.pdf/731d4757-eac6-2424-f860-139f4fb592a9"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/06_ANEXO_VI_VF_TAI_LI_9VQNV6IY6C_154AB89SD658.pdf/b0570204-638f-647e-58fc-1f067e6d0e6e"
+            },
+            {
+              "label": "Inscripciones",
+              "url": "https://administracion.gob.es/PAG/ips"
+            },
+            {
+              "label": "Nota informativa: Ampliación plazo de presentación de solicitudes",
+              "url": "https://sede.inap.gob.es/documents/10136/1712229/NOTA+INFORMATIVA+AMPLIACION+PLAZO+INSCRIPCION.pdf/a818d2e2-f73b-af16-146b-857e37ba0f27"
+            },
+            {
+              "label": "Resolución de 1 de marzo de 2023",
+              "url": "https://www.boe.es/boe/dias/2023/03/03/pdfs/BOE-A-2023-5593.pdf"
+            }
+          ]
+        },
+        {
+          "title": "Listado de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Nota informativa sobre los listados de admitidos y excluidos.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/Nota+Informativa+Busqueda+Opositores+Listados.pdf/7f391b73-0d22-c6de-4e9c-ff5f1c4dbb28"
+            },
+            {
+              "label": "Resolución de 18 de mayo de 2023",
+              "url": "https://www.boe.es/boe/dias/2023/05/22/pdfs/BOE-A-2023-11959.pdf"
+            },
+            {
+              "label": "Fecha y lugar del ejercicio",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/26-+ANEXO+XIII.pdf/f62e5eca-7dd2-e321-d408-0cca1bb4dad9"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI-L-ADM-PROVIS-SA-ALF_GE_RXI1TDQKGD_154AB89SD658.pdf/a0228987-46a6-649e-5e26-c9f879c1e21d"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI-L-ADM-PROVIS-SA-ALF_CRD_FURX10YPYY_154AB89SD658.pdf/ed8d33b0-b0f6-df6f-74f4-2caf548a1fdb"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI-L-EXC-PROVIS-BOE_CEQLG4VQPU_154AB89SD658.pdf/1133894c-9fe0-beb1-cf3b-5d6bb7215b30"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/Causas+de+exclusi%C3%B3n+ANEXO+VI+TAI-L.pdf/74154e0e-de03-d3e0-1540-9959ffd97894"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/INSTRUCCIONES+SUBSANACION+CPS+OEP+2020-2021-2022.pdf/ee48a112-38a7-fd1e-549e-44cf2ab98694"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública,",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/report_RESOLUCION+DEFINITIVA+ADMITIDOS+Y+EXCLUIDOS.pdf/4b183800-4946-95c5-8cad-a86a4a15fe29"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI_L_GE_BBVOGMLXYO_154AB89SD658.pdf/bc446888-3349-35ff-eb79-fbffe9407203"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI_L_CRD_0BP2CSVAAJ_154AB89SD658.pdf/255e6456-eb78-190b-c37c-886a91e39208"
+            },
+            {
+              "label": "Listado definitivo de excluidos.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI-L-EXC_RTLO8FRCAS_154AB89SD658.pdf/3101bb61-efaa-d4e0-eee4-649067d70bc1"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2194895/report_CorreccinerroresResolucin_7MN8SQDTDE_154AB89SD658.pdf/fbb7ea9e-7379-1117-566e-047b35c381bf"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único.",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/A+CORU%C3%91A_TAI-L_2CP5W8697V_154AB89SD658.pdf/a083803b-5ef7-bab2-fb5d-bbbd5e7fea8a"
+            },
+            {
+              "label": "Alicante",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/ALICANTETAILIBRECIFRADO2023_ZF9P2MHMX6_154AB89SD658.pdf/f77d97c0-7c0a-0b47-44c6-ae985b2fb50f"
+            },
+            {
+              "label": "Asturias",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/ASTURIAS_06_TAI-L_D54U078LYN_154AB89SD658.pdf/782096c1-9809-0478-7f75-d845a1a7cd7a"
+            },
+            {
+              "label": "Badajoz",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/BADAJOZ_TAI_LIBRE_6Q72XLYK8C_154AB89SD658.pdf/8cbd4c28-db3d-56c5-dfc5-0d1b796bcf96"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI-L-CRD-GE-17-09-2023DNIANONIMOINAP_Y2UVHTLKLT_154AB89SD658.pdf/affd4773-9e4f-b465-ada7-d2b25f8a2a30"
+            },
+            {
+              "label": "Plano acceso",
+              "url": "https://sede.inap.gob.es/documents/59312/2194839/FACULTADECONOMIAYEMPUBEDIFICIOS690Y696DOMINGO17-09-2023ADVO-TAI_KMV2PFPDZI_154AB89SD658.pdf/7f0d1d42-7066-d69c-9643-10ed49a98c41"
+            },
+            {
+              "label": "Cádiz",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/CADIZ_TAI_LI_GENERALYCRD_7FTJ8PGIJ9_154AB89SD658.pdf/8d036169-3566-f5bc-5fd0-f904a2d8026e"
+            },
+            {
+              "label": "Córdoba",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/CORDOBA_TAI-L_OJJ551492I_154AB89SD658.pdf/0b93380c-769d-e7ca-910b-9ea59667c8d4"
+            },
+            {
+              "label": "Granada",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/GRANADATAILGENYCRD_KZ6V7MNZ5M_154AB89SD658.pdf/a43c01ea-aa81-efec-5340-b4054608fbe1"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI_L_ILLESBALEARS_RYCMXMGQNH_154AB89SD658.pdf/af3a9c21-086b-675c-3de4-35f31dc473e1"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI_L_CDR_ILLESBALEARS_ATEODO0S6O_154AB89SD658.pdf/c9a6c40b-c83b-8700-cbfd-00ee51718f81"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/LASPALMAS_TECNICOSAUXILIARESDEINFORMATICATURNOLIBRE_X56EL8C9WO_154AB89SD658.pdf/985f1bbb-4400-6f01-5235-f3ded9dd3c6e"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/LASPALMAS_TECNICOSAUXILIARESDEINFORMATICACUPO5LIBRE_K7H9HIP2DV_154AB89SD658.pdf/8700e030-1464-628e-1588-c310078b0a83"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/MADRID_TAI_L_PRSWEOAE1A_154AB89SD658.pdf/4337a22e-7cc9-7c73-1945-81317f278114"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/MALAGA_TAI-L_CDAWPFLT0E_154AB89SD658.pdf/43747df3-885b-9d7a-eb6d-46e031696296"
+            },
+            {
+              "label": "Plano acceso",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/MLAGA-PLANOPRUEBASDA17SEPTIEMBRE-AUXYTAI_UW60YJDIM9_154AB89SD658.pdf/10d2c914-af86-377a-bacc-de6b19d5a340"
+            },
+            {
+              "label": "Murcia",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI_L_MURCIA_ZI5ZW69ZPD_154AB89SD658.pdf/553ad8c4-a1b7-7369-e69d-1bc7c3cea65f"
+            },
+            {
+              "label": "Pontevedra",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/PontevedraTAI-L_EOQNZ7QELG_154AB89SD658.pdf/2d7d30db-012b-c63c-8f9d-0590442de127"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/SEVILLATAILIGE_6LO3R90D0L_154AB89SD658.pdf/5a132ad9-13e3-c2ad-59e3-00a78d54d724"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/SEVILLATAILICDR_RE6Z4UHMKJ_154AB89SD658.pdf/7773ebd1-1e10-d060-1546-3bea8da67043"
+            },
+            {
+              "label": "Santa Cruz de Tenerife",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/SCTENERIFE_DistribucinopositoresTAIL_QYLC5Q60FB_154AB89SD658.pdf/77288a31-c5ee-302e-9f63-8a417e887a38"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TOLEDOAUXILIARESINFORMATICOSLIBRECUPOGENERALSINDNICOMPLETO_MLVLYB2JVL_154AB89SD658.pdf/803c8d3e-f9d0-528f-b425-8e4794fb9b1b"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TOLEDOAUXILIARESINFORMATICOSLIBRECUPODISCAPACITADOSSINDNICOMPLETO_6MA3FD6CZU_154AB89SD658.pdf/1b90c70c-5ad4-048e-67da-02d9d8bed0d1"
+            },
+            {
+              "label": "Plano acceso.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/IESELGRECO_DOMINGO17SEP_4M3E50XS6Z_154AB89SD658.pdf/71eebc00-337e-3699-920d-9200c34b96af"
+            },
+            {
+              "label": "Plano acceso pabellones.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/CROQUISIESELGRECOACCESOSAPABELLONES_WP8W4OBALH_154AB89SD658.pdf/5a0451eb-7765-b2cf-0940-513c07f4aee3"
+            },
+            {
+              "label": "Valencia",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/Valencia_DISTR_OPO_TAI-L_1D05LEVATO_154AB89SD658.pdf/eccdab4a-37f0-b073-9ae8-0469a7971cb4"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/VALLADOLID_17-9-23TAIL-INDUVA_9WXVV2NLJE_154AB89SD658.pdf/958ff95e-17e0-435a-85b8-0737d2269e14"
+            },
+            {
+              "label": "Vitoria",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/VITORIA_TAI-LDeportes_473DC5PR49_154AB89SD658.pdf/03d145bd-dbb7-3345-deac-60e1c47838b0"
+            },
+            {
+              "label": "Zaragoza",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/Distribucin_TAI-L_ZARAGOZAdocx_E557BZ9MJI_154AB89SD658.pdf/7b65c7fc-55c4-60f7-b60a-a992bffee690"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección:",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/notainformativatransporte_XH6AH1TFCC_154AB89SD658.pdf/c18cb489-1566-8343-31e8-3a65f09cd064"
+            },
+            {
+              "label": "Nota informativa de acceso a Facultades (ampliación)",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/Nota+informativa+transporte+2.2.pdf/dfcb8c62-4277-571e-73a3-7f98cb17cdb1"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/TAI+LI+2023.pdf/1fe7e36d-60d0-742d-a69c-f282ae32879a"
+            },
+            {
+              "label": "Nota informativa: cronograma",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/NOTA+DE+LA+COMISI%C3%93N+PERMANENTE+DE+SELECCI%C3%93N.CRONOGRAMA.pdf/0992f8e8-7e1b-c733-f4cf-471d145c2c0e"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único",
+          "links": [
+            {
+              "label": "Cuestionario",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/Cuestionario+TAI-L_2023.pdf/505d8c94-69a3-2971-b013-76c83e442ba1"
+            },
+            {
+              "label": "Plantilla provisional de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/PlantillaRespuestas+TAI-L_2023.pdf/0c2b4a46-bfa5-f165-dc95-7bbec8b675ef"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales",
+              "url": "https://sede.inap.gob.es/documents/59312/2194839/Nota+informativa+alegaciones.pdf/7dc29c55-5ee2-2878-9221-809664b36574"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones: incidencia",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/Nota+informativa+alegaciones+Errores.pdf/e47df621-b81f-41b4-6492-1212bc3a7b03"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones:",
+              "url": "https://sede.inap.gob.es/documents/59312/2194932/Notainformativaalegacionescorrecionerrores_V46A6AAIW0_154AB89SD658.pdf/d571d446-8f03-02b1-697d-0bf151a7bc04"
+            },
+            {
+              "label": "Datos provisionales de presentados a las pruebas selectivas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/Presentados+totales.pdf/21355738-dc03-e5fb-6b99-5025fe982b89"
+            },
+            {
+              "label": "Datos provisionales de presentados:",
+              "url": "https://sede.inap.gob.es/documents/59312/2194895/Presentadostotales_XNMRX57Z1Z_154AB89SD658.pdf/f51a2929-38bc-1067-fb1e-23cf1e767752"
+            },
+            {
+              "label": "Resolución por la que se publica el llamamiento extraordinario",
+              "url": "https://sede.inap.gob.es/documents/59312/2194765/RESOLUCIONCONJUNTAEXTRAORDINARIOS_firmada_Y98AS0L1MC_154AB89SD658.pdf/8611844e-9bba-528f-cd2b-9515bccf5af0"
+            },
+            {
+              "label": "Nota informativa: cronograma",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/NOTA+DE+LA+COMISI%C3%93N+PERMANENTE+DE+SELECCI%C3%93N.CRONOGRAMA.2.1.pdf/601f3510-1781-3782-d1d4-639d858afb0f"
+            },
+            {
+              "label": "Datos provisionales de presentados",
+              "url": "https://sede.inap.gob.es/documents/59312/2194932/Presentados+totales+v4.pdf/7bcfb0f2-e18b-b7b3-f19c-e124558b6fe5"
+            },
+            {
+              "label": "Nota informativa: cronograma",
+              "url": "https://sede.inap.gob.es/documents/59312/2194932/NOTA+DE+LA+COMISI%C3%93N+PERMANENTE+DE+SELECCI%C3%93N.CRONOGRAMA.3.pdf/fe4ea3c9-cf89-7660-2bb8-334f9fa8925b"
+            },
+            {
+              "label": "Resolución por la que se aprueba la relación de opositores que han superado el ejercicio único.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/Resoluci%C3%B3n+superan+primer+ejercicio+TAI-L.pdf/6edd1227-e651-b58f-e5de-379ab715d12c"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/1-TAI-L-DM-SUP_GE_NBI96LOBCS_154AB89SD658.pdf/a3b6656f-e772-cfbd-b65a-3ca663d137a3"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/1-TAI-L-DM-SUP_CRD_Y9Z38R2EPO_154AB89SD658.pdf/55752764-c2a2-a83e-d534-d64bd7844f9c"
+            },
+            {
+              "label": "Plantilla definitiva de respuestas.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/PlantillaRespuestas+DEFINITIVA+TAI-L_oep2022.pdf/54977d89-8c20-cb49-d715-23cb72681c35"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/PUNTUACIONES+MINIMAS+EJER+UNICO+TAI+L.pdf/0b7a9b95-4624-d636-7e1f-ec501310b1ab"
+            },
+            {
+              "label": "Nota informativa: fórmula de transformación de puntuaciones directas en calificaciones",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/Nota+informativa+F%C3%B3rmula+Transformada.pdf/88def2c4-f096-269c-8957-4a21e07a05e6"
+            }
+          ]
+        },
+        {
+          "title": "Final del proceso",
+          "links": [
+            {
+              "label": "Resolución de la Secretaría de Estado de Función Pública",
+              "url": "https://www.boe.es/boe/dias/2024/03/05/pdfs/BOE-A-2024-4298.pdf"
+            },
+            {
+              "label": "Resolución de 3 de junio de 2024 de la Secretaría de Estado de Función Pública",
+              "url": "https://www.boe.es/boe/dias/2024/06/06/pdfs/BOE-A-2024-11491.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "8b90c227acd9a8be9a2346c93e508dde14af7751fb15966500bb0956ca4cd2f9"
+    },
+    {
+      "year": 2022,
+      "label": "Promoción interna para personal funcionario y personal laboral fijo.",
+      "url": "https://sede.inap.gob.es/taipi-oep-2020-2021-2022",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 20 de enero de 2023",
+              "url": "https://www.boe.es/boe/dias/2023/01/27/pdfs/BOE-A-2023-2175.pdf"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/BasesEspecificas_SV2ISR4BUL_154AB89SD658.pdf/2baaeee8-337b-d88d-8b71-6442a8eb1757"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/07_ANEXO_VII_VF_TAI_PI_2PVBGZETU4_154AB89SD658.pdf/86747151-3658-6ab3-8066-25f8896caddd"
+            },
+            {
+              "label": "Inscripciones",
+              "url": "https://administracion.gob.es/PAG/ips"
+            },
+            {
+              "label": "Nota informativa: Ampliación plazo de presentación de solicitudes",
+              "url": "https://sede.inap.gob.es/documents/10136/1712229/NOTA+INFORMATIVA+AMPLIACION+PLAZO+INSCRIPCION.pdf/a818d2e2-f73b-af16-146b-857e37ba0f27"
+            },
+            {
+              "label": "Resolución de 1 de marzo de 2023",
+              "url": "https://www.boe.es/boe/dias/2023/03/03/pdfs/BOE-A-2023-5593.pdf"
+            }
+          ]
+        },
+        {
+          "title": "Listado de admitidos y excluidos.",
+          "links": [
+            {
+              "label": "Nota informativa sobre los listados de admitidos y excluidos.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/Nota+Informativa+Busqueda+Opositores+Listados.pdf/4f569a70-0639-ebee-3429-e3ec7975d43c"
+            },
+            {
+              "label": "Resolución de 18 de mayo de 2023,",
+              "url": "https://www.boe.es/boe/dias/2023/05/22/pdfs/BOE-A-2023-11959.pdf"
+            },
+            {
+              "label": "Fecha y lugar del ejercicio",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/26-+ANEXO+XIII.pdf/deb83ca2-86ac-bb75-604a-6a65149ec906"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI-ADM-PROVIS-SA-ALF_PG_3ISFSH57B8_154AB89SD658.pdf/685d712f-0402-42c4-138e-4e34fef75a44"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI-ADM-PROVIS-SA-ALF_CRD_QUOGPSF1OL_154AB89SD658.pdf/0b1fb452-610f-eaf5-0c68-afe3f232a0f7"
+            },
+            {
+              "label": "Listado provisional excluidos.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI-EXC-PROVIS-BOE_Z9ZEVJ200Y_154AB89SD658.pdf/9584b6b4-16a4-5b77-7d9c-9fd6a33657a0"
+            },
+            {
+              "label": "Causas de exclusión.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/07-CausasdeexclusinANEXOVIITAI-P_FMN89CE00T_154AB89SD658.pdf/8579652d-b331-5a2b-3c73-cf01d4e28055"
+            },
+            {
+              "label": "Instrucciones generales subsanación.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/INSTRUCCIONESSUBSANACIONCPSOEP2020-2021-2022_GU6C22AT3M_154AB89SD658.pdf/aea0daf5-2f36-3afe-9f95-bf4a6bed1461"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública,",
+              "url": "https://sede.inap.gob.es/documents/59312/2194858/report_RESOLUCION+DEFINITIVA+ADMITIDOS+Y+EXCLUIDOS.pdf/4b183800-4946-95c5-8cad-a86a4a15fe29"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI_P_PG_LEQD3KDRU5_154AB89SD658.pdf/90edda5f-8225-7916-53af-24088f7493ed"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI_P_CRD_7H30OKZ0KB_154AB89SD658.pdf/2b5db943-bbb4-ea83-7425-10660ab7ef6c"
+            },
+            {
+              "label": "Listado definitivo de excluidos.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI-EXC_LTJWNAZQZG_154AB89SD658.pdf/221e3250-2ed6-ef9c-4aa8-bae565bce9e5"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/2194895/report_CorreccinerroresResolucin_7MN8SQDTDE_154AB89SD658.pdf/fbb7ea9e-7379-1117-566e-047b35c381bf"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único.",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/A+CORU%C3%91A_TAI-PI_U1Z38HKPJO_154AB89SD658.pdf/c658e45a-5d07-b1e7-9590-c6a0d48319ba"
+            },
+            {
+              "label": "Alicante",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/ALICANTETAIPROMOCIONCIFRADO2023_SG7P2H93JL_154AB89SD658.pdf/4e320059-8503-508c-3632-2e5a6281b5a0"
+            },
+            {
+              "label": "Asturias",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/ASTURIAS_07_TAI-P_KN2BTJQR1C_154AB89SD658.pdf/935637bd-4a59-581b-f6d8-0c54b8b82858"
+            },
+            {
+              "label": "Badajoz",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/BADAJOZ_TAI_PI_D94QVVFJPB_154AB89SD658.pdf/a9bed486-340b-b60d-a41a-227037eb9071"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI-P-GE-17-09-2023DNIANONIMOINAP_VX94PEW4Z5_154AB89SD658.pdf/240677d9-b8b6-2022-a91b-a43d1fa8dff1"
+            },
+            {
+              "label": "Plano acceso",
+              "url": "https://sede.inap.gob.es/documents/59312/2194839/FACULTADECONOMIAYEMPUBEDIFICIOS690Y696DOMINGO17-09-2023ADVO-TAI_KMV2PFPDZI_154AB89SD658.pdf/7f0d1d42-7066-d69c-9643-10ed49a98c41"
+            },
+            {
+              "label": "Cádiz",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/CADIZ_TAI_PI_ZBGPL9L3EM_154AB89SD658.pdf/d72fbf7d-bd5b-0816-b54e-5b48ed03135c"
+            },
+            {
+              "label": "Córdoba",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/CORDOBA_TAI-P_XUHX9J4FOQ_154AB89SD658.pdf/5cd9d5f5-79eb-95d5-7ae5-c0a3c76b72ad"
+            },
+            {
+              "label": "Granada",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/GRANADATAIPGENYCRD_C1CEPW3E71_154AB89SD658.pdf/7199909b-ac62-a8b8-de5e-e21eb6527ec2"
+            },
+            {
+              "label": "Illes Balears",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI_P_ILLESBALEARS_SVN4QZT2VS_154AB89SD658.pdf/bd0a41f9-2730-03ef-5859-a47f55509d6b"
+            },
+            {
+              "label": "Las Palmas de Gran Canaria",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/LASPALMAS_TECNICOSAUXILIARESPROMOCININTERNA_176EIVURIF_154AB89SD658.pdf/c22a9aaf-ec69-1f8a-9938-6bb8007f4460"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/MADRID_TAI_PI_O6AK0MPL20_154AB89SD658.pdf/3e3698fe-a115-1eeb-7a1b-5fb1394b0867"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/MALAGA_TAI-P_V2ES49I2Z9_154AB89SD658.pdf/7edb429d-9fb2-a1a7-b4c5-fb4897d49ef2"
+            },
+            {
+              "label": "Plano acceso",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/MLAGA-PLANOPRUEBASDA17SEPTIEMBRE-AUXYTAI_UW60YJDIM9_154AB89SD658.pdf/782b4618-efb4-14d9-7098-62d7c64f866e"
+            },
+            {
+              "label": "Murcia",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI_P_MURCIA_YYBUJXJ70L_154AB89SD658.pdf/ccc43cdd-5aed-a0a0-94a4-5d13690004b2"
+            },
+            {
+              "label": "Pontevedra",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/PontevedraTAI-P_97OXREG73W_154AB89SD658.pdf/b9d53847-445f-8535-718d-dd1d95f84cf9"
+            },
+            {
+              "label": "Sevilla",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/SEVILLATAIPI_ILYQDO1Q04_154AB89SD658.pdf/ee4ea632-cecd-0b6f-393e-e8d5081f931a"
+            },
+            {
+              "label": "Santa Cruz de Tenerife",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/SCTENERIFE_DistribucinopositoresTAIPI_31RJVFZQRC_154AB89SD658.pdf/13a097c3-f9a5-5a84-fde5-c491de4e0627"
+            },
+            {
+              "label": "General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TOLEDOAUXILIARESINFORMATICOSPROMINTERNACUPOGENERALSINDNICOMPLETO_6MII1A0BSI_154AB89SD658.pdf/27830dc2-159c-3174-0e7d-ff8736ddc447"
+            },
+            {
+              "label": "Plano acceso.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/IESELGRECO_DOMINGO17SEP_4M3E50XS6Z_154AB89SD658.pdf/978307a5-612c-c1ec-a12a-fbf108dbf0e2"
+            },
+            {
+              "label": "Plano acceso pabellones.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/CROQUISIESELGRECOACCESOSAPABELLONES_WP8W4OBALH_154AB89SD658.pdf/4d35aca3-9f01-ad03-8ea1-7083fe0d2a9c"
+            },
+            {
+              "label": "Valencia",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/Valencia_DISTR_OPO_TAI-P_G0I725K1UA_154AB89SD658.pdf/a6274a8e-534a-af83-952e-a6bf9a26f51f"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/VALLADOLID_17-9-23TAI-PIINDUVA_ETISSKFYZB_154AB89SD658.pdf/3151d66e-3a2d-9018-fa95-d178a33c2c3b"
+            },
+            {
+              "label": "Vitoria",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/VITORIA_TAI-PDeportes_3J8OKMHOWX_154AB89SD658.pdf/2f8f95f8-c8f9-c4f8-7327-d2a104c6923c"
+            },
+            {
+              "label": "Nota informativa de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/notainformativatransporte_XH6AH1TFCC_154AB89SD658.pdf/140fbc14-78cc-a04f-2950-04613c2c1c60"
+            },
+            {
+              "label": "Nota informativa de acceso a Facultades (ampliación)",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/Nota+informativa+transporte+2.2.pdf/dfcb8c62-4277-571e-73a3-7f98cb17cdb1"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI+PI+2023.pdf/f9c185d7-613c-3a80-45d5-11e3b3123677"
+            },
+            {
+              "label": "Nota informativa: cronograma",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/NOTA+DE+LA+COMISI%C3%93N+PERMANENTE+DE+SELECCI%C3%93N.CRONOGRAMA.pdf/d661bd12-1895-f840-09d4-8c76979faa70"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único",
+          "links": [
+            {
+              "label": "Cuestionario",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/Cuestionario+TAI-PI_2023.pdf/5de03cad-c8b3-7231-1aff-96afaa23d3f2"
+            },
+            {
+              "label": "Plantilla provisional de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/PlantillaRespuestas+TAI-PI_2023.pdf/662da569-0f2d-980e-9a22-3e1876635051"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales",
+              "url": "https://sede.inap.gob.es/documents/59312/2194839/Nota+informativa+alegaciones.pdf/7dc29c55-5ee2-2878-9221-809664b36574"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones: incidencia",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/Nota+informativa+alegaciones+Errores.pdf/e47df621-b81f-41b4-6492-1212bc3a7b03"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones:",
+              "url": "https://sede.inap.gob.es/documents/59312/2194932/Notainformativaalegacionescorrecionerrores_V46A6AAIW0_154AB89SD658.pdf/d571d446-8f03-02b1-697d-0bf151a7bc04"
+            },
+            {
+              "label": "Datos provisionales de presentados a las pruebas selectivas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/Presentados+totales.pdf/21355738-dc03-e5fb-6b99-5025fe982b89"
+            },
+            {
+              "label": "Datos provisionales de presentados:",
+              "url": "https://sede.inap.gob.es/documents/59312/2194895/Presentadostotales_XNMRX57Z1Z_154AB89SD658.pdf/f51a2929-38bc-1067-fb1e-23cf1e767752"
+            },
+            {
+              "label": "Nota informativa: cronograma",
+              "url": "https://sede.inap.gob.es/documents/59312/2194801/NOTA+DE+LA+COMISI%C3%93N+PERMANENTE+DE+SELECCI%C3%93N.CRONOGRAMA.2.1.pdf/601f3510-1781-3782-d1d4-639d858afb0f"
+            },
+            {
+              "label": "Datos provisionales de presentados",
+              "url": "https://sede.inap.gob.es/documents/59312/2194932/Presentados+totales+v4.pdf/7bcfb0f2-e18b-b7b3-f19c-e124558b6fe5"
+            },
+            {
+              "label": "Nota informativa: cronograma",
+              "url": "https://sede.inap.gob.es/documents/59312/2194932/NOTA+DE+LA+COMISI%C3%93N+PERMANENTE+DE+SELECCI%C3%93N.CRONOGRAMA.3.pdf/fe4ea3c9-cf89-7660-2bb8-334f9fa8925b"
+            },
+            {
+              "label": "Resolución por la que se aprueba la relación de opositores que han superado el ejercicio único",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/Resoluci%C3%B3n+superan+primer+ejercicio+TAI-P.pdf/be5336a6-8ef6-b1c2-36b5-53608dd4295c"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/1-TAI-PI-DM-SUP_PG_TEVWNLPMYJ_154AB89SD658.pdf/e527b571-6ab1-f117-305b-b206b7401740"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/1-TAI-PI-DM-SUP_CRD_GBPK63DNIS_154AB89SD658.pdf/ff6b7060-de56-614e-7ba5-5d4763aa9733"
+            },
+            {
+              "label": "Plantilla definitiva de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/Plantilla+respuestas+DEFINITIVA+TAI-P_oep2022.pdf/3dd0da87-b08b-00e2-5cc1-35d8579b4136"
+            },
+            {
+              "label": "Corrección de errores de los criterios de corrección, valoración y superación.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/TAI-P_CORRECCION+ERRORES+CRITERIOS+CORRECCION.pdf/6932b6e6-99ed-e4a4-c6ed-e3c4a5705a72"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/PUNTUACIONES+MINIMAS+EJER+UNICO+TAI+PI.pdf/adefad89-c6f0-16d5-7dab-cd6711d0ac24"
+            },
+            {
+              "label": "Nota informativa: fórmula de transformación de puntuaciones directas en calificaciones",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/Nota+informativa+F%C3%B3rmula+Transformada.pdf/a17d8f06-9961-4621-f096-ec6c482b6cef"
+            },
+            {
+              "label": "Nota informativa: cronograma orientativo",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/NOTA+DE+LA+COMISI%C3%93N+PERMANENTE+DE+SELECCI%C3%93N.CRONOGRAMA.3.pdf/a51ee066-4b10-63be-2be6-7fb14f45d253"
+            }
+          ]
+        },
+        {
+          "title": "Fase de concurso",
+          "links": [
+            {
+              "label": "Resolución de 16 de febrero de 202",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/ResolucinprovisionalfaseconcursoTAIPI_E2CV839UXZ_154AB89SD658.pdf/78e2c28d-e37c-5006-e022-c3adcfd55d31"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-PFC-AL_PG_CPYMETOZMB_154AB89SD658.pdf/0df2f63c-6abe-c63c-1a01-e5825a3ae169"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-PFC-AL_CRD_NOYKHK1P15_154AB89SD658.pdf/64d2fcfe-cd07-512c-7849-4d0ce410a1a5"
+            },
+            {
+              "label": "Resolución de 23 de abril de 2024",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/RESOLUCIONVALORACIONDEFINITIVAMERITOSTAIPI_KXTGAF8463_154AB89SD658.pdf/eb2a4ea1-016a-9c03-5f14-1a6ba953c089"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-PFC-D-AL_PG_5HAWM7WCPA_154AB89SD658.pdf/3f0f3b06-2b8b-bccb-ab5f-71927c72390d"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-PFC-D-AL_CRD_XTIGZE4M3Z_154AB89SD658.pdf/8905f914-35d9-54f3-3fda-1d6443e160bc"
+            }
+          ]
+        },
+        {
+          "title": "Suma fase de oposición y concurso.",
+          "links": [
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/SUMAFASEDEOPOSICIONYCONCURSOTAIPI_XY8DQQBLF2_154AB89SD658.pdf/61b99729-eae3-12b4-9728-5ada2cb75420"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-SUFC-AL_PG_P4ZWCZS06V_154AB89SD658.pdf/f7bef82c-529b-895a-c2a8-d71e3bd01945"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-SUFC-ALFAB_CRD_VREIYGJVSM_154AB89SD658.pdf/7aecab23-f74b-7132-d826-98ef61c7bc7b"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-SUFC-PT_PG_OGFFZ8H1GE_154AB89SD658.pdf/a11ca3dd-a336-cdd0-2a20-1ea08345ecff"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/2194876/2-TAI-SUFC-PT_CRD_MBN7KHG95X_154AB89SD658.pdf/755aaec2-6e19-40de-c8ba-20e89525b954"
+            }
+          ]
+        },
+        {
+          "title": "Final del proceso.",
+          "links": [
+            {
+              "label": "Resolución de 8 de mayo de 2024,",
+              "url": "https://www.boe.es/boe/dias/2024/05/20/pdfs/BOE-A-2024-10085.pdf"
+            },
+            {
+              "label": "Resolución de 17 de enero de 2025",
+              "url": "https://boe.es/boe/dias/2025/01/20/pdfs/BOE-A-2025-889.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "9cfd760468fc7a5649c702c81d86cbc78d1554f38c6e425de886ff7d779cce54"
+    },
+    {
+      "year": 2019,
+      "label": "Ingreso libre",
+      "url": "https://sede.inap.gob.es/tai-2019-ingreso-libre",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 26 de mayo de 2021",
+              "url": "https://boe.es/boe/dias/2021/05/28/pdfs/BOE-A-2021-8892.pdf"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/BasesEspecificas.pdf/2b1daca9-db62-b722-c4cf-80b5d8534714"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/AnexoTAI-L.pdf/e8309b7d-7b54-1218-1411-f6351aa46824"
+            }
+          ]
+        },
+        {
+          "title": "Listados de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 3 de septiembre de 2021",
+              "url": "https://www.boe.es/boe/dias/2021/09/07/pdfs/BOE-A-2021-14627.pdf"
+            },
+            {
+              "label": "Fecha, hora y lugar del ejercicio",
+              "url": "https://sede.inap.gob.es/documents/59312/1925662/ANEXOXLUGARCELEBRACIONPRIMEREJERCICIOOEP2019_154AB89SD658.pdf/cab522de-637d-f1e8-7c94-f0abbded1f94"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TAI-L-ADM-PROVIS-SA-ALF_GE_154AB89SD658.pdf/f048878a-5a9e-9fff-d883-908134520375"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TAI-L-ADM-PROVIS-SA-ALF_CRD_154AB89SD658.pdf/c560c988-494e-b0d1-537e-9543e8026572"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TAI-L-EXC-PROVIS-BOE_154AB89SD658.pdf/ba29fa9a-19c2-821c-6f62-a6cb559da9eb"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/ANEXOIICausasdeexclusinTAI-L_154AB89SD658.pdf/27538774-6aac-da43-5069-d7259552fc77"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/INSTRUCCIONES+SUBSANACION+CPS+OEP+2019-20.pdf/ab8a6941-c4e2-4225-4bd6-7ca8f7c0d9b6"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/RESOLUCION+DEFINITIVA+ADMITIDOS+Y+EXCLUIDOS_154AB89SD658.pdf/03c8ec69-4160-f055-8b49-ac3362b459be"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TAI_L_GE_154AB89SD658.PDF/6b5ee73c-837e-e034-8141-dacceb0c6dd1"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TAI_L_CRD_154AB89SD658.PDF/7ce0b4f1-ac7c-3326-3163-25f086428d29"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TAI-L-EXC_154AB89SD658.PDF/191a0c93-e2ca-22f9-6931-bcf70f5087c2"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/1RESOLUCIONmodificacinDEFINITIVAADMITIDOS_154AB89SD658.pdf/625b5530-ae8f-7f71-d2e3-9761579c2516"
+            }
+          ]
+        },
+        {
+          "title": "Primer ejercicio.",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/ACORUNA_ListadoWebTAILIACORUA_154AB89SD658.pdf/d5bd91e3-6183-716f-4cbb-5c823040fd5e"
+            },
+            {
+              "label": "Álava/Araba",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/ALAVA_TAILIBRE-LAVA_154AB89SD658.pdf/fbc19476-1245-6b5e-d707-7278cae3af72"
+            },
+            {
+              "label": "Asturias",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/ASTURIAS_TAI-L_154AB89SD658.pdf/4ca44389-3c63-734b-b4fc-1a2fe9b8c847"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/BARCELONA_UCLBARCELONATAI-L_154AB89SD658.pdf/03788e97-ad29-7b29-b68f-d371b9bf1828"
+            },
+            {
+              "label": "Illes Balears",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/BALEARES_TAI_L_ILLESBALEARS_2_154AB89SD658.pdf/322a0acb-8f50-c82c-5223-b7f36e8c8a0e"
+            },
+            {
+              "label": "Sistema General.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/LASPALMAS_TAI_L_GE_LASPALMASSINDNI_154AB89SD658.pdf/e2b9a386-e250-6697-1d74-67c04ed3ce5b"
+            },
+            {
+              "label": "Sistema Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/LASPALMAS_TAI_L_CRD_LASPALMASSINDNI_154AB89SD658.pdf/893b4f38-caeb-19ed-f83b-c56bbcf2ea61"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TAILI_MADRID_154AB89SD658.pdf/58bc7a3c-e5cf-226c-98c6-1657c30ef987"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/MALAGA_8-TAI-LTcnicosAuxiliaresInformticaAE-IngresoLibre_154AB89SD658.pdf/9dc0123d-5ae0-1e53-9949-7d76fb05b82c"
+            },
+            {
+              "label": "Murcia",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/MURCIA-TAI-L_154AB89SD658.pdf/019cacb9-e560-b8f7-22a1-a604477f3504"
+            },
+            {
+              "label": "Santa Cruz de Tenerife",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/TENERIFE_TAI-LDistribucinopositoresparaWebpdf7_154AB89SD658.pdf/a16b88ce-188b-6cb7-dc33-6ace8a3307b0"
+            },
+            {
+              "label": "Sistema General.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/SEVILLA_TAI_L_GEN_154AB89SD658.pdf/0f75250d-5bb3-8a91-14e6-4625aa52b87e"
+            },
+            {
+              "label": "Sistema Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/SEVILLA_TAI_L_CRD_154AB89SD658.pdf/d20e7060-d9ca-1ac2-a580-335c3749d729"
+            },
+            {
+              "label": "Valencia",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/VALENCIA_TAI-L_VALENCIA_154AB89SD658.pdf/395dd69e-152c-fe94-cfc9-396fb010d341"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/VALLADOLID_TAI-Lpuertasaccesoyaulas_154AB89SD658.pdf/533c1bff-a937-9603-6d4d-017d2f3515f1"
+            },
+            {
+              "label": "Zaragoza",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/ZARAGOZA_Distribucin_TAI_L_ZARAGOZA_154AB89SD658.pdf/4fc7766e-402c-1d9d-d3b9-5156d9d8bd9b"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/1925662/2OEP2019TAI-LI_154AB89SD658.pdf/0def8107-8fdd-c394-8860-dd291cc31fca"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/aleg_plant_prov_154AB89SD658.pdf/0bc83a74-81a8-15b9-f7b9-5e07c77a5ca5"
+            },
+            {
+              "label": "Cuestionario",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/cues_1er_ejer_TAI-L_oep19_154AB89SD658.pdf/ac7ec9d6-3ac6-4457-6687-6ecf53aa158e"
+            },
+            {
+              "label": "Plantilla provisional de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/plant_prov_1er_ejer_TAI-L_oep19_154AB89SD658.pdf/674ea505-fc2c-68ab-1259-91b2aa264aae"
+            },
+            {
+              "label": "Resolución",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/ResolucinsuperanprimerejercicioTAIL_154AB89SD658.pdf/94e561b2-358e-7bb8-3f17-fba442f8e80c"
+            },
+            {
+              "label": "Acceso general.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/1-TAI-L-DM-SUP_GE_154AB89SD658.pdf/cf1565e4-ad34-d5e0-bca2-43b282282678"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/1-TAI-L-DM-SUP_CRD_154AB89SD658.pdf/7bf2dd91-addd-0974-f7d6-e9e6fc47b4ae"
+            },
+            {
+              "label": "Plantilla definitiva de respuestas.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/Plantilla_definitivaTAI-LEjercicionico2019_154AB89SD658.pdf/3a177074-d70b-2fda-e9ec-38cc0942944d"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/Puntuacionesminimasprimerejercicio2019TAIL_154AB89SD658.pdf/9186ee4e-faf8-e9c5-3152-403b71232c9a"
+            },
+            {
+              "label": "Nota informativa sobre fórmula de transformación de puntuaciones directas en calificaciones.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925774/NotainformativaFrmulaTransformada_154AB89SD658.pdf/b21a0a6f-b3ee-8fea-8984-2348caba710c"
+            }
+          ]
+        },
+        {
+          "title": "Final del proceso.",
+          "links": [
+            {
+              "label": "Resolución de la Secretaría de Estado de Función Pública",
+              "url": "https://www.boe.es/boe/dias/2022/03/21/pdfs/BOE-A-2022-4417.pdf"
+            },
+            {
+              "label": "Resolución de la Secretaría de Estado de Función Pública",
+              "url": "https://www.boe.es/buscar/doc.php?id=BOE-A-2022-9033"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "8646256c3d77debc28a745920ee2a050b956249a57fce37d9246cb53e17ef646"
+    },
+    {
+      "year": 2019,
+      "label": "Promoción interna para personal funcionario y personal laboral fijo",
+      "url": "https://sede.inap.gob.es/tai-2019-promocion-interna",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 26 de mayo de 2021",
+              "url": "https://boe.es/boe/dias/2021/05/28/pdfs/BOE-A-2021-8892.pdf"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/BasesEspecificas.pdf/de7c39ab-a4ee-232e-b34c-d49e9b2fb537"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/AnexoTAI-P.pdf/69660e5e-a03f-8cc8-e526-68d670240607"
+            }
+          ]
+        },
+        {
+          "title": "Listados de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 3 de septiembre de 2021",
+              "url": "https://www.boe.es/boe/dias/2021/09/07/pdfs/BOE-A-2021-14627.pdf"
+            },
+            {
+              "label": "Fecha, hora y lugar del ejercicio",
+              "url": "https://sede.inap.gob.es/documents/59312/1925662/ANEXOXLUGARCELEBRACIONPRIMEREJERCICIOOEP2019_154AB89SD658.pdf/cab522de-637d-f1e8-7c94-f0abbded1f94"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TAI-ADM-PROVIS-SA-ALF_PG_154AB89SD658.pdf/f206ad93-75fa-7221-873a-f9cf22320ab4"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TAI-ADM-PROVIS-SA-ALF_CRD_154AB89SD658.pdf/20fcf742-d0db-356e-26ed-2125b4be011f"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TAI-EXC-PROVIS-BOE_154AB89SD658.pdf/c9fd6755-434e-f0b8-ec37-97eccb31dae7"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/ANEXOIIICausasdeexclusinTAI-P_154AB89SD658.pdf/13e76aaf-5c7e-e58f-2311-532cddf1f1ef"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/INSTRUCCIONES+SUBSANACION+CPS+OEP+2019-20.pdf/dbf61a67-f554-230d-1962-b17427fb9b5a"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/RESOLUCION+DEFINITIVA+ADMITIDOS+Y+EXCLUIDOS_154AB89SD658.pdf/b2ab8b1e-7d16-3d8a-670e-915d7339e445"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TAI_P_PG_154AB89SD658.PDF/fc153737-a8ec-0b6a-4cbc-55588ea7ad26"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TAI_P_CRD_154AB89SD658.PDF/3a43d07e-92d1-e2cf-c00d-051722b060f5"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TAI-EXC_154AB89SD658.PDF/2798257e-89d2-13b8-e1d0-99b21c4039f5"
+            }
+          ]
+        },
+        {
+          "title": "Primer ejercicio.",
+          "links": [
+            {
+              "label": "A Coruña",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/ACORUNA_ListadoWebTAIPIACORUA_154AB89SD658.pdf/ca837276-9412-7011-23ec-cb3e010d9c67"
+            },
+            {
+              "label": "Álava/Araba",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/ALAVA_TAIPINTERNA-LAVA_154AB89SD658.pdf/b371f99e-414c-2dca-0f91-727834184265"
+            },
+            {
+              "label": "Barcelona",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/BARCELONA_UCLBARCELONATAI-P_154AB89SD658.pdf/804be652-bbdc-8801-bc5d-2ebaedf0c28e"
+            },
+            {
+              "label": "Illes Balears",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/BALEARES_TAI_P_ILLESBALEARS-2_154AB89SD658.pdf/8aa5efb3-9e79-67c1-ecd1-c73ab136c9cc"
+            },
+            {
+              "label": "Sistema General.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/LASPALMAS_TAI_P_PG_LASPALMASSINDNI_154AB89SD658.pdf/6a9501d6-4e02-35ec-7835-65503438b3ad"
+            },
+            {
+              "label": "Sistema Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/LASPALMAS_TAI_P_CRD_LASPALMASSINDNI_154AB89SD658.pdf/807f490a-b135-cfd4-bb61-2a8f16f1b7c8"
+            },
+            {
+              "label": "Madrid",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TAIPI_MADRID_154AB89SD658.pdf/7f727528-cf25-d1fc-717c-c30030c11adc"
+            },
+            {
+              "label": "Málaga",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/MALAGA_9-TAI-PTcnicoAuxiliaresInformticaAE-PromocinInterna_154AB89SD658.pdf/f06ba62c-27c9-0a03-6f35-cb74be4a6c83"
+            },
+            {
+              "label": "Murcia",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/MURCIA_TAI-P_154AB89SD658.pdf/3d59224a-3aa7-0533-19df-9cbad4dcd1a8"
+            },
+            {
+              "label": "Santa Cruz de Tenerife",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/TENERIFE_TAI-PDistribucinopositoresparaWebpdf3_154AB89SD658.pdf/bd01d6ba-c343-483c-e1cc-aeea2219d67f"
+            },
+            {
+              "label": "Sevilla",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/SEVILLA_TAI_P_GEN_154AB89SD658.pdf/4b636151-11e0-dc79-5837-47a54b1bf28e"
+            },
+            {
+              "label": "Valencia",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/VALENCIA_TAI-P_VALENCIA_154AB89SD658.pdf/e5a1aaba-b6aa-5b6a-b17c-315a1ca9e942"
+            },
+            {
+              "label": "Valladolid",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/VALLADOLID_TAI-Ppuertasaccesoyaulas_154AB89SD658.pdf/bf96da6e-3ac9-83b0-f6ce-7cf7a263a0cc"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/1925662/3OEP2019TAI-PI_154AB89SD658.pdf/c9c86cb8-ffab-9b0d-96f7-8ff10d7bd020"
+            },
+            {
+              "label": "Nota informativa sobre la presentación de alegaciones a las plantillas correctoras provisionales",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/aleg_plant_prov_154AB89SD658.pdf/1c10cdfb-4c48-06e2-c167-88202cb7f547"
+            },
+            {
+              "label": "Cuestionario",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/cues_1er_ejer_TAI-P_oep19_154AB89SD658.pdf/69f68075-790a-96eb-fe71-68758f73f4de"
+            },
+            {
+              "label": "Plantilla provisional de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/plant_prov_1er_ejer_TAI-P_oep19_154AB89SD658.pdf/1ef5df0c-0769-0c4f-2061-749781551136"
+            },
+            {
+              "label": "Resolución",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/ResolucinsuperanejerciciounicoTAIPI_154AB89SD658.pdf/0cfe3a1a-7ff8-b701-978a-5c50b53d2317"
+            },
+            {
+              "label": "Acceso general.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/1-TAI-PI-DM-SUP_PG_154AB89SD658.pdf/6ddd052d-2009-294b-04e0-d5013b94c331"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/1-TAI-PI-DM-SUP_CRD_154AB89SD658.pdf/5b1db179-0b75-96d9-015d-040e9b04e013"
+            },
+            {
+              "label": "Plantilla definitiva de respuestas.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/Plantilla_definitivaTAI-PEjercicionico2019_154AB89SD658.pdf/7d5f23e1-b935-d873-bd2a-61cd84b65602"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/Puntuacionesminimasprimerejercicio2019TAIPI_154AB89SD658.pdf/c0ff2a15-5bc7-3da5-db8e-a5ced6c35e47"
+            },
+            {
+              "label": "Nota informativa sobre fórmula de transformación de puntuaciones directas en calificaciones.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/NotainformativaFrmulaTransformada_154AB89SD658.pdf/5cf04bb1-d528-0a91-64f4-445960188797"
+            }
+          ]
+        },
+        {
+          "title": "Fase concurso.",
+          "links": [
+            {
+              "label": "Resolución de 5 de abril de 2022",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/report_ResolucinprovisionalfaseconcursoTAIPI_154AB89SD658.pdf/9846d863-651b-5a5a-f851-b4bca69982d0"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-PFC-AL_PG_154AB89SD658.pdf/357a53e0-1075-6f74-b0f2-fadd85a98e37"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-PFC-AL_CRD_154AB89SD658.pdf/718a1f41-3af3-e97e-2ffe-482556a37f96"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/RESOLUCIONVALORACIONDEFINITIVAMERITOSTAIPI_firmada_RYGC5GTGLY_154AB89SD658.pdf/2ce258c3-bc2a-eb02-163a-8baad7e4c4a4"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-PFC-D-AL_PG_1XRKDZMDO2_154AB89SD658.pdf/fb350bf7-ee17-0f79-e2c2-3002e606ce70"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-PFC-D-AL_CRD_V8QHUVEWOZ_154AB89SD658.pdf/76ee10eb-8362-533a-227c-642d6983f156"
+            }
+          ]
+        },
+        {
+          "title": "Suma fase oposición y concurso.",
+          "links": [
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/SUMAFASEDEOPOSICIONYCONCURSOTAIPI_firmado_V0BDWKTI2S_154AB89SD658.pdf/1ce2986d-3a55-eaa7-8698-9c8685fce671"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-SUFC-AL_PG.pdf/f487376f-5553-8b0a-3ec3-3e3650ece059"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-SUFC-AL_CRD.pdf/11c588ef-720c-9e31-1910-8ac00afcd699"
+            },
+            {
+              "label": "Acceso General.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-SUFC-PT_PG.pdf/5d256344-2c71-9681-e709-9c6cc2c20313"
+            },
+            {
+              "label": "Cupo Base Específica 5.",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/2-TAI-SUFC-PT_CRD.pdf/b1a11e69-e853-f273-dc3e-466d6e0e4600"
+            }
+          ]
+        },
+        {
+          "title": "Fin del proceso.",
+          "links": [
+            {
+              "label": "Resolución de la Secretaría de Estado de Función Pública",
+              "url": "https://boe.es/boe/dias/2022/06/09/pdfs/BOE-A-2022-9472.pdf"
+            },
+            {
+              "label": "Resolución de la Secretaría de Estado de Función Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1925806/taip-nombramientofuncionariocarrera_9M8X7UF7R4_154AB89SD658.pdf/793d228d-9731-c29a-a22b-fcaed0b2d516"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "5df601b65238711dac59d01a27943fbbd48ea90219289b933deab499f4dc584a"
+    },
+    {
+      "year": 2018,
+      "label": "Ingreso libre",
+      "url": "https://sede.inap.gob.es/tai-2018-ingreso-libre",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 14 de junio de 2019",
+              "url": "https://www.boe.es/boe/dias/2019/06/17/pdfs/BOE-A-2019-9062.pdf"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/00-Bases.pdf/8bede080-c740-64e1-c45e-a4be8d80368f"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/05-TAI-L.pdf/de9b935d-5a80-3099-74ec-0a41fd03bfaf"
+            }
+          ]
+        },
+        {
+          "title": "Listados de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 5 de septiembre de 2019",
+              "url": "https://www.boe.es/boe/dias/2019/09/09/pdfs/BOE-A-2019-12895.pdf"
+            },
+            {
+              "label": "Lugar, día y hora de examen",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/LUGAR_DIA_HORA_EXAMEN.pdf/aabf689e-5098-67e3-bbbf-57aacbb817bc"
+            },
+            {
+              "label": "Acceso General",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/TAI-L-ADM-PROVIS-SA-ALF_GE_154AB89SD658.pdf/35afc4e5-840f-2d42-f721-33b07091afbb"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/TAI-L-ADM-PROVIS-SA-ALF_CRD_154AB89SD658.pdf/5a59b80d-90ff-fe02-89e7-7d39a679d1c9"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/TAI-L-EXC-PROVIS-BOE_154AB89SD658.pdf/fa35eea9-dc8f-99b1-3ed7-ec8bcd48ce83"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/CAUSAS-EXCL-TAI-L_154AB89SD658.pdf/24872424-7921-2990-c860-a3260be2219f"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/INSTRUCCIONESSUBSANACIONCPSOEP2018_154AB89SD658.pdf/424103e4-ab2d-d431-7240-d4f0546bcfcc"
+            },
+            {
+              "label": "Nota informativa sobre la causa de exclusión F3",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/NOTAINFORMATIVACPSF3_154AB89SD658.pdf/80e57c87-fb6d-6fc0-fecd-d0b78a98a1c5"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/00RESOLUCINDEFINITIVAADMITIDOSFIRMADA_154AB89SD658.pdf/dc6de973-1c7c-2154-7f1f-6b7dd8b3720f"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/07TAI_L_01GE_154AB89SD658.pdf/760220c7-3f59-c39c-7239-6417a59397cc"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/07TAI_L_02CRD_154AB89SD658.pdf/fc1ab2fc-f2f6-3b95-c5ef-15cdabac1770"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/07TAI-L-03EXC_154AB89SD658.pdf/6801a898-55bd-1530-eb48-f98f58cb2085"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/RESMODIFICADEFINITIVASADMITIDAS_154AB89SD658.pdf/15f3622a-1f70-725e-8cf1-aa1a9185ba3a"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/TAILGRAL_154AB89SD658.pdf/e31c765e-c139-a387-af87-26b80fada5ce"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/TAILCRD_154AB89SD658.pdf/47ebf882-18c0-dffa-4012-b09b398a9baf"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/ResolCOMPLEMENTARIAadmitidos_154AB89SD658.pdf/524ea11b-089b-9c48-b0b6-a021cb1f5331"
+            }
+          ]
+        },
+        {
+          "title": "Primer ejercicio",
+          "links": [
+            {
+              "label": "Distribución de opositores por aula",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/DISTR_OPO_TAIL_154AB89SD658.pdf/73f3a02d-d44c-bc85-894a-661f37e530f7"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/7OEP2018TAILI_154AB89SD658.pdf/cdc80da6-8e02-a640-65c4-faa5917c9a28"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/Notaalegaciones_154AB89SD658.pdf/ec72428d-0e53-3f93-b84b-82c94eea0295"
+            },
+            {
+              "label": "Cuestionario",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/07TAIL_154AB89SD658.pdf/4c0b46eb-c8ff-1c9c-0749-06aab6f0a9e1"
+            },
+            {
+              "label": "Plantilla provisional de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/07-Plantilla_provisionalTAI-LPrimerejercicio2018_154AB89SD658.pdf/2cd08c6d-89b7-a0b5-3075-e11687c05f62"
+            },
+            {
+              "label": "Nota informativa de presentados",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/notainformativapresentados__154AB89SD658.pdf/4adcf8b4-69b9-195e-058a-931e3ae80ec6"
+            },
+            {
+              "label": "Resolución",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/ResolucinsuperanprimerejercicioTAIL_154AB89SD658.pdf/a8191b9b-51e5-522a-ca09-e88be7487836"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/1-TAI-L-DM-SUP_GE_154AB89SD658.pdf/632c6585-3797-e010-10da-78c52ed21859"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/1-TAI-L-DM-SUP_CRD_154AB89SD658.pdf/a77dd549-cddb-5ff6-e114-d2f6cd4c1063"
+            },
+            {
+              "label": "Plantilla definitiva de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/Plantilla_defTAI-L1ejer_154AB89SD658.pdf/a546831b-fe61-6dd4-230b-5171c13b27df"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/PuntminimasTAIL1ejer_154AB89SD658.pdf/ffe7336a-b035-156b-262f-fd1817af7636"
+            },
+            {
+              "label": "Nota informativa sobre fórmula de transformación de puntuaciones directas en calificaciones",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/Nota_Formula_154AB89SD658.pdf/60de1ebb-16e2-8d67-fe43-af298a24d9e6"
+            }
+          ]
+        },
+        {
+          "title": "Segundo ejercicio",
+          "links": [
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/CRITERIOS_2_TAILI_154AB89SD658.pdf/c44b7573-d587-4a0a-3eef-8d4cd346b266"
+            },
+            {
+              "label": "Distribución de opositores por aula",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/TAI_L_OEP2018_DISTRIB_OPO_2EJER_154AB89SD658.pdf/ace5dc59-1ce4-0c8a-135b-7ffc381ec559"
+            },
+            {
+              "label": "Mapa de la Facultad de Ciencias (mapa azul)",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/TAI_L_OEP2018_DISTRIB_OPO_2EJER_MAPA%2520AZUL_154AB89SD658.pdf/b5c6b89d-62d0-21cd-76b2-139aebc426df"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/Nota_informativa_25_enero_154AB89SD658.pdf/d64ad80a-2501-6549-41ea-260992689e07"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/Nota%2520TAI-L%25202EJ%2520alegaciones%252025%2520enero%25202019.pdf/88048a7f-bd8b-810e-4689-44b7dbad8e4a"
+            },
+            {
+              "label": "Cuestionario",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/CUESTIONARIO__SEGUNDO_EJERCICIO_TAILI_%2520OEP_2018_154AB89SD658.pdf/a1909d6d-18d0-9b4b-d2ad-ebb02bd7ed8c"
+            },
+            {
+              "label": "Plantilla provisional de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/Plantilla_provisional_Segundo%2520ejercicio_TAILI_OEP_2018._154AB89SD658.pdf/a884f963-5445-bb1a-a4cb-02e9eb30bfd8"
+            },
+            {
+              "label": "Resolución de 30 de abril de 2020, por la que se aprueba la relación de opositores que han superado el segundo ejercicio",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/2ejer_Reso_superan_TAILI_OEP2018__154AB89SD658.pdf/8630d1d0-bc53-6255-f7e2-f26aa888b6a4"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/2jer_aprobados_general_TAILI_OEP2018__154AB89SD658.pdf/b474f512-e27a-3e23-9dc9-9890ff210e1a"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/2ejer_aprobados_CRD_TAILI_OEP2018__154AB89SD658.pdf/55525349-9e05-8864-7d5f-2da5ed838264"
+            },
+            {
+              "label": "Plantilla definitiva de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/2jer_Plantilla_definitiva%2520TAILI_OEP2018__154AB89SD658.pdf/005c1328-6fb4-3a56-81db-acaa79c356d3"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/2ejer_Punt_minimas%25202018_TAILI_OEP2018__154AB89SD658.pdf/9929afed-090f-a586-a01e-c5fac4ef6ed0"
+            }
+          ]
+        },
+        {
+          "title": "Final del proceso",
+          "links": [
+            {
+              "label": "Resolución de 7 de junio de 2020",
+              "url": "https://sede.inap.gob.es/documents/59312/1790179/Relaci%C3%B3n_definitiva_superan_pruebas_selectivas_TAILI_OEP_2018_154AB89SD658.pdf/1a150ec2-153e-956f-e4c1-f59c3c471137"
+            },
+            {
+              "label": "Resolución de 18 de diciembre de 2020",
+              "url": "https://www.boe.es/boe/dias/2020/12/22/pdfs/BOE-A-2020-16688.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "8f020ffa23d5977a866fe291af26f18682a45cdc7f2935cc50bd6f468ea68d5d"
+    },
+    {
+      "year": 2018,
+      "label": "Promoción interna para personal funcionario y personal laboral fijo",
+      "url": "https://sede.inap.gob.es/tai-2018-promocion-interna",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 14 de junio de 2019",
+              "url": "https://www.boe.es/boe/dias/2019/06/17/pdfs/BOE-A-2019-9062.pdf"
+            },
+            {
+              "label": "Bases",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/00-Bases.pdf/8bede080-c740-64e1-c45e-a4be8d80368f"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/06-TAI-P.pdf/1eb40b0a-bee2-d32b-2113-ac7a353bb112"
+            }
+          ]
+        },
+        {
+          "title": "Listados de admitidos y excluidos",
+          "links": [
+            {
+              "label": "Resolución de 5 de septiembre de 2019",
+              "url": "https://www.boe.es/boe/dias/2019/09/09/pdfs/BOE-A-2019-12895.pdf"
+            },
+            {
+              "label": "Lugar, día y hora de examen",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/LUGAR_DIA_HORA_EXAMEN.pdf/aabf689e-5098-67e3-bbbf-57aacbb817bc"
+            },
+            {
+              "label": "Promoción General",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/TAI-ADM-PROVIS-SA-ALF_PG_154AB89SD658.pdf/900bb294-e849-b0d5-089e-a9734991abf4"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/TAI-ADM-PROVIS-SA-ALF_CRD_154AB89SD658.pdf/8eccdf0a-3730-3f9f-b02c-74c6cbd012a5"
+            },
+            {
+              "label": "Listado provisional de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/TAI-EXC-PROVIS-BOE_154AB89SD658.pdf/435bdc88-d9c4-9edf-4554-85613055d7d6"
+            },
+            {
+              "label": "Causas de exclusión",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/CAUSAS-EXCL-TAI-PI_154AB89SD658.pdf/4beb8b53-f779-dc99-74a1-284e1b1faed5"
+            },
+            {
+              "label": "Instrucciones generales para la subsanación",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/INSTRUCCIONESSUBSANACIONCPSOEP2018_154AB89SD658.pdf/424103e4-ab2d-d431-7240-d4f0546bcfcc"
+            },
+            {
+              "label": "Nota informativa sobre la causa de exclusión F3",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/NOTAINFORMATIVACPSF3_154AB89SD658.pdf/80e57c87-fb6d-6fc0-fecd-d0b78a98a1c5"
+            },
+            {
+              "label": "Resolución del Instituto Nacional de Administración Pública",
+              "url": "https://sede.inap.gob.es/documents/59312/1747284/00RESOLUCINDEFINITIVAADMITIDOSFIRMADA_154AB89SD658.pdf/dc6de973-1c7c-2154-7f1f-6b7dd8b3720f"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/08TAI_P_01PG_154AB89SD658.pdf/ed8b2728-add0-a7ac-81b6-681b4849699e"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/08TAI_P_02CRD_154AB89SD658.pdf/615c6168-4abd-0382-ae8d-cb4aa2e8f8ef"
+            },
+            {
+              "label": "Listado definitivo de excluidos",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/08TAI_P_03EXC_154AB89SD658.pdf/1c74383a-b063-5371-da5d-295332b76582"
+            }
+          ]
+        },
+        {
+          "title": "Ejercicio único",
+          "links": [
+            {
+              "label": "Distribución de opositores por aula",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/DISTR_OPO_TAIPI_154AB89SD658.pdf/62dd76e0-31c1-39a2-6da6-22ebd37fd453"
+            },
+            {
+              "label": "Criterios de corrección, valoración y superación",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/8OEP2018TAIPI_154AB89SD658.pdf/f4857b8c-0a2e-01a1-cd0c-70e920fe73f6"
+            },
+            {
+              "label": "Nota informativa",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/Notaalegaciones_154AB89SD658.pdf/c703511f-32ba-e104-01e3-eb0fd2860de9"
+            },
+            {
+              "label": "Cuestionario",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/08TAIPI_154AB89SD658.pdf/5b93e5e5-86bc-a169-8128-d3f8f073d9f2"
+            },
+            {
+              "label": "Plantilla provisional de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/08-Plantilla_provisionalTAI-PEjercicionico2018_154AB89SD658.pdf/5d446263-1325-2a6c-2121-f3fd966c4bca"
+            },
+            {
+              "label": "Nota informativa de presentados",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/notainformativapresentados__154AB89SD658.pdf/6d836e52-d988-609b-7cd7-c74226bda6de"
+            },
+            {
+              "label": "Resolución",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/ResolucinsuperanejerciciounicoTAIPI_154AB89SD658.pdf/0205d11b-b2af-d558-62f5-3f84b3dc533f"
+            },
+            {
+              "label": "Promoción general",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/1-TAI-PI-DM-SUP_PG_154AB89SD658.pdf/96ff2db5-775c-6dc3-a74a-080347f25f4f"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/1-TAI-PI-DM-SUP_CRD_154AB89SD658.pdf/c37927d6-089d-b7aa-4418-06508186a64c"
+            },
+            {
+              "label": "Plantilla definitiva de respuestas",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/Plantilla_defTAI-Pejerunico_154AB89SD658.pdf/0120eadc-9877-2a4c-51dd-02b625d9ef79"
+            },
+            {
+              "label": "Nota informativa puntuaciones mínimas",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/PuntminimasTAIPIejerunico_154AB89SD658.pdf/f823a512-b2be-9bf1-4f68-e1073697436e"
+            },
+            {
+              "label": "Nota informativa sobre fórmula de transformación de puntuaciones directas en calificaciones",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/Nota_Formula_154AB89SD658.pdf/914cc15d-257d-0dba-6c9f-8eeb345a0fab"
+            }
+          ]
+        },
+        {
+          "title": "Fase Concurso",
+          "links": [
+            {
+              "label": "Resolución de 6 de febrero de 2020",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/Res_%2520provi_concurso_TAI_PI_OEP_2018_154AB89SD658.pdf/2047aed8-f3e5-face-5288-72c8d550fe5c"
+            },
+            {
+              "label": "Promoción general",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-PFC-AL_PG_OEP_2018_154AB89SD658.pdf/dfb12399-3a99-fc33-9f24-71c0a8e01674"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-PFC-AL_CRD_OEP_2018_154AB89SD658.pdf/02743959-4f6d-80d0-092b-d2b7bf2416e0"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/DEF-CONCURSO-TAI-PI_154AB89SD658.pdf/66577eb9-2111-a0eb-7a40-0900c1dec87e"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/Correccion%2520errores%2520Resolucion%2520de%252027%2520febrero%25202020%2520defi%2520concurso%2520y%2520suma%2520TAI%2520PI.pdf_firmado.pdf/f28bc18d-8160-c595-0482-9b210b38aaf1"
+            },
+            {
+              "label": "Promoción general",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-PFC-D-AL_PG_154AB89SD658.pdf/a7ead784-e55a-7b87-6928-64dcf181adbc"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-PFC-D-AL_CRD_154AB89SD658.pdf/b7b2cb77-f7b9-6900-b9f1-0e7a331a0411"
+            }
+          ]
+        },
+        {
+          "title": "Suma fase oposición y concurso",
+          "links": [
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/SUMA-OPO-CONC-TAI-PI_154AB89SD658.pdf/e3ea3a23-d1c8-e78c-ff9e-c3af9e6ca711"
+            },
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/Correccion%2520errores%2520Resolucion%2520de%252027%2520febrero%25202020%2520defi%2520concurso%2520y%2520suma%2520TAI%2520PI.pdf_firmado.pdf/f28bc18d-8160-c595-0482-9b210b38aaf1"
+            },
+            {
+              "label": "Promoción general",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-SUFC-AL_PG_154AB89SD658.pdf/dd9205e3-b671-3f6c-4715-def165d55758"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-SUFC-AL_CRD_154AB89SD658.pdf/a767113f-ac01-6807-b102-f540b5572ec8"
+            },
+            {
+              "label": "Promoción general",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-SUFC-PT_PG_154AB89SD658.pdf/d09d06d8-af69-3e69-4226-f3ec846a9362"
+            },
+            {
+              "label": "Cupo Base Específica 5",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/2-TAI-SUFC-PT_CRD_154AB89SD658.pdf/e23b426d-6b2b-9dc1-c3e7-14a708b96647"
+            }
+          ]
+        },
+        {
+          "title": "Final del proceso",
+          "links": [
+            {
+              "label": "Resolución de 9 de marzo de 2020",
+              "url": "https://sede.inap.gob.es/documents/59312/1777270/TAIPI_OEP_2018_aprobados_pruebas_selectivas_154AB89SD658.pdf/dc128a42-a138-944d-755a-b56b9ce69abe"
+            },
+            {
+              "label": "Resolución de 2 de diciembre de 2020",
+              "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2020-15606"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "98a522caf3daa9539a1b7e3675d22b4b2448999222281c7dfb040dde37c5b5f5"
+    }
+  ],
+  "resources": [
+    {
+      "title": "Exámenes Ingreso libre",
+      "links": [
+        {
+          "label": "OEP 2008: Ejercicio primera parte",
+          "url": "https://www.inap.es/es/documents/10136/1695444/PrimeraparteTAILI2008.pdf/63b5cd36-adbb-3ee2-ec1f-3c420920588a"
+        },
+        {
+          "label": "OEP 2008: Ejercicio segunda parte",
+          "url": "https://www.inap.es/es/documents/10136/1695444/SegundaparteTAILI2008.pdf/28cba337-c56c-8d2f-b496-4e94c0da210b"
+        },
+        {
+          "label": "OEP 2008: Plantilla de respuestas",
+          "url": "https://www.inap.es/es/documents/10136/1695444/PlantilladefinitivaTAILI2008.pdf/afc54752-7d12-3874-f0aa-721c9450aa56"
+        }
+      ]
+    },
+    {
+      "title": "Exámenes promoción interna",
+      "links": [
+        {
+          "label": "OEP 2008: Ejercicio primera parte",
+          "url": "https://www.inap.es/es/documents/10136/1695444/TaiPIejercicioprimeraparte2008.pdf/67524f3a-74c0-5076-5149-6a24260baa70"
+        },
+        {
+          "label": "OEP 2008: Ejercicio segunda parte",
+          "url": "https://www.inap.es/es/documents/10136/1695444/TaiPIejerciciosegundaparte2008.pdf/91a056bd-3f47-25cc-5e12-39b64035c36a"
+        },
+        {
+          "label": "OEP 2008: Plantilla de respuestas",
+          "url": "https://www.inap.es/es/documents/10136/1695444/TaiPIejerciciosegundaparte2008.pdf/91a056bd-3f47-25cc-5e12-39b64035c36a"
+        },
+        {
+          "label": "OEP 2010: Cuestionario primera parte 1",
+          "url": "https://www.inap.es/es/documents/10136/1695444/TAI10_cuestionariotai1primera%20parte.pdf/152ef377-66fb-9e1d-8ff2-246fb6ee1917"
+        },
+        {
+          "label": "OEP 2010: Cuestionario segunda parte 2",
+          "url": "https://www.inap.es/es/documents/10136/1695444/TAI10_cuestionarioTAIPI2segunda%20parte.pdf/92bb3422-b8c6-9101-8a2a-07e6609ea9e4"
+        },
+        {
+          "label": "OEP 2010: Plantilla de respuestas",
+          "url": "https://www.inap.es/es/documents/10136/1695444/TAI10_SolucionesDEFINITIVAS2010TAIPI.pdf/18d5bce6-aeef-413e-687e-856f821fdee9"
+        }
+      ]
+    }
+  ],
+  "inapCheckedAt": "2026-11-06T07:22:53+00:00",
+  "boe": [],
+  "boeThrough": "2026-11-06",
+  "sequence": 0,
+  "changes": []
+}
