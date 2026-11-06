@@ -287,6 +287,7 @@ export default function App() {
     apply({ kind: 'position', resourceId: resource.id, value: { version: resource.version, page, openedAt: new Date().toISOString() } })
   }
   function open(resource: Resource, page?: number, highlight?: string) {
+    search.current?.blur()
     const previous = study.positions[resource.id]
     const lastPage = previous?.version === resource.version ? previous.page : 1
     if (view.page !== 'resource') setBack({ view, scroll: window.scrollY })
@@ -371,7 +372,15 @@ export default function App() {
     review: 'Por revisar', search: 'Búsqueda', resource: current?.title ?? 'Recurso', topic: 'Tema', block: 'Bloque',
   })[view.page]
   const listProps = { open, favorite, study, index, connected }
-  const showConnect = !account && !connected && auth.status !== 'connecting'
+  const loadingLibrary = !account && !!clientId && !error && network
+    && ['loading', 'connecting', 'connected'].includes(auth.status)
+  const showConnect = !account && !loadingLibrary && network
+  const libraryStatus = !network ? 'Sin conexión.' : error ? 'La biblioteca no se pudo cargar.' : 'Cargando biblioteca…'
+  const retryLibrary = auth.status === 'connected'
+  const connectLabel = retryLibrary ? loadingLibrary ? libraryStatus : 'Reintentar'
+    : loadingLibrary ? 'Conectando…' : 'Conectar Google Drive'
+  const indexLabel = !indexStats.indexed && indexStats.pending
+    ? 'Preparando la búsqueda en PDF…' : `${indexStats.indexed} PDF indexados`
 
   return <div className="app-shell">
     <a className="skip-link" href="#main">Saltar al contenido</a>
@@ -404,7 +413,7 @@ export default function App() {
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="Abrir navegación" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}><Menu size={22} /></button>
         <form className="global-search" role="search" onSubmit={event => { event.preventDefault(); startSearch(query) }}>
-          <Search size={20} /><input ref={search} value={query} placeholder="Buscar en la biblioteca…" aria-label="Buscar en la biblioteca" onChange={event => {
+          <Search size={20} /><input ref={search} value={query} placeholder="Buscar en biblioteca" aria-label="Buscar en la biblioteca" onChange={event => {
             const input = event.nativeEvent
             if (!searching && 'inputType' in input && (input.inputType === 'historyUndo' || input.inputType === 'historyRedo')) return
             startSearch(event.target.value)
@@ -416,13 +425,12 @@ export default function App() {
       </header>
 
       <main className={current ? 'content content-reader' : 'content'} id="main" tabIndex={-1}>
-        {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. Las operaciones de Drive se reanudarán al volver a conectar.</div>}
+        {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
         {account && !connected && <div className="banner" role="status"><CloudOff size={18} />
           <span>{auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Renueva el acceso a Drive para abrir archivos y sincronizar.'}</span>
           <button className="button" disabled={!network || auth.status === 'connecting' || working}
             onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{auth.status === 'connected' ? 'Reintentar' : 'Reconectar'}</button></div>}
         {(error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
-          {auth.status === 'connected' && !account && <button className="button" disabled={working} onClick={() => void refresh()}>Reintentar</button>}
           {!ios && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
           {error && <button className="icon-button" aria-label="Cerrar aviso" onClick={() => setError('')}><X size={17} /></button>}
         </div>}
@@ -434,17 +442,19 @@ export default function App() {
               <span className="hero-kicker">{account ? <><BookOpen size={16} /> {recent[0] ? 'Último recurso' : 'Biblioteca privada'}</> : <><LockKeyhole size={15} /> Biblioteca privada</>}</span>
               <h2>{account ? recent[0]?.title ?? (resources.length ? `${resources.length} recursos` : 'Añadir el primer recurso') : 'Google Drive'}</h2>
               <p>{account
-                ? recent[0] ? locationName(recent[0].topicId) : resources.length ? `${indexStats.indexed} PDF indexados` : 'Puedes añadir archivos, enlaces y notas.'
+                ? recent[0] ? locationName(recent[0].topicId) : resources.length ? indexLabel : 'Puedes añadir archivos, enlaces y notas.'
                 : 'Conecta tu cuenta para consultar la biblioteca y sincronizar el progreso.'}</p>
               {account && recent[0] ? <button className="hero-button" onClick={() => open(recent[0])}>Abrir último recurso <ArrowRight size={17} /></button>
+                : account && resources.length ? <a className="hero-button" href="#temario">Ver temario <ChevronRight size={17} /></a>
                 : account ? <button className="hero-button" disabled={!connected} onClick={() => setModal({ kind: 'add' })}><Plus size={17} /> Añadir recurso</button>
-                  : <button className="hero-button" disabled={!clientId || ['loading', 'connecting', 'connected'].includes(auth.status)} onClick={() => connect()}><Cloud size={18} />
-                    {auth.status === 'connecting' ? 'Conectando…' : auth.status === 'connected' || working ? 'Cargando biblioteca…' : 'Conectar Google Drive'}<ArrowRight size={17} /></button>}
+                  : <button className="hero-button" disabled={!clientId || !showConnect || working}
+                    onClick={() => retryLibrary ? void refresh() : connect()}><Cloud size={18} />
+                    {connectLabel}<ArrowRight size={17} /></button>}
               {!clientId && <p className="hero-note">Falta configurar el Client ID público.</p>}
             </div>
             <HeroArt />
           </section>
-          <section className="section">
+          <section className="section" id="temario">
             <div className="section-head"><div><h2>Temario oficial</h2><p>4 bloques · 33 temas</p></div>
               <a href={syllabusSource} target="_blank" rel="noreferrer" className="text-link">Ver convocatoria <ExternalLink size={15} /></a></div>
             <div className="block-grid">{blocks.map((item, i) => <button className="block-card" key={item.id} onClick={() => navigate({ page: 'block', id: item.id })}>
@@ -456,9 +466,10 @@ export default function App() {
           </section>
         </> : view.page === 'search' ? <>
           <div className="page-heading"><p className="context-label"><Search size={17} /> Biblioteca</p><h1>Búsqueda</h1><p>Busca por título, fuente y texto dentro de los PDF.</p></div>
-          <SearchResults query={cleanQuery} pageResults={pageResults.documents === pdfVersions ? pageResults : emptyPageResults} error={searchError} resources={resources}
+          {loadingLibrary || (retryLibrary && !account) ? <div className="empty" role="status"><Cloud size={24} /><p>{libraryStatus}</p></div>
+            : <SearchResults query={cleanQuery} pageResults={pageResults.documents === pdfVersions ? pageResults : emptyPageResults} error={searchError} resources={resources}
             limits={searchLimits} loadMore={kind => setSearchLimits(current => ({ ...current, [kind]: current[kind] + searchBatch }))}
-            indexing={indexWorking} hasAccount={!!account} open={open} />
+            indexing={indexWorking} hasAccount={!!account} open={open} />}
         </> : current && view.page === 'resource' ? <>
           <div className="resource-topline">
             <button className="text-link" onClick={returnToList}><ArrowLeft size={17} /> Volver</button>
@@ -492,12 +503,13 @@ export default function App() {
           {view.page === 'block' && block ? <div className="topic-list">
             {block.topics.map(item => <button key={item.id} onClick={() => openLocation(item.id)}>
               <span className={`block-number ${tones[blocks.indexOf(block)]}`}>{item.number}</span>
-              <span><strong>{item.title}</strong><small>{resources.filter(resource => resource.topicId === item.id || resource.relatedTopicIds?.includes(item.id)).length} recursos</small></span><ChevronRight size={18} />
+              <span><strong>{item.title}</strong>{account && <small>{resources.filter(resource => resource.topicId === item.id || resource.relatedTopicIds?.includes(item.id)).length} recursos</small>}</span><ChevronRight size={18} />
             </button>)}
-          </div> : <ResourceList items={visible} filters={filters} setFilters={setFilters} {...listProps}
-            empty={showConnect ? 'Conecta Google Drive para ver tus recursos.' : 'Todavía no hay recursos en esta sección.'}
-            onEmpty={showConnect && clientId ? () => connect() : connected && (topic || view.page === 'general') ? () => setModal({ kind: 'add' }) : undefined}
-            emptyAction={showConnect ? 'Conectar Drive' : 'Añadir recurso'} />}
+          </div> : loadingLibrary ? <div className="empty" role="status"><Cloud size={24} /><p>{libraryStatus}</p></div>
+            : <ResourceList items={visible} filters={filters} setFilters={setFilters} {...listProps}
+              empty={account ? 'Todavía no hay recursos en esta sección.' : showConnect && !retryLibrary ? 'Conecta Google Drive para ver tus recursos.' : libraryStatus}
+              onEmpty={showConnect && clientId ? () => retryLibrary ? void refresh() : connect() : connected && (topic || view.page === 'general') ? () => setModal({ kind: 'add' }) : undefined}
+              emptyAction={showConnect ? retryLibrary ? 'Reintentar' : 'Conectar Drive' : 'Añadir recurso'} />}
         </>}
       </main>
 
