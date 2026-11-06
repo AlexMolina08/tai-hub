@@ -13,6 +13,37 @@ document.addEventListener('click', event => {
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') parent.postMessage({type:'tai-study-escape'}, '*');
 });
+for (const image of document.querySelectorAll('img[src]')) {
+  const viewport = document.createElement('div');
+  viewport.className = 'image-viewport';
+  viewport.style.cssText = 'max-width:100%;overflow:auto;overscroll-behavior:contain';
+  viewport.tabIndex = 0;
+  viewport.setAttribute('role', 'region');
+  viewport.setAttribute('aria-label', image.alt || 'Imagen del tema');
+  image.before(viewport);
+  viewport.append(image);
+  const originalStyle = image.getAttribute('style');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'copy-code image-zoom';
+  button.textContent = 'Ampliar imagen';
+  button.setAttribute('aria-pressed', 'false');
+  button.addEventListener('click', () => {
+    const expanded = button.getAttribute('aria-pressed') !== 'true';
+    viewport.style.maxHeight = expanded ? '70vh' : '';
+    if (expanded) {
+      const width = Math.max(image.naturalWidth, image.getBoundingClientRect().width * 2);
+      image.style.cssText = 'display:block;max-width:none;width:' + width + 'px;height:auto';
+    } else if (originalStyle === null) {
+      image.removeAttribute('style');
+    } else {
+      image.setAttribute('style', originalStyle);
+    }
+    button.setAttribute('aria-pressed', String(expanded));
+    button.textContent = expanded ? 'Ajustar imagen' : 'Ampliar imagen';
+  });
+  viewport.after(button);
+}
 for (const pre of document.querySelectorAll('pre')) {
   const button = document.createElement('button');
   button.type = 'button';

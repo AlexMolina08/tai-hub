@@ -37,6 +37,20 @@ for (const file of files) {
     await frame.locator('#ampliaciones').evaluate(element => element.scrollIntoView())
     await expect(frame.locator('#ampliaciones > h2')).toBeInViewport()
     await page.screenshot({ path: test.info().outputPath(`${topicId}-ampliacion.png`) })
+    const contextualLink = frame.locator('.context-links a').first()
+    await contextualLink.click()
+    const correctionId = (await contextualLink.getAttribute('href'))!.slice(1)
+    await expect(frame.locator(`[id="${correctionId}"]`)).toBeInViewport()
+    await page.screenshot({ path: test.info().outputPath(`${topicId}-contexto.png`) })
+    const zoom = frame.getByRole('button', { name: 'Ampliar imagen', exact: true }).first()
+    if (await zoom.count()) {
+      await zoom.click()
+      await expect(frame.getByRole('button', { name: 'Ajustar imagen', exact: true }).first()).toHaveAttribute('aria-pressed', 'true')
+      expect(await frame.locator('body').evaluate(body => body.scrollWidth <= body.ownerDocument.documentElement.clientWidth + 1)).toBe(true)
+      await frame.locator('.image-viewport').first().evaluate(element => element.scrollIntoView())
+      await page.screenshot({ path: test.info().outputPath(`${topicId}-imagen.png`) })
+      await frame.getByRole('button', { name: 'Ajustar imagen', exact: true }).first().click()
+    }
     const code = frame.locator('pre').first()
     if (await code.count()) {
       const button = frame.getByRole('button', { name: 'Copiar código', exact: true }).first()
