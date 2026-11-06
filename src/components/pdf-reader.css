@@ -3,6 +3,7 @@
   --pdf-panel: var(--surface, Canvas);
   --pdf-accent: var(--accent, #236055);
   display: flex;
+  position: relative;
   flex-direction: column;
   min-width: 0;
   color: var(--text, CanvasText);
@@ -172,6 +173,64 @@
 .pdf-annotation-row {
   display: flex;
   align-items: center;
+}
+
+.pdf-annotation-feedback,
+.pdf-annotation-history {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 0.85rem;
+}
+
+.pdf-annotation-feedback {
+  position: fixed;
+  z-index: 6;
+  inset-inline-end: max(8px, env(safe-area-inset-right));
+  inset-block-end: 12px;
+  max-width: calc(100% - 16px);
+  padding-inline: 10px 3px;
+  border: 1px solid var(--pdf-border);
+  border-radius: 9px;
+  background: var(--pdf-panel);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 14%);
+}
+
+@media (max-width: 899px) {
+  .pdf-reader:not(.pdf-reader--focus) .pdf-annotation-feedback {
+    inset-block-end: calc(60px + env(safe-area-inset-bottom));
+  }
+}
+
+.pdf-reader--focus .pdf-annotation-feedback {
+  position: absolute;
+  inset-block-end: max(8px, env(safe-area-inset-bottom));
+}
+
+.pdf-annotation-feedback button,
+.pdf-annotation-history button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pdf-accent);
+  font-weight: 650;
+}
+
+.pdf-annotation-feedback > span {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-annotation-feedback button:hover,
+.pdf-annotation-history button:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
 .pdf-feedback,

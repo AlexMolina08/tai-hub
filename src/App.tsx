@@ -338,7 +338,11 @@ export default function App() {
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="Abrir navegación" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}><Menu size={22} /></button>
         <form className="global-search" role="search" onSubmit={event => { event.preventDefault(); startSearch(query) }}>
-          <Search size={20} /><input ref={search} value={query} placeholder="Buscar en la biblioteca…" aria-label="Buscar en la biblioteca" onChange={event => startSearch(event.target.value)} />
+          <Search size={20} /><input ref={search} value={query} placeholder="Buscar en la biblioteca…" aria-label="Buscar en la biblioteca" onChange={event => {
+            const input = event.nativeEvent
+            if (!searching && 'inputType' in input && (input.inputType === 'historyUndo' || input.inputType === 'historyRedo')) return
+            startSearch(event.target.value)
+          }} />
           {query ? <button type="button" className="icon-button" aria-label="Borrar búsqueda" onClick={() => { changeQuery(''); search.current?.focus() }}><X size={16} /></button> : <kbd>⌘ K</kbd>}
         </form>
         <button className="button add-top" aria-label="Añadir recurso" disabled={!connected || !account} onClick={() => setModal({ kind: 'add' })}><Plus size={18} /><span>Añadir recurso</span></button>

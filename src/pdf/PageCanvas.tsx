@@ -155,7 +155,7 @@ export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, que
     <div className="pdf-canvas" ref={canvasHost} />
     <div className="pdf-highlights" aria-hidden="true">
       {annotations.flatMap(annotation => (annotation.rects ?? []).map((rect, index) =>
-        <Overlay key={`${annotation.id}-${index}`} rect={rect} />))}
+        <Overlay key={`${annotation.id}-${index}`} rect={rect} highlightId={annotation.id} />))}
       {matches.map((rect, index) => <Overlay key={index} rect={rect} match />)}
     </div>
     <div className="textLayer" ref={textHost} />
@@ -164,8 +164,8 @@ export const PageCanvas = memo(function PageCanvas({ pdf, page, width, zoom, que
   </div>
 })
 
-function Overlay({ rect, match }: { rect: PdfRect; match?: boolean }) {
-  return <span className={match ? 'pdf-search-mark' : 'pdf-user-mark'} style={{
+function Overlay({ rect, match, highlightId }: { rect: PdfRect; match?: boolean; highlightId?: string }) {
+  return <span className={match ? 'pdf-search-mark' : 'pdf-user-mark'} data-highlight-id={highlightId} style={{
     left: `${rect.x * 100}%`,
     top: `${rect.y * 100}%`,
     width: `${rect.width * 100}%`,
