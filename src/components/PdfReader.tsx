@@ -244,15 +244,8 @@ export default function PdfReader({
     if (target instanceof HTMLElement && (target.closest('input, textarea, select') || target.isContentEditable)) return
     if (window.getSelection()?.isCollapsed === false) return
     const key = event.key.toLowerCase()
-    if (key === 'x' && !event.shiftKey && selectedMark) {
-      event.preventDefault()
-      remove(selectedMark)
-      return
-    }
-    const last = history.undo.at(-1)
-    const cutHighlight = key === 'x' && !event.shiftKey && last?.added && last.annotation.kind === 'highlight'
     const redo = (key === 'z' && event.shiftKey) || (key === 'y' && event.ctrlKey && !event.shiftKey)
-    if (!cutHighlight && key !== 'z' && !redo) return
+    if (key !== 'z' && !redo) return
     if (!(redo ? history.redo : history.undo).length) return
     event.preventDefault()
     replay(redo)

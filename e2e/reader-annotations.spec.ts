@@ -24,7 +24,7 @@ async function selectText(page: Page) {
   await expect(page.getByRole('button', { name: 'Subrayar texto seleccionado' })).toHaveAttribute('data-selected', 'true')
 }
 
-test('Ctrl+X undoes the highlight just created in the reader', async ({ page, context, browserName }) => {
+test('Command+Z undoes the highlight just created and cut leaves it intact', async ({ page, context, browserName }) => {
   await new DriveFixture().install(context, browserName === 'webkit')
   const reader = await openPdf(page)
   await selectText(page)
@@ -33,6 +33,8 @@ test('Ctrl+X undoes the highlight just created in the reader', async ({ page, co
   await expect(mark).toHaveCount(1)
   await expect(reader.getByRole('button', { name: 'Deshacer', exact: true })).toBeInViewport()
   await page.keyboard.press('Control+x')
+  await expect(mark).toHaveCount(1)
+  await page.keyboard.press('Meta+z')
   await expect(mark).toHaveCount(0)
 })
 
@@ -97,7 +99,7 @@ test('removes a saved highlight from the page and synchronizes its restoration',
     const remove = reopened.getByRole('button', { name: 'Quitar subrayado', exact: true })
     await expect(remove).toBeInViewport()
     if (isMobile) await remove.tap()
-    else await other.keyboard.press('Control+x')
+    else await remove.click()
     await expect(mark).toHaveCount(0)
     await expect.poll(() => drive.savedStudy()).toContain('"value":null')
     await reopened.getByRole('button', { name: 'Deshacer', exact: true }).click()
