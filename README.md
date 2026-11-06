@@ -18,10 +18,12 @@ GitHub Actions verifica los cambios de `main`. GitHub Pages publica la rama `gh-
 
 - **Añadir recurso** admite archivos, enlaces y notas. Desde el recurso puedes editar su tema, fuente y etiquetas, sustituir un PDF o enviar el archivo a la papelera de Drive.
 - **Buscar** consulta metadatos y texto por página. Los PDF sin texto extraíble se identifican como tales. La extracción se realiza al conectar Drive y cuando cambia el contenido del PDF. El índice local se guarda en IndexedDB y se sincroniza con Drive.
-- El lector permite desplazarte de una página a la siguiente y ampliar la vista a pantalla completa. Recuerda la página y sincroniza marcadores, notas y subrayados por versión. **Ajustes** muestra el estado de Drive y permite actualizar la biblioteca o reintentar el índice.
+- El lector guarda la posición dentro de la página, el zoom y el modo lectura. Al recargar una pestaña con un PDF abierto, recupera ese punto. **Abrir último recurso** y **Recientes** recuperan la última posición sincronizada con Drive.
 - Toca un subrayado para quitarlo. Pulsa **Deshacer** o usa **⌘Z** en Mac y **Ctrl+Z** en otros teclados. También puedes deshacer o rehacer desde el panel de notas mientras el PDF siga abierto.
 - **Reproducir en Drive** abre la sesión autenticada de Google en otra pestaña. El reproductor de Drive gestiona la transmisión y los controles disponibles para el formato. Los originales también se pueden descargar.
 - **Ajustes → Importar carpeta** recibe un manifiesto v1 y la carpeta de archivos. La operación comprueba cuota, deduplica por huella y verifica tamaño y MD5 cuando el manifiesto lo contiene. Para reanudar tras cerrar la sesión, selecciona el mismo manifiesto y carpeta. Las cargas completas ya verificadas se omiten.
+- **Por revisar** reúne las fichas con la marca **Pendiente de revisión**. Desmárcala y guarda la ficha al terminar.
+- **Tests de Tailabs** abre la sección de tests de Tailabs en una pestaña nueva con la sesión de ese sitio.
 
 ## Fuentes oficiales
 
