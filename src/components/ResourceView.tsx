@@ -5,6 +5,7 @@ import { safeLink } from '../resources'
 
 const images = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif', 'image/bmp'])
 const audio = new Set(['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav'])
+const richText = new Set(['application/rtf', 'application/x-rtf', 'text/rtf', 'text/richtext'])
 export function ResourceView({ resource, library, connected, download }: {
   resource: Resource
   library: DriveLibrary
@@ -14,9 +15,11 @@ export function ResourceView({ resource, library, connected, download }: {
   const [preview, setPreview] = useState<{ url?: string; text?: string }>()
   const [error, setError] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const image = resource.kind === 'image' && images.has(resource.mimeType) && resource.size <= 16 * 1024 ** 2
-  const sound = resource.kind === 'audio' && audio.has(resource.mimeType) && resource.size <= 16 * 1024 ** 2
+  const previewMime = resource.mimeType === 'audio/x-m4a' ? 'audio/mp4' : resource.mimeType
+  const image = resource.kind === 'image' && images.has(previewMime) && resource.size <= 16 * 1024 ** 2
+  const sound = resource.kind === 'audio' && audio.has(previewMime) && resource.size <= 16 * 1024 ** 2
   const text = resource.kind === 'text' && resource.size <= 2 * 1024 ** 2
+    && !richText.has(previewMime) && !/\.rtf$/i.test(resource.name)
   useEffect(() => {
     if (!connected || (!image && !sound && !text)) return
     setPreview(undefined)
@@ -28,12 +31,12 @@ export function ResourceView({ resource, library, connected, download }: {
         const value = await blob.text()
         if (live) setPreview({ text: value })
       } else if (live) {
-        url = URL.createObjectURL(new Blob([blob], { type: resource.mimeType }))
+        url = URL.createObjectURL(new Blob([blob], { type: previewMime }))
         setPreview({ url })
       }
     }).catch(() => { if (live) setError(true) })
     return () => { live = false; if (url) URL.revokeObjectURL(url) }
-  }, [resource.id, resource.version, resource.mimeType, image, sound, text, library, connected, attempt])
+  }, [resource.id, resource.version, previewMime, image, sound, text, library, connected, attempt])
 
   if (resource.kind === 'note') return <div className="note-preview">{resource.note}</div>
   if (resource.kind === 'link') {
