@@ -37,6 +37,14 @@ for (const file of files) {
     expect(displayedText).toBe(expectedText)
     expect(await frame.locator('[id^="pdf-p"]').count()).toBeGreaterThan(10)
     expect(await frame.locator('#base .ampliacion, #base .correccion, #base .context-links').count()).toBe(0)
+    expect(await frame.locator('#base pre').evaluateAll(elements => elements.filter(element => /^●\s*●\s*●[^\n]*$/.test(element.textContent!.trim())).length)).toBe(0)
+    expect(await frame.locator('#base details.sources').evaluateAll(elements => elements.filter(element =>
+      element.querySelector('summary')?.textContent?.startsWith('Referencia de examen recogida en el manual') && element.querySelector('pre')
+    ).length)).toBe(0)
+    const transcripts = frame.locator('#base pre.terminal-transcript')
+    if (await transcripts.count()) {
+      expect(await transcripts.evaluateAll(elements => elements.every(element => !element.closest('details') && !!element.getAttribute('data-copy')))).toBe(true)
+    }
     const missing = await frame.locator('a[href^="#"]').evaluateAll(anchors => anchors.map(a => a.getAttribute('href')!.slice(1)).filter(id => !document.getElementById(decodeURIComponent(id))))
     expect(missing).toEqual([])
     expect(await frame.locator('body').evaluate(body => body.scrollWidth <= body.ownerDocument.documentElement.clientWidth + 1)).toBe(true)
@@ -47,6 +55,12 @@ for (const file of files) {
       return images.filter(image => !image.naturalWidth || !image.alt).length
     })).toBe(0)
     await page.getByRole('button', { name: 'Lectura amplia', exact: true }).click()
+    if (await transcripts.count()) {
+      const redirection = transcripts.filter({ hasText: 'echo "2026" >> fichero' }).first()
+      await redirection.evaluate(element => element.scrollIntoView({ block: 'start', behavior: 'instant' }))
+      await expect(redirection).toBeInViewport()
+      await page.screenshot({ path: test.info().outputPath(`${topicId}-comandos.png`) })
+    }
     await frame.locator('nav a').first().click()
     await expect(frame.locator('#base h2').first()).toBeInViewport()
     await page.screenshot({ path: test.info().outputPath(`${topicId}-base.png`) })

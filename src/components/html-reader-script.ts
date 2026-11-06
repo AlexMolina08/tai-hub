@@ -50,6 +50,9 @@ for (const pre of document.querySelectorAll('pre')) {
   button.className = 'copy-code';
   button.textContent = 'Copiar código';
   button.addEventListener('click', async () => {
+    const text = pre.getAttribute('data-copy') ?? pre.textContent ?? '';
+    let fallback = pre.nextElementSibling?.nextElementSibling;
+    if (fallback?.classList.contains('copy-fallback')) fallback.remove();
     const select = () => {
       const selection = getSelection();
       const range = document.createRange();
@@ -59,9 +62,28 @@ for (const pre of document.querySelectorAll('pre')) {
     };
     select();
     let copied = false;
+    const copy = event => {
+      if (!event.clipboardData) return;
+      event.clipboardData.setData('text/plain', text);
+      event.preventDefault();
+    };
+    document.addEventListener('copy', copy);
     try { copied = document.execCommand('copy'); } catch {}
+    finally { document.removeEventListener('copy', copy); }
     if (!copied) {
-      try { await navigator.clipboard.writeText(pre.textContent || ''); copied = true; } catch {}
+      try { await navigator.clipboard.writeText(text); copied = true; } catch {}
+    }
+    if (!copied && pre.hasAttribute('data-copy')) {
+      fallback = document.createElement('pre');
+      fallback.className = 'copy-fallback';
+      fallback.textContent = text;
+      fallback.setAttribute('aria-label', 'Código preparado para copiar');
+      button.after(fallback);
+      const range = document.createRange();
+      range.selectNodeContents(fallback);
+      const selection = getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
     }
     button.textContent = copied ? 'Copiado' : 'Código seleccionado: usa Copiar';
   });

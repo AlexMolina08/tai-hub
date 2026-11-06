@@ -7,7 +7,9 @@ body{padding:18px}h2{margin-top:80vh}.table-wrap{overflow:auto}table{min-width:7
 </style></head><body><h1>Apuntes de prueba</h1><nav><a href="#normalizacion">Normalización</a></nav>
 <h2 id="normalizacion">Dependencias funcionales</h2><p>Texto seleccionable del documento privado.</p>
 <div class="table-wrap"><table><tr><th>Clave</th><th>Dependencia</th></tr><tr><td>A</td><td>A → B</td></tr></table></div>
-<pre><code>SELECT 1;</code></pre><img alt="Diagrama de prueba" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=">
+<pre><code>SELECT 1;</code></pre>
+<pre class="terminal-transcript" data-copy="printf 'example'">user@host:~$ printf 'example'\nexample</pre>
+<img alt="Diagrama de prueba" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=">
 <script>parent.document.body.dataset.privateScript='executed'</script>
 <img src="https://private-leak.invalid/image" onerror="parent.document.body.dataset.privateScript='executed'">
 <meta http-equiv="refresh" content="0;url=https://private-leak.invalid/refresh">
@@ -46,9 +48,25 @@ test('reads private HTML with navigation, selectable text and contained tables; 
   })).toBe(true)
   expect(await page.locator('iframe').getAttribute('sandbox')).not.toContain('allow-same-origin')
   if (!process.env.TAI_PRIVATE_HTML) {
-    await expect(frame.getByRole('button', { name: 'Copiar código' })).toBeVisible()
-    await frame.getByRole('button', { name: 'Copiar código' }).click()
-    await expect(frame.getByRole('button', { name: /Copiado|Código seleccionado/ })).toBeVisible()
+    await frame.locator('body').evaluate(body => {
+      window.addEventListener('copy', event => { body.dataset.copied = event.clipboardData?.getData('text/plain') })
+    })
+    await frame.getByRole('button', { name: 'Copiar código', exact: true }).first().click()
+    await expect(frame.locator('body')).toHaveAttribute('data-copied', 'SELECT 1;')
+    const transcriptButton = frame.locator('.terminal-transcript + button.copy-code')
+    await transcriptButton.click()
+    await expect(frame.locator('body')).toHaveAttribute('data-copied', "printf 'example'")
+    await expect(frame.locator('.terminal-transcript')).toHaveText("user@host:~$ printf 'example'\nexample")
+    await frame.locator('body').evaluate(() => {
+      document.execCommand = () => false
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => { throw new Error('Clipboard unavailable') } } })
+    })
+    await transcriptButton.click()
+    await expect(transcriptButton).toHaveText('Código seleccionado: usa Copiar')
+    await expect(frame.locator('.copy-fallback')).toHaveText("printf 'example'")
+    expect(await frame.locator('.copy-fallback').evaluate(() => getSelection()?.toString())).toBe("printf 'example'")
+    await transcriptButton.click()
+    await expect(frame.locator('.copy-fallback')).toHaveCount(1)
   }
   const brokenImages = await frame.locator('img[src]').evaluateAll(images => images.filter(image => (image as HTMLImageElement).complete && !(image as HTMLImageElement).naturalWidth).length)
   expect(brokenImages).toBe(0)
