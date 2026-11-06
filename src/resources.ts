@@ -1,6 +1,6 @@
 import { AudioLines, File, FileImage, FileText, Film, Link2, NotebookPen, ScrollText } from 'lucide-react'
 import { topicById } from './syllabus'
-import type { Resource, ResourceKind } from './drive'
+import type { Resource } from './drive'
 
 export const kinds = {
   pdf: { label: 'PDF', icon: FileText },
@@ -11,15 +11,6 @@ export const kinds = {
   link: { label: 'Enlace', icon: Link2 },
   note: { label: 'Nota', icon: NotebookPen },
   other: { label: 'Archivo', icon: File },
-}
-
-export function kindFor(mime: string, name: string): ResourceKind {
-  if (mime === 'application/pdf' || /\.pdf$/i.test(name)) return 'pdf'
-  if (mime.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(name)) return 'video'
-  if (mime.startsWith('image/')) return 'image'
-  if (mime.startsWith('audio/')) return 'audio'
-  if (mime.startsWith('text/') && !/\.(html?|svg)$/i.test(name)) return 'text'
-  return 'other'
 }
 
 export function locationName(id: string | null) {

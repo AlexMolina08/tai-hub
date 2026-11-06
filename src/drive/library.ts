@@ -40,14 +40,16 @@ const KNOWN_MIME: Record<string, string> = {
   csv: 'text/csv',
 };
 
-export function fileMime(file: File): string {
+type FileFormat = Pick<File, 'name' | 'type'>;
+
+export function fileMime(file: FileFormat): string {
   if (file.type && file.type !== 'application/octet-stream') return file.type;
   return KNOWN_MIME[file.name.split('.').pop()?.toLowerCase() ?? ''] ?? 'application/octet-stream';
 }
 
-export function resourceKind(file: File): ResourceKind {
+export function resourceKind(file: FileFormat): ResourceKind {
   const mime = fileMime(file);
-  if (mime === 'application/pdf') return 'pdf';
+  if (mime === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf';
   if (mime === 'image/svg+xml' || mime === 'text/html') return 'other';
   for (const kind of ['video', 'image', 'audio', 'text'] as const) {
     if (mime.startsWith(kind + '/')) return kind;
@@ -112,7 +114,7 @@ function readDraft(file: DriveFile): ResourceDraft {
     source: '',
     topicId: null,
     tags: [],
-    kind: resourceKind(new File([], file.name, { type: file.mimeType })),
+    kind: resourceKind({ name: file.name, type: file.mimeType }),
     needsReview: true,
   };
 }
@@ -258,17 +260,18 @@ export class DriveLibrary {
     return asResource(await client.json<DriveFile>(filePath(id), { fields: FILE_FIELDS }, jsonBody('PATCH', { description })));
   }
 
-  async replace(id: string, file: File, progress?: UploadProgress): Promise<Resource> {
+  async replace(id: string, file: File, draft: ResourceDraft, progress?: UploadProgress): Promise<Resource> {
     const client = this.#client();
     const previous = await this.#resourceFile(client, id);
-    if (readDraft(previous).kind !== 'pdf') throw new Error('La sustitución de versiones está disponible para PDFs.');
+    if (readDraft(previous).kind !== 'pdf' || draft.kind !== 'pdf') throw new Error('La sustitución de versiones está disponible para PDFs.');
+    const description = describe(normalizeDraft(draft));
     await checkPdf(file);
     if (previous.headRevisionId) {
       // Pin the previous original before uploading the replacement.
       await client.json<DriveRevision>(revisionPath(id, previous.headRevisionId), { fields: 'id,keepForever' }, jsonBody('PATCH', { keepForever: true }));
     }
     return asResource(await client.upload(
-      { name: file.name, mimeType: 'application/pdf', appProperties: previous.appProperties },
+      { name: file.name, mimeType: 'application/pdf', description, appProperties: previous.appProperties },
       file.slice(0, file.size, 'application/pdf'),
       id,
       progress,
@@ -284,7 +287,7 @@ export class DriveLibrary {
 
   async revisions(id: string): Promise<DriveRevision[]> {
     const client = this.#client();
-    await this.#resourceFile(client, id);
+    const current = await this.#resourceFile(client, id);
     const revisions: DriveRevision[] = [];
     let pageToken: string | undefined;
     do {
@@ -296,7 +299,8 @@ export class DriveLibrary {
       revisions.push(...(page.revisions ?? []));
       pageToken = page.nextPageToken;
     } while (pageToken);
-    return revisions.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime));
+    return revisions.filter(revision => revision.keepForever && revision.id !== current.headRevisionId)
+      .sort((a, b) => (b.modifiedTime ?? '').localeCompare(a.modifiedTime ?? ''));
   }
 
   mediaSource(id: string) {
@@ -341,12 +345,19 @@ export class DriveLibrary {
     return new Blob(chunks, { type: file.mimeType });
   }
 
+  downloadInBrowser(resource: Resource): { href: string; direct: boolean } | undefined {
+    if (resource.size <= DOWNLOAD_LIMIT) return;
+    const direct = driveLink(resource.webContentLink);
+    return direct ? { href: direct, direct: true } : { href: this.viewUrl(resource), direct: false };
+  }
+
   async download(resource: Resource, revisionId?: string): Promise<void> {
-    const client = this.#client();
-    if (!revisionId && resource.size > DOWNLOAD_LIMIT) {
-      saveLink(driveLink(resource.webContentLink) ?? this.viewUrl(resource));
+    const browser = revisionId ? undefined : this.downloadInBrowser(resource);
+    if (browser) {
+      saveLink(browser.href);
       return;
     }
+    const client = this.#client();
     if (revisionId) {
       const revision = await client.json<DriveRevision>(revisionPath(resource.id, revisionId), {
         fields: 'id,originalFilename,keepForever',

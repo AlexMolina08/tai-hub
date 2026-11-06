@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { DriveLibrary, Resource } from '../drive'
-import { bytes, kindFor } from '../resources'
+import { resourceKind, type DriveLibrary, type Resource } from '../drive'
+import { bytes } from '../resources'
 import { importPath, parseManifest, type ImportEntry } from '../imports'
 
 export function ImportPanel({ library, onChange, connected, reconnect }: {
@@ -57,7 +57,7 @@ export function ImportPanel({ library, onChange, connected, reconnect }: {
           const { entry, ordinal } = pending[next++]
           try {
             const item = await library.create({
-              title: entry.title, kind: kindFor(entry.mimeType, entry.path), source: entry.source,
+              title: entry.title, kind: resourceKind({ type: entry.mimeType, name: entry.path }), source: entry.source,
               topicId: entry.topicId, tags: entry.tags, needsReview: entry.needsReview,
               relatedTopicIds: entry.relatedTopicIds, sourcePath: entry.path,
             }, files.get(entry.path), done => { active.set(entry.key, done); report() }, entry.key)

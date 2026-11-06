@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Upload } from 'lucide-react'
-import type { Resource, ResourceDraft } from '../drive'
+import { resourceKind, type Resource, type ResourceDraft } from '../drive'
 import { blocks } from '../syllabus'
-import { kindFor, safeLink } from '../resources'
+import { safeLink } from '../resources'
 
 export function TopicOptions() {
   return <><option value="">General</option>{blocks.map(block =>
@@ -37,12 +37,12 @@ export function ResourceForm({ resource, initialTopic, sources, save }: {
     if (!title.trim()) return setError('Escribe un título.')
     if (mode === 'link' && !link) return setError('Introduce una dirección http o https válida.')
     if (mode === 'file' && !resource && !file) return setError('Selecciona un archivo.')
-    if (resource && file && kindFor(file.type, file.name) !== resource.kind) return setError('Selecciona un archivo del mismo tipo.')
+    if (resource && file && resourceKind(file) !== resource.kind) return setError('Selecciona un archivo del mismo tipo.')
     setBusy(true)
     try {
       const draft: ResourceDraft = {
         title: title.trim(),
-        kind: resource?.kind ?? (mode === 'file' ? kindFor(file!.type, file!.name) : mode),
+        kind: resource?.kind ?? (mode === 'file' ? resourceKind(file!) : mode),
         source: source.trim() || 'Personal',
         topicId: topic || null,
         tags: [...new Set(tags.split(',').map(tag => tag.trim()).filter(Boolean))],

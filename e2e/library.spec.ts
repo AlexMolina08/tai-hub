@@ -59,6 +59,7 @@ test('opens exact PDF results, downloads original and syncs notes to an independ
   const first = page.getByRole('button', { name: /Documento de prueba General · Página 2/ })
   const second = page.getByRole('button', { name: /Segundo documento General · Página 1/ })
   await expect(second).toBeVisible()
+  await expect(first.locator('mark')).toHaveText(['Observación', 'objetivo'])
   await expect.poll(() => drive.savedIndexes()).toHaveLength(3)
   await first.click()
   await expect(page.getByRole('img', { name: 'Página 2 del PDF' })).toBeVisible()
@@ -96,6 +97,7 @@ test('opens large video in Drive without fetching bytes and recovers an expired 
   await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('Vídeo de prueba')
   await page.getByRole('button', { name: /Vídeo de prueba General/ }).click()
   const viewer = page.getByRole('link', { name: 'Reproducir en Drive' })
+  await expect(page.getByRole('button', { name: 'Descargar original' })).toHaveCount(0)
   await expect(viewer).toHaveAttribute('href', 'https://drive.google.com/file/d/test-video/view')
   const popup = page.waitForEvent('popup')
   await viewer.click()
@@ -133,12 +135,16 @@ test('replaces and reindexes a PDF while retaining its previous original', async
   await form.getByLabel('Título').fill('Documento actualizado')
   await form.getByLabel('Ubicación').selectOption('b1t1')
   await form.getByLabel('Etiquetas').fill('prueba, versión')
+  // A revision and its description must be committed by the same upload.
+  await page.route(/https:\/\/www\.googleapis\.com\/drive\/v3\/files\/test-pdf-one\?/, route =>
+    route.request().method() === 'PATCH' ? route.fulfill({ status: 503, json: {} }) : route.fallback())
   await form.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(form).not.toBeVisible()
   await expect(page.getByRole('heading', { name: 'Documento actualizado' })).toBeVisible()
   await page.getByRole('button', { name: 'Opciones', exact: true }).click()
   await page.getByRole('button', { name: 'Versiones', exact: true }).click()
   const versions = page.getByRole('dialog', { name: 'Versiones del original' })
+  await expect(versions.getByRole('button', { name: 'Descargar' })).toHaveCount(1)
   const oldEvent = page.waitForEvent('download')
   await versions.getByRole('button', { name: 'Descargar' }).click()
   const oldDownload = await oldEvent
@@ -149,6 +155,33 @@ test('replaces and reindexes a PDF while retaining its previous original', async
   await search.fill('observacion objetivo')
   await expect(page.getByRole('button', { name: /Segundo documento General · Página 1/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Documento actualizado.*Página 2/ })).toHaveCount(0)
+})
+
+test('identifies a text original with a generic MIME and retries its preview', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture()
+  await drive.install(context, browserName === 'webkit')
+  await connect(page)
+  await expect.poll(() => drive.savedIndexes()).toHaveLength(3)
+  await page.getByRole('button', { name: 'Añadir recurso', exact: true }).first().click()
+  const form = page.getByRole('dialog', { name: 'Añadir recurso' })
+  await form.getByLabel('Seleccionar archivo').setInputFiles({
+    name: 'Apunte sintético.txt', mimeType: 'application/octet-stream', buffer: Buffer.from('Texto de prueba para vista previa.'),
+  })
+  const save = page.waitForResponse(response => response.url().includes('/upload/drive/v3/files?uploadType=multipart'))
+  await form.getByRole('button', { name: 'Añadir recurso' }).click()
+  const { id } = await (await save).json()
+  await expect(form).not.toBeVisible()
+  let first = true
+  await page.route(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, route => {
+    if (!first) return route.fallback()
+    first = false
+    return route.fulfill({ status: 503, json: {} })
+  })
+  await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('Apunte sintético')
+  await page.getByRole('button', { name: /Apunte sintético General/ }).click()
+  await expect(page.getByText(/Personal · Texto/)).toBeVisible()
+  await page.getByRole('button', { name: 'Reintentar vista previa' }).click()
+  await expect(page.getByText('Texto de prueba para vista previa.')).toBeVisible()
 })
 
 test('imports a manifest, verifies bytes and skips a completed import on retry', async ({ page, context, browserName }) => {

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { Fragment, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock3, Cloud, CloudOff, Download, Ellipsis,
   ExternalLink, FileSearch, FolderOpen, LayoutGrid, LibraryBig, List, LockKeyhole, LogOut,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { GoogleSession, DriveLibrary, StudySync, type Resource, type ResourceDraft, type StudyPatch, type StudyState } from './drive'
 import type { PdfIndex, PdfSearchHit } from './pdf/index'
+import { matchRanges } from './pdf/text'
 import { blocks, syllabusSource, topicById } from './syllabus'
 import { bytes, driveLink, fold, kinds, locationName } from './resources'
 import { Dialog } from './components/Dialog'
@@ -37,6 +38,7 @@ type ReaderLocation = {
 type Modal = { kind: 'add' | 'import' | 'settings'; resource?: never }
   | { kind: 'edit' | 'manage' | 'trash' | 'versions'; resource: Resource }
 type Revision = Awaited<ReturnType<DriveLibrary['revisions']>>[number]
+type RevisionList = { items?: Revision[]; error?: string }
 const mainNav = [
   { page: 'home', label: 'Inicio', icon: LayoutGrid },
   { page: 'general', label: 'General', icon: FolderOpen },
@@ -71,7 +73,7 @@ export default function App() {
   const [searchError, setSearchError] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [modal, setModal] = useState<Modal>()
-  const [revisions, setRevisions] = useState<Revision[]>()
+  const [revisions, setRevisions] = useState<RevisionList>({})
   const [working, setWorking] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
@@ -299,23 +301,27 @@ export default function App() {
   }
   async function save(draft: ResourceDraft, file?: File, replacement?: File, progress?: (done: number, total: number) => void) {
     if (modal?.resource) {
-      if (replacement) {
-        const revised = await library.replace(modal.resource.id, replacement, progress)
-        setResources(items => items.map(item => item.id === revised.id ? revised : item))
-      }
-      const updated = await library.update(modal.resource.id, draft)
+      const updated = replacement
+        ? await library.replace(modal.resource.id, replacement, draft, progress)
+        : await library.update(modal.resource.id, draft)
       setResources(items => items.map(item => item.id === updated.id ? updated : item))
     } else {
       const created = await library.create(draft, file, progress)
       setResources(items => [...items, created])
     }
-    setModal(undefined)
+    setModal(current => current === modal ? undefined : current)
     setNotice('Recurso guardado en Drive.')
   }
   function versions(resource: Resource) {
-    setRevisions(undefined)
+    const request: RevisionList = {}
+    setRevisions(request)
+    setError('')
     setModal({ kind: 'versions', resource })
-    void library.revisions(resource.id).then(setRevisions).catch(failure => { setRevisions([]); showError(failure) })
+    void library.revisions(resource.id)
+      .then(items => setRevisions(current => current === request ? { items } : current))
+      .catch(failure => setRevisions(current => current === request ? {
+        error: failure instanceof Error ? failure.message : 'No se pudieron consultar las versiones.',
+      } : current))
   }
   async function trash() {
     const item = modal?.resource
@@ -474,7 +480,7 @@ export default function App() {
               annotations={study.annotations[current.id]?.[current.version] ?? []}
               onPage={page => markOpened(current, page)}
               apply={apply} reconnect={() => connect()} download={() => library.download(current)} />
-            : <ResourceView key={`${current.id}:${current.version}`} resource={current} library={library} download={() => download(current)} />}
+            : <ResourceView key={`${current.id}:${current.version}`} resource={current} library={library} connected={connected} download={() => download(current)} />}
         </> : <>
           {block && <button className="text-link back-link" onClick={() => navigate(topic ? { page: 'block', id: block.id } : { page: 'home' })}>
             <ArrowLeft size={17} /> {topic ? `Bloque ${block.roman}` : 'Biblioteca'}</button>}
@@ -516,8 +522,9 @@ export default function App() {
         <div className="actions"><button className="button" onClick={() => setModal(undefined)}>Cancelar</button><button className="button danger" disabled={working} onClick={trash}>Enviar a papelera</button></div></div>}
       {modal.kind === 'versions' && <div className="settings-panel"><p>Las versiones guardadas conservan el archivo original de cada revisión.</p>
         {error && <p role="alert" className="form-error">{error}</p>}
-        {!revisions ? <p role="status">Consultando Drive…</p> : !revisions.length ? <p>No hay revisiones disponibles.</p> :
-          revisions.map((revision, i) => <div className="revision" key={revision.id}><span>{revision.modifiedTime ? new Date(revision.modifiedTime).toLocaleString('es') : `Revisión ${i + 1}`}</span>
+        {revisions.error ? <p role="alert" className="form-error">{revisions.error}</p>
+          : !revisions.items ? <p role="status">Consultando Drive…</p> : !revisions.items.length ? <p>No hay versiones anteriores conservadas.</p> :
+            revisions.items.map((revision, i) => <div className="revision" key={revision.id}><span>{revision.modifiedTime ? new Date(revision.modifiedTime).toLocaleString('es') : `Revisión ${i + 1}`}</span>
             <button className="button" onClick={() => modal.resource && download(modal.resource, revision.id)}><Download size={16} /> Descargar</button></div>)}</div>}
       {modal.kind === 'settings' && <div className="settings-panel">
         <section><h3>Apariencia</h3><div className="segmented">{[['system', 'Sistema', Settings2], ['light', 'Claro', Sun], ['dark', 'Oscuro', Moon]].map(([value, label, Icon]) => {
@@ -620,11 +627,19 @@ function SearchResults({ query, pageResults, error, resources, limits, loadMore,
     {hits.length > 0 && <section><h2>Dentro de PDF <small>{morePages ? `${limits.pages}+` : hits.length}</small></h2><div className="resource-list">
       {hits.slice(0, limits.pages).map(hit => { const item = byId.get(hit.id)!; return <button className="search-item" key={`${hit.id}:${hit.page}`} onClick={() => open(item, hit.page, query)}>
         <span className="file-icon kind-pdf"><FileSearch size={19} /></span>
-        <span><strong>{item.title}</strong><small>{locationName(item.topicId)} · Página {hit.page}</small><span className="snippet">{hit.snippet}</span></span><ChevronRight size={18} />
+        <span><strong>{item.title}</strong><small>{locationName(item.topicId)} · Página {hit.page}{item.source && ` · ${item.source}`}</small><SearchSnippet hit={hit} /></span><ChevronRight size={18} />
       </button> })}
     </div>{morePages && <div className="actions"><button className="button" onClick={() => loadMore('pages')}>Mostrar más páginas</button></div>}</section>}
     {!found.length && !hits.length && !indexing && pageResults.query === query && <div className="empty"><FileSearch size={25} /><p>No hay coincidencias para «{query}».</p></div>}
   </div>
+}
+
+function SearchSnippet({ hit }: { hit: PdfSearchHit }) {
+  const { snippet, terms } = hit
+  const ranges = matchRanges(snippet, terms)
+  return <span className="snippet">{ranges.map(({ start, end }, index) => <Fragment key={start}>
+    {snippet.slice(ranges[index - 1]?.end ?? 0, start)}<mark>{snippet.slice(start, end)}</mark>
+  </Fragment>)}{snippet.slice(ranges.at(-1)?.end ?? 0)}</span>
 }
 
 type ReaderAnnotations = StudyState['annotations'][string][string]

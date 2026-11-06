@@ -191,8 +191,11 @@ export class DriveFixture {
       }
       if (method === 'GET' && saved) return json({ ...saved, body: undefined, keepForever: true })
       if (method === 'GET' && !revisionId) return json({
-        revisions: [...this.revisions.entries()].filter(([key]) => key.startsWith(fileId + '/'))
-          .map(([, { id, originalFilename }]) => ({ id, originalFilename, keepForever: true })),
+        revisions: [
+          ...(original ? [{ id: original.headRevisionId, originalFilename: original.name, keepForever: true }] : []),
+          ...[...this.revisions.entries()].filter(([key]) => key.startsWith(fileId + '/'))
+            .map(([, { id, originalFilename }]) => ({ id, originalFilename, keepForever: true })),
+        ],
       })
       return json({ error: {} }, 404)
     }
