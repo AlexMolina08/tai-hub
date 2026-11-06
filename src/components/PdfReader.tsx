@@ -21,7 +21,7 @@ export interface PdfReaderProps {
   onPageChange: (page: number) => void
   onAnnotationAdd: (annotation: PdfAnnotation) => void
   onAnnotationRemove: (id: string) => void
-  onDownload: () => void
+  onDownload: () => Promise<void>
   onReconnect?: () => void
   originalUrl?: string
 }
@@ -40,6 +40,8 @@ export default function PdfReader({
 }: PdfReaderProps) {
   const [pdf, setPdf] = useState<PDFDocumentProxy>()
   const [error, setError] = useState('')
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [streamFallback, setStreamFallback] = useState(false)
   const [page, setPage] = useState(initialPage)
@@ -67,6 +69,7 @@ export default function PdfReader({
   const searchToggle = useRef<HTMLButtonElement>(null)
   const notesToggle = useRef<HTMLButtonElement>(null)
   const searchField = useRef<HTMLInputElement>(null)
+  const downloadButton = useRef<HTMLButtonElement>(null)
   const restoreModeFocus = useRef(false)
   const scroll = useRef<HTMLDivElement>(null)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
@@ -328,6 +331,19 @@ export default function PdfReader({
     scroll.current?.focus({ preventScroll: true })
   }
 
+  async function downloadOriginal() {
+    if (downloading) return
+    setDownloading(true)
+    setDownloadError('')
+    try {
+      await onDownload()
+    } catch (failure) {
+      setDownloadError(failure instanceof Error ? failure.message : 'No se pudo descargar el original.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   async function find(event: FormEvent) {
     event.preventDefault()
     if (!pdf || !query.trim()) return
@@ -426,7 +442,8 @@ export default function PdfReader({
           onMouseDown={event => event.preventDefault()} onClick={addHighlight}><Highlighter /> <span>Subrayar</span></button>
         <button type="button" ref={notesToggle} aria-label="Notas, marcadores y subrayados" aria-expanded={showNotes} disabled={!pdf}
           onClick={() => { setShowNotes(value => !value); setShowSearch(false) }}><StickyNote /></button>
-        <button type="button" aria-label="Descargar original" onClick={onDownload}><Download /></button>
+        <button type="button" ref={downloadButton} aria-label="Descargar original" aria-disabled={downloading}
+          onClick={() => void downloadOriginal()}><Download /></button>
         {originalUrl && <a href={originalUrl} target="_blank" rel="noopener noreferrer" aria-label="Abrir PDF en Drive"><ExternalLink /></a>}
       </div>
       <button type="button" className="pdf-mode-toggle" ref={modeToggle} onClick={toggleReadingMode}
@@ -436,6 +453,15 @@ export default function PdfReader({
         {!readingMode && <span className="pdf-mode-short">Leer</span>}
       </button>
     </div>
+
+    {downloading && <p className="pdf-download-feedback" role="status">Preparando descarga…</p>}
+    {downloadError && <div className="pdf-download-feedback pdf-download-error">
+      <p role="alert">{downloadError}</p>
+      <button type="button" aria-label="Cerrar aviso de descarga" onClick={() => {
+        setDownloadError('')
+        downloadButton.current?.focus({ preventScroll: true })
+      }}><X size={17} /></button>
+    </div>}
 
     {highlightHelp && !selection && <p className="pdf-highlight-help" role="status">
       Selecciona el texto del PDF y pulsa Subrayar. En iPhone, mantén pulsada una palabra. Toca una marca guardada para quitarla.

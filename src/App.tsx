@@ -473,7 +473,7 @@ export default function App() {
                 ? study.positions[current.id].page : view.initialPage} query={view.query}
               annotations={study.annotations[current.id]?.[current.version] ?? []}
               onPage={page => markOpened(current, page)}
-              apply={apply} reconnect={() => connect()} download={() => download(current)} />
+              apply={apply} reconnect={() => connect()} download={() => library.download(current)} />
             : <ResourceView key={`${current.id}:${current.version}`} resource={current} library={library} download={() => download(current)} />}
         </> : <>
           {block && <button className="text-link back-link" onClick={() => navigate(topic ? { page: 'block', id: block.id } : { page: 'home' })}>
@@ -631,7 +631,7 @@ type ReaderAnnotations = StudyState['annotations'][string][string]
 function PdfPane({ resource, access, initialPage, query, annotations, onPage, apply, download, reconnect }: {
   resource: Resource; initialPage?: number; query?: string; annotations: ReaderAnnotations
   access?: AbortSignal
-  onPage: (page: number) => void; apply: (patch: StudyPatch) => void; download: () => void; reconnect: () => void
+  onPage: (page: number) => void; apply: (patch: StudyPatch) => void; download: () => Promise<void>; reconnect: () => void
 }) {
   const source = useMemo(() => {
     if (!access || access.aborted) return undefined

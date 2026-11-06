@@ -167,3 +167,39 @@ test('renders all visible pages when zoomed out on a landscape PDF', async ({ pa
     return true
   })).toBe(true)
 })
+
+test('shows download progress and recovery in reading mode', async ({ page, context, browserName }) => {
+  await new DriveFixture().install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('Documento de prueba')
+  await page.getByRole('button', { name: /^Documento de prueba General/ }).click()
+  await page.getByRole('button', { name: 'Modo lectura', exact: true }).click()
+  const reader = page.getByRole('dialog', { name: 'Modo lectura PDF' })
+  await expect(reader.getByRole('img', { name: 'Página 1 del PDF' })).toBeVisible()
+
+  let fail = true
+  let release!: () => void
+  const pending = new Promise<void>(resolve => { release = resolve })
+  await context.route('https://www.googleapis.com/drive/v3/files/test-pdf-one?alt=media', async route => {
+    if (!fail || route.request().method() !== 'GET') return route.fallback()
+    fail = false
+    await pending
+    return route.fulfill({ status: 403, json: { error: {} }, headers: {
+      'access-control-allow-origin': new URL(page.url()).origin,
+    } })
+  })
+  const download = reader.getByRole('button', { name: 'Descargar original' })
+  try {
+    await download.click()
+    await expect(reader.getByText('Preparando descarga…')).toBeVisible()
+    await expect(download).toBeDisabled()
+  } finally { release() }
+  await expect(reader.getByRole('alert')).toHaveText('Google Drive no ha autorizado esta operación.')
+  await expect(download).toBeEnabled()
+  const finished = page.waitForEvent('download')
+  await download.click()
+  expect((await finished).suggestedFilename()).toBe('test-pdf-one.pdf')
+  await expect(reader.getByRole('alert')).toHaveCount(0)
+})

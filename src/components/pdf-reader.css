@@ -55,6 +55,7 @@
 }
 
 .pdf-tools button:disabled,
+.pdf-tools button[aria-disabled="true"],
 .pdf-panel button:disabled {
   opacity: 0.38;
   cursor: default;
@@ -457,6 +458,37 @@
   border-block-end: 1px solid var(--pdf-border);
   background: var(--pdf-panel);
   font-size: 0.85rem;
+}
+
+.pdf-download-feedback {
+  margin: 0;
+  padding: 7px 10px;
+  border-block-end: 1px solid var(--pdf-border);
+  font-size: 0.85rem;
+}
+
+.pdf-download-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 0;
+  color: var(--danger);
+  background: var(--error-bg);
+}
+
+.pdf-download-error p {
+  margin-block: 7px;
+}
+
+.pdf-download-error button {
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: inherit;
+  border: 0;
+  background: transparent;
 }
 
 .pdf-page-form button:disabled {
