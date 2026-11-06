@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock3, Cloud, CloudOff, Download, Ellipsis,
   ExternalLink, FileSearch, FolderOpen, LayoutGrid, LibraryBig, List, LockKeyhole, LogOut,
@@ -39,6 +39,10 @@ const mainNav = [
   { page: 'recent', label: 'Recientes', icon: Clock3 },
 ] as const
 const tones = ['green', 'blue', 'violet', 'ochre']
+const emptyFilters = { kind: '', source: '', tag: '' }
+const searchBatch = 80
+const initialSearchLimits = { resources: searchBatch, pages: searchBatch }
+const emptyPageResults = { query: '', documents: '', hits: [] as PdfSearchHit[] }
 
 export default function App() {
   const auth = useSyncExternalStore(session.subscribe, session.snapshot)
@@ -53,8 +57,12 @@ export default function App() {
   const [indexRun, setIndexRun] = useState(0)
   const [network, setNetwork] = useState(navigator.onLine)
   const [view, setView] = useState<View>({ page: 'home' })
-  const [back, setBack] = useState<View>({ page: 'home' })
+  const [back, setBack] = useState<{ view: View; scroll: number }>({ view: { page: 'home' }, scroll: 0 })
+  const [filters, setFilters] = useState(emptyFilters)
   const [query, setQuery] = useState('')
+  const [searchLimits, setSearchLimits] = useState(initialSearchLimits)
+  const [pageResults, setPageResults] = useState(emptyPageResults)
+  const [searchError, setSearchError] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [modal, setModal] = useState<Modal>()
   const [revisions, setRevisions] = useState<Revision[]>()
@@ -66,13 +74,17 @@ export default function App() {
     catch { return 'system' }
   })
   const search = useRef<HTMLInputElement>(null)
+  const nextScroll = useRef(0)
   const study = useSyncExternalStore(sync ? fn => sync.subscribe(fn) : subscribeIdle, sync ? () => sync.snapshot() : getEmptyStudy)
   const studyStatus = useSyncExternalStore(sync?.subscribe ?? subscribeIdle, sync?.status ?? (() => 'idle'))
   const accountId = account?.id
   const current = view.page === 'resource' ? resources.find(item => item.id === view.id) : undefined
   const readingPdf = current?.kind === 'pdf'
+  const searching = view.page === 'search'
+  const cleanQuery = query.trim()
 
   useEffect(() => { if (clientId) void session.prepare().catch(() => {}) }, [])
+  useLayoutEffect(() => { window.scrollTo({ top: nextScroll.current, behavior: 'instant' }) }, [view])
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     try { localStorage.setItem('tai-theme', theme) } catch { /* Browser storage unavailable. */ }
@@ -98,12 +110,16 @@ export default function App() {
   function showError(failure: unknown) {
     setError(failure instanceof Error ? failure.message : 'La operación no se pudo completar.')
   }
-  function navigate(next: View) {
+  function navigate(next: View, restoreScroll?: number) {
+    nextScroll.current = restoreScroll ?? 0
+    if (restoreScroll === undefined && next.page !== 'resource') setFilters(emptyFilters)
     setView(next)
     setDrawer(false)
     setNotice('')
     setError('')
-    window.scrollTo({ top: 0 })
+  }
+  function returnToList() {
+    navigate(back.view, back.scroll)
   }
   function connect(sameTab?: boolean) {
     setError('')
@@ -117,7 +133,8 @@ export default function App() {
   function clearPrivate() {
     setAccount(undefined)
     setResources([])
-    setQuery('')
+    changeQuery('')
+    setPageResults(emptyPageResults)
     setModal(undefined)
     navigate({ page: 'home' })
   }
@@ -189,6 +206,17 @@ export default function App() {
     })
     return () => { live = false; abort.abort() }
   }, [index, indexDocuments, connected, network, indexRun, readingPdf])
+  useEffect(() => {
+    if (!searching || cleanQuery.length < 2 || !index) return
+    let active = true
+    setSearchError(false)
+    const timer = setTimeout(() => {
+      void index.search(cleanQuery, searchLimits.pages + 1)
+        .then(hits => { if (active) setPageResults({ query: cleanQuery, documents: pdfVersions, hits }) })
+        .catch(() => { if (active) setSearchError(true) })
+    }, 100)
+    return () => { active = false; clearTimeout(timer) }
+  }, [cleanQuery, index, indexTick, pdfVersions, searchLimits.pages, searching])
 
   function apply(patch: StudyPatch) {
     void sync?.apply(patch).catch(showError)
@@ -199,7 +227,7 @@ export default function App() {
   function open(resource: Resource, page?: number, highlight?: string) {
     const previous = study.positions[resource.id]
     const lastPage = previous?.version === resource.version ? previous.page : 1
-    if (view.page !== 'resource') setBack(view)
+    if (view.page !== 'resource') setBack({ view, scroll: window.scrollY })
     markOpened(resource, resource.kind === 'pdf' ? page ?? lastPage : 0)
     navigate({ page: 'resource', id: resource.id, initialPage: page ?? lastPage, query: highlight })
   }
@@ -237,7 +265,7 @@ export default function App() {
       await library.trash(item.id)
       setResources(items => items.filter(resource => resource.id !== item.id))
       setModal(undefined)
-      navigate(back)
+      returnToList()
       setNotice('Recurso enviado a la papelera de Drive.')
     } catch (failure) { showError(failure) }
     finally { setWorking(false) }
@@ -264,8 +292,12 @@ export default function App() {
   // Index mutates in place. The counter invalidates this summary when a document changes.
   }, [index, indexDocuments, indexTick])
   const openLocation = (id: string | null) => navigate(id ? { page: 'topic', id } : { page: 'general' })
-  const startSearch = (value: string) => {
+  function changeQuery(value: string) {
+    if (value.trim() !== cleanQuery) setSearchLimits(initialSearchLimits)
     setQuery(value)
+  }
+  const startSearch = (value: string) => {
+    changeQuery(value)
     if (view.page !== 'search') navigate({ page: 'search' })
   }
   const title = topic?.title ?? block?.title ?? ({
@@ -307,7 +339,7 @@ export default function App() {
         <button className="icon-button mobile-menu" aria-label="Abrir navegación" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}><Menu size={22} /></button>
         <form className="global-search" role="search" onSubmit={event => { event.preventDefault(); startSearch(query) }}>
           <Search size={20} /><input ref={search} value={query} placeholder="Buscar en la biblioteca…" aria-label="Buscar en la biblioteca" onChange={event => startSearch(event.target.value)} />
-          {query ? <button type="button" className="icon-button" aria-label="Borrar búsqueda" onClick={() => { setQuery(''); search.current?.focus() }}><X size={16} /></button> : <kbd>⌘ K</kbd>}
+          {query ? <button type="button" className="icon-button" aria-label="Borrar búsqueda" onClick={() => { changeQuery(''); search.current?.focus() }}><X size={16} /></button> : <kbd>⌘ K</kbd>}
         </form>
         <button className="button add-top" aria-label="Añadir recurso" disabled={!connected || !account} onClick={() => setModal({ kind: 'add' })}><Plus size={18} /><span>Añadir recurso</span></button>
         <button className="avatar" onClick={() => setModal({ kind: 'settings' })} aria-label="Cuenta y ajustes">{account?.name ? account.name.charAt(0).toUpperCase() : <Settings2 size={17} />}</button>
@@ -351,10 +383,12 @@ export default function App() {
           </section>
         </> : view.page === 'search' ? <>
           <div className="page-heading"><p className="context-label"><Search size={17} /> Biblioteca</p><h1>Búsqueda</h1><p>Busca por título, fuente y texto dentro de los PDF.</p></div>
-          <SearchResults query={query} index={index} tick={indexTick} resources={resources} indexing={indexWorking} hasAccount={!!account} open={open} />
+          <SearchResults query={cleanQuery} pageResults={pageResults.documents === pdfVersions ? pageResults : emptyPageResults} error={searchError} resources={resources}
+            limits={searchLimits} loadMore={kind => setSearchLimits(current => ({ ...current, [kind]: current[kind] + searchBatch }))}
+            indexing={indexWorking} hasAccount={!!account} open={open} />
         </> : current && view.page === 'resource' ? <>
           <div className="resource-topline">
-            <button className="text-link" onClick={() => navigate(back)}><ArrowLeft size={17} /> Volver</button>
+            <button className="text-link" onClick={returnToList}><ArrowLeft size={17} /> Volver</button>
             <div className="resource-actions">
               <button className="button resource-favorite" aria-label={study.favorites[current.id] ? 'Quitar de favoritos' : 'Guardar en favoritos'}
                 aria-pressed={!!study.favorites[current.id]} onClick={() => favorite(current)}>
@@ -388,7 +422,7 @@ export default function App() {
               <span className={`block-number ${tones[blocks.indexOf(block)]}`}>{item.number}</span>
               <span><strong>{item.title}</strong><small>{resources.filter(resource => resource.topicId === item.id || resource.relatedTopicIds?.includes(item.id)).length} recursos</small></span><ChevronRight size={18} />
             </button>)}
-          </div> : <ResourceList key={view.page + (topic?.id ?? '')} items={visible} {...listProps}
+          </div> : <ResourceList items={visible} filters={filters} setFilters={setFilters} {...listProps}
             empty={showConnect ? 'Conecta Google Drive para ver tus recursos.' : 'Todavía no hay recursos en esta sección.'}
             onEmpty={showConnect && clientId ? () => connect() : connected && (topic || view.page === 'general') ? () => setModal({ kind: 'add' }) : undefined}
             emptyAction={showConnect ? 'Conectar Drive' : 'Añadir recurso'} />}
@@ -466,21 +500,20 @@ type ListProps = {
   index?: PdfIndex
   connected: boolean
 }
-function ResourceList({ items, open, favorite, study, index, empty, onEmpty, emptyAction }: ListProps & {
+function ResourceList({ items, open, favorite, study, index, filters, setFilters, empty, onEmpty, emptyAction }: ListProps & {
   items: Resource[]; empty: string; onEmpty?: () => void; emptyAction: string
+  filters: typeof emptyFilters; setFilters: (filters: typeof emptyFilters) => void
 }) {
-  const [kind, setKind] = useState('')
-  const [source, setSource] = useState('')
-  const [tag, setTag] = useState('')
+  const { kind, source, tag } = filters
   const filtered = items.filter(item => (!kind || item.kind === kind) && (!source || item.source === source) && (!tag || item.tags.includes(tag)))
   if (!items.length) return <div className="empty"><FolderOpen size={25} /><p>{empty}</p>{onEmpty && <button className="button primary" onClick={onEmpty}>{emptyAction}</button>}</div>
   return <>
     <div className="filters">
-      <label><span>Tipo</span><select value={kind} onChange={event => setKind(event.target.value)}><option value="">Todos los tipos</option>
+      <label><span>Tipo</span><select value={kind} onChange={event => setFilters({ ...filters, kind: event.target.value })}><option value="">Todos los tipos</option>
         {[...new Set(items.map(item => item.kind))].map(value => <option value={value} key={value}>{kinds[value].label}</option>)}</select></label>
-      <label><span>Fuente</span><select value={source} onChange={event => setSource(event.target.value)}><option value="">Todas las fuentes</option>
+      <label><span>Fuente</span><select value={source} onChange={event => setFilters({ ...filters, source: event.target.value })}><option value="">Todas las fuentes</option>
         {[...new Set(items.map(item => item.source))].sort().map(value => <option key={value}>{value}</option>)}</select></label>
-      <label><span>Etiqueta</span><select value={tag} onChange={event => setTag(event.target.value)}><option value="">Todas las etiquetas</option>
+      <label><span>Etiqueta</span><select value={tag} onChange={event => setFilters({ ...filters, tag: event.target.value })}><option value="">Todas las etiquetas</option>
         {[...new Set(items.flatMap(item => item.tags))].sort().map(value => <option key={value}>{value}</option>)}</select></label>
       <span>{filtered.length} {filtered.length === 1 ? 'recurso' : 'recursos'}</span>
     </div>
@@ -493,46 +526,36 @@ function ResourceList({ items, open, favorite, study, index, empty, onEmpty, emp
             {item.tags.length > 0 && <span className="tag-list">{item.tags.map(label => <span key={label}>{label}</span>)}</span>}</span></button>
         <button className="icon-button" aria-pressed={!!study.favorites[item.id]} aria-label={study.favorites[item.id] ? 'Quitar de favoritos' : 'Guardar en favoritos'} onClick={() => favorite(item)}><Star size={19} className={study.favorites[item.id] ? 'filled' : ''} /></button>
       </article>
-    })}</div> : <div className="empty"><FileSearch size={25} /><p>No hay recursos con estos filtros.</p><button className="button" onClick={() => { setKind(''); setSource(''); setTag('') }}>Quitar filtros</button></div>}
+    })}</div> : <div className="empty"><FileSearch size={25} /><p>No hay recursos con estos filtros.</p><button className="button" onClick={() => setFilters(emptyFilters)}>Quitar filtros</button></div>}
   </>
 }
 
-function SearchResults({ query, index, tick, resources, indexing, hasAccount, open }: {
-  query: string; index?: PdfIndex; tick: number; resources: Resource[]; indexing: boolean; hasAccount: boolean; open: ListProps['open']
+function SearchResults({ query, pageResults, error, resources, limits, loadMore, indexing, hasAccount, open }: {
+  query: string; pageResults: { query: string; hits: PdfSearchHit[] }; error: boolean; resources: Resource[]
+  limits: typeof initialSearchLimits; loadMore: (kind: keyof typeof initialSearchLimits) => void
+  indexing: boolean; hasAccount: boolean; open: ListProps['open']
 }) {
-  const clean = query.trim()
-  const [results, setResults] = useState<{ query: string; hits: PdfSearchHit[] }>({ query: '', hits: [] })
-  const [error, setError] = useState(false)
-  useEffect(() => {
-    if (clean.length < 2 || !index) return
-    let active = true
-    setError(false)
-    const timer = setTimeout(() => {
-      void index.search(clean, 80).then(hits => { if (active) setResults({ query: clean, hits }) })
-        .catch(() => { if (active) setError(true) })
-    }, 100)
-    return () => { active = false; clearTimeout(timer) }
-  }, [clean, index, tick])
-  if (!hasAccount || clean.length < 2) return <div className="empty"><Search size={26} /><p>{hasAccount ? 'Escribe al menos dos caracteres.' : 'Conecta Drive para buscar en tus documentos.'}</p></div>
-  const terms = fold(clean).split(/\s+/)
+  if (!hasAccount || query.length < 2) return <div className="empty"><Search size={26} /><p>{hasAccount ? 'Escribe al menos dos caracteres.' : 'Conecta Drive para buscar en tus documentos.'}</p></div>
+  const terms = fold(query).split(/\s+/)
   const found = resources.filter(item => terms.every(term => fold([item.title, item.source, ...item.tags, locationName(item.topicId)].join(' ')).includes(term)))
   const byId = new Map(resources.map(item => [item.id, item]))
-  const hits = results.query === clean ? results.hits.filter(hit => byId.has(hit.id)) : []
+  const hits = pageResults.query === query ? pageResults.hits.filter(hit => byId.has(hit.id)) : []
+  const morePages = hits.length > limits.pages
   return <div className="search-results">
     {indexing && <p className="form-hint" role="status">Índice en actualización. Irán apareciendo más páginas.</p>}
     {error && <p className="form-error" role="alert">La búsqueda de páginas no se pudo completar.</p>}
     {found.length > 0 && <section><h2>Recursos <small>{found.length}</small></h2><div className="resource-list">
-      {found.slice(0, 80).map(item => { const Icon = kinds[item.kind].icon; return <button className="search-item" key={item.id} onClick={() => open(item)}>
+      {found.slice(0, limits.resources).map(item => { const Icon = kinds[item.kind].icon; return <button className="search-item" key={item.id} onClick={() => open(item)}>
         <span className={`file-icon kind-${item.kind}`}><Icon size={19} /></span><span><strong>{item.title}</strong><small>{locationName(item.topicId)} · {item.source}</small></span><ChevronRight size={18} />
       </button> })}
-    </div></section>}
-    {hits.length > 0 && <section><h2>Dentro de PDF <small>{hits.length}</small></h2><div className="resource-list">
-      {hits.map(hit => { const item = byId.get(hit.id)!; return <button className="search-item" key={`${hit.id}:${hit.page}`} onClick={() => open(item, hit.page, clean)}>
+    </div>{found.length > limits.resources && <div className="actions"><button className="button" onClick={() => loadMore('resources')}>Mostrar más recursos</button></div>}</section>}
+    {hits.length > 0 && <section><h2>Dentro de PDF <small>{morePages ? `${limits.pages}+` : hits.length}</small></h2><div className="resource-list">
+      {hits.slice(0, limits.pages).map(hit => { const item = byId.get(hit.id)!; return <button className="search-item" key={`${hit.id}:${hit.page}`} onClick={() => open(item, hit.page, query)}>
         <span className="file-icon kind-pdf"><FileSearch size={19} /></span>
         <span><strong>{item.title}</strong><small>{locationName(item.topicId)} · Página {hit.page}</small><span className="snippet">{hit.snippet}</span></span><ChevronRight size={18} />
       </button> })}
-    </div></section>}
-    {!found.length && !hits.length && !indexing && results.query === clean && <div className="empty"><FileSearch size={25} /><p>No hay coincidencias para «{clean}».</p></div>}
+    </div>{morePages && <div className="actions"><button className="button" onClick={() => loadMore('pages')}>Mostrar más páginas</button></div>}</section>}
+    {!found.length && !hits.length && !indexing && pageResults.query === query && <div className="empty"><FileSearch size={25} /><p>No hay coincidencias para «{query}».</p></div>}
   </div>
 }
 

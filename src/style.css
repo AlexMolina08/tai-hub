@@ -154,6 +154,7 @@ select, .resource-form input:not([type="file"]):not([type="checkbox"]), textarea
 .search-results { display: grid; gap: 19px; }
 .search-results h2 { margin-bottom: 8px; }
 .search-results h2 small { color: var(--muted); margin-left: 5px; font-size: 13px; }
+.search-results .actions { margin-top: 8px; }
 .search-item { border: 0; border-radius: 0; }
 .snippet { display: block; margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .resource-topline { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 12px; }

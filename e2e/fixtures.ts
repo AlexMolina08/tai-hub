@@ -65,6 +65,13 @@ export class DriveFixture {
     this.resource(id, title, 'pdf', fixturePdf(pages, size))
   }
 
+  addVideo(id: string, title: string, format: 'mp4' | 'mkv' = 'mp4') {
+    this.resource(id, title, 'video', Buffer.from('Vídeo sintético'))
+    const file = this.files.get(id)!
+    file.name = `${id}.${format}`
+    if (format === 'mkv') file.mimeType = 'video/x-matroska'
+  }
+
   async install(context: BrowserContext, binaryRouteBridge = false) {
     if (binaryRouteBridge) {
       // Playwright's WebKit interceptor omits Blob-backed request bodies.

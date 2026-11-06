@@ -39,6 +39,7 @@ export function ResourceView({ resource, library, download }: {
       : <p>El recurso no contiene un enlace válido.</p>}</div>
   }
   const external = driveLink(resource)
+  const matroska = resource.kind === 'video' && (resource.mimeType === 'video/x-matroska' || /\.mkv$/i.test(resource.name))
   return <div className="file-preview">
     {(image || sound || text) && !preview && !error && <p role="status" className="form-hint">Cargando vista previa…</p>}
     {image && preview?.url && !error && <img src={preview.url} alt={resource.title} onError={() => setError(true)} />}
@@ -46,12 +47,13 @@ export function ResourceView({ resource, library, download }: {
     {text && preview && <pre>{preview.text}</pre>}
     <div className="fallback-preview">
       <FileQuestion size={24} aria-hidden="true" />
-      <p>{resource.kind === 'video'
+      <p>{matroska ? 'La reproducción de este formato depende de Drive. También puedes descargar el original.'
+        : resource.kind === 'video'
         ? 'Reproduce el vídeo en tu sesión de Drive. Drive se encarga de la carga progresiva y los controles de reproducción.'
         : error ? 'No se pudo cargar la vista previa. Puedes abrir o descargar el original.'
           : 'El original está disponible en Drive.'}</p>
       <div className="actions">
-        {external && <a className="button primary" href={external} target="_blank" rel="noreferrer"><ExternalLink size={16} /> {resource.kind === 'video' ? 'Reproducir en Drive' : 'Abrir en Drive'}</a>}
+        {external && <a className="button primary" href={external} target="_blank" rel="noreferrer"><ExternalLink size={16} /> {resource.kind === 'video' && !matroska ? 'Reproducir en Drive' : 'Abrir en Drive'}</a>}
         <button className="button" onClick={download}><Download size={16} /> Descargar original</button>
       </div>
     </div>
