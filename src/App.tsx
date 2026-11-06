@@ -1,7 +1,7 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   ArrowLeft, ArrowRight, BookOpen, ChevronRight, ClipboardList, Clock3, Cloud, CloudOff, Download, Ellipsis,
-  ExternalLink, FileSearch, FolderOpen, LayoutGrid, LibraryBig, List, LockKeyhole, LogOut,
+  ExternalLink, FileSearch, FolderOpen, Landmark, LayoutGrid, LibraryBig, List, LockKeyhole, LogOut,
   Menu, Moon, Plus, RefreshCw, Search, Settings2, Star, Sun, Trash2, Upload, X,
 } from 'lucide-react'
 import { GoogleSession, DriveLibrary, StudySync, type Resource, type ResourceDraft, type StudyPatch, type StudyState } from './drive'
@@ -11,6 +11,7 @@ import { blocks, syllabusSource, topicById } from './syllabus'
 import { bytes, driveLink, fold, kinds, locationName } from './resources'
 import { Dialog } from './components/Dialog'
 import { ImportPanel } from './components/ImportPanel'
+import { OfficialInap, useOfficialInap } from './components/OfficialInap'
 import { ResourceForm } from './components/ResourceForm'
 import { ResourceView } from './components/ResourceView'
 
@@ -27,7 +28,7 @@ const emptyStudy: StudyState = { favorites: {}, positions: {}, annotations: {} }
 const subscribeIdle = () => () => {}
 const getEmptyStudy = () => emptyStudy
 
-type View = { page: 'home' | 'general' | 'favorites' | 'recent' | 'review' | 'search' }
+type View = { page: 'home' | 'general' | 'favorites' | 'recent' | 'review' | 'search' | 'inap' }
   | { page: 'block' | 'topic'; id: string }
   | { page: 'resource'; id: string; initialPage?: number; query?: string }
 type ListLocation = { view: View; scroll: number }
@@ -53,6 +54,7 @@ const initialSearchLimits = { resources: searchBatch, pages: searchBatch }
 const emptyPageResults = { query: '', documents: '', hits: [] as PdfSearchHit[] }
 
 export default function App() {
+  const official = useOfficialInap()
   const auth = useSyncExternalStore(session.subscribe, session.snapshot)
   const [verifiedAccess, setVerifiedAccess] = useState<AbortSignal>()
   const connected = auth.status === 'connected' && !!verifiedAccess && !verifiedAccess.aborted
@@ -376,7 +378,7 @@ export default function App() {
   }
   const title = topic?.title ?? block?.title ?? ({
     home: 'Biblioteca', general: 'General', favorites: 'Favoritos', recent: 'Recientes',
-    review: 'Por revisar', search: 'Búsqueda', resource: current?.title ?? 'Recurso', topic: 'Tema', block: 'Bloque',
+    review: 'Por revisar', search: 'Búsqueda', resource: current?.title ?? 'Recurso', topic: 'Tema', block: 'Bloque', inap: 'INAP y BOE',
   })[view.page]
   const listProps = { open, favorite, study, index, connected }
   const loadingLibrary = !account && !!clientId && !error && network
@@ -388,9 +390,12 @@ export default function App() {
     : loadingLibrary ? 'Conectando…' : 'Conectar Google Drive'
   const indexLabel = !indexStats.indexed && indexStats.pending
     ? 'Preparando la búsqueda en PDF…' : `${indexStats.indexed} PDF indexados`
+  const inapLabel = official.unread ? 'Convocatorias INAP, novedades disponibles' : 'Convocatorias INAP'
+  const officialView = view.page === 'inap'
 
   return <div className="app-shell">
     <a className="skip-link" href="#main">Saltar al contenido</a>
+    <span className="sr-only" role="status">{official.unread && 'Hay novedades de INAP y BOE.'}</span>
     {drawer && <button className="scrim" aria-label="Cerrar navegación" onClick={() => setDrawer(false)} />}
     <aside className={drawer ? 'sidebar sidebar-open' : 'sidebar'} aria-label="Navegación principal">
       <button className="brand" onClick={() => navigate({ page: 'home' })}>
@@ -401,6 +406,8 @@ export default function App() {
         {mainNav.map(({ page, label, icon: Icon }) => <button key={page} aria-current={view.page === page ? 'page' : undefined}
           onClick={() => navigate({ page })}><Icon size={18} /> {label}</button>)}
         {(reviewCount > 0 || view.page === 'review') && <button aria-current={view.page === 'review' ? 'page' : undefined} onClick={() => navigate({ page: 'review' })}><List size={18} /> Por revisar <span className="nav-count">{reviewCount}</span></button>}
+        <button aria-current={officialView ? 'page' : undefined} aria-label={inapLabel}
+          onClick={() => navigate({ page: 'inap' })}><InapIcon unread={official.unread} /> Convocatorias INAP</button>
         <a href={tailabsUrl} target="_blank" rel="noreferrer" onClick={() => setDrawer(false)}><ClipboardList size={18} /> Tests de Tailabs <ExternalLink className="nav-external" size={14} /></a>
       </nav>
       <div className="nav-heading">Temario oficial <span>33 temas</span></div>
@@ -433,12 +440,12 @@ export default function App() {
       </header>
 
       <main className={current ? 'content content-reader' : 'content'} id="main" tabIndex={-1}>
-        {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
-        {account && !connected && <div className="banner" role="status"><CloudOff size={18} />
+        {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && !officialView && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
+        {!officialView && account && !connected && <div className="banner" role="status"><CloudOff size={18} />
           <span>{auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Renueva el acceso a Drive para abrir archivos y sincronizar.'}</span>
           <button className="button" disabled={!network || auth.status === 'connecting' || working}
             onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{auth.status === 'connected' ? 'Reintentar' : 'Reconectar'}</button></div>}
-        {(error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
+        {!officialView && (error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
           {!ios && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
           {error && <button className="icon-button" aria-label="Cerrar aviso" onClick={() => setError('')}><X size={17} /></button>}
         </div>}
@@ -463,13 +470,16 @@ export default function App() {
             <HeroArt />
           </section>
           <div className="study-links" aria-label="Accesos de estudio">
+            <button className={official.unread ? 'shortcut shortcut-unread' : 'shortcut'} onClick={() => navigate({ page: 'inap' })}>
+              <InapIcon unread={official.unread} /><span>{official.unread ? 'Novedades de INAP' : 'Convocatorias'}</span><ChevronRight size={16} />
+            </button>
             <a className="shortcut" href={tailabsUrl} target="_blank" rel="noreferrer">
               <ClipboardList size={19} /><span>Tests de Tailabs</span><ExternalLink size={15} />
             </a>
           </div>
           <section className="section" id="temario">
             <div className="section-head"><div><h2>Temario oficial</h2><p>4 bloques · 33 temas</p></div>
-              <a href={syllabusSource} target="_blank" rel="noreferrer" className="text-link">Ver convocatoria <ExternalLink size={15} /></a></div>
+              <a href={syllabusSource} target="_blank" rel="noreferrer" className="text-link">Ver programa en el BOE <ExternalLink size={15} /></a></div>
             <div className="block-grid">{blocks.map((item, i) => <button className="block-card" key={item.id} onClick={() => navigate({ page: 'block', id: item.id })}>
               <span className={`block-number ${tones[i]}`}>{item.roman}</span><span><strong>{item.title}</strong><small>{item.topics.length} temas</small></span><ChevronRight size={18} />
             </button>)}</div>
@@ -477,7 +487,7 @@ export default function App() {
           <section className="section"><div className="section-head"><h2>Accesos rápidos</h2></div>
             <div className="shortcut-grid">{mainNav.slice(1).map(({ page, label, icon: Icon }) => <button key={page} className="shortcut" onClick={() => navigate({ page })}><Icon size={19} /> {label}<ChevronRight size={16} /></button>)}</div>
           </section>
-        </> : view.page === 'search' ? <>
+        </> : officialView ? <OfficialInap {...official} /> : view.page === 'search' ? <>
           <div className="page-heading"><p className="context-label"><Search size={17} /> Biblioteca</p><h1>Búsqueda</h1><p>Busca por título, fuente y texto dentro de los PDF.</p></div>
           {loadingLibrary || (retryLibrary && !account) ? <div className="empty" role="status"><Cloud size={24} /><p>{libraryStatus}</p></div>
             : <SearchResults query={cleanQuery} pageResults={pageResults.documents === pdfVersions ? pageResults : emptyPageResults} error={searchError} resources={resources}
@@ -530,6 +540,9 @@ export default function App() {
 
       <nav className="mobile-nav" aria-label="Accesos principales">
         {mainNav.map(({ page, label, icon: Icon }) => <button key={page} aria-current={view.page === page ? 'page' : undefined} onClick={() => navigate({ page })}><Icon size={19} />{label}</button>)}
+        <button aria-current={officialView ? 'page' : undefined} aria-label={inapLabel} onClick={() => navigate({ page: 'inap' })}>
+          <InapIcon unread={official.unread} /> INAP
+        </button>
       </nav>
     </div>
 
@@ -578,6 +591,10 @@ export default function App() {
       </div>}
     </Dialog>}
   </div>
+}
+
+function InapIcon({ unread }: { unread: boolean }) {
+  return <span className="inap-icon" aria-hidden="true"><Landmark size={18} />{unread && <span className="inap-dot" />}</span>
 }
 
 function HeroArt() {
