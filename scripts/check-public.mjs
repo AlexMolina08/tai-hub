@@ -31,5 +31,5 @@ async function checkDirectory(directory) {
 }
 
 await Promise.all(tracked.map(checkFile))
-await checkDirectory('dist')
-console.log('Árbol Git y dist revisados.')
+await checkDirectory(process.argv[2] ?? 'dist')
+console.log('Árbol Git y archivos de publicación revisados.')
