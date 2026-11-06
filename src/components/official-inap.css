@@ -1,0 +1,51 @@
+.inap-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 295px), 1fr));
+  gap: 12px;
+}
+
+.inap-card, .inap-group {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.inap-card { padding: 16px; }
+.inap-card h2 { font-size: 1.2rem; }
+.inap-card p:not(.context-label), .inap-links small { color: var(--muted); }
+.inap-card h2 + p { margin-top: 6px; }
+.inap-status { font-size: .88rem; margin-bottom: 8px; }
+.inap-group { margin-top: 8px; }
+.inap-group > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 11px 13px;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+
+.inap-group > summary span {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+
+.inap-call, .inap-group > .inap-links { padding: 0 12px 12px; }
+.inap-links { list-style: none; margin: 0; padding: 0; }
+.inap-links > li + li { border-top: 1px solid var(--line); }
+.inap-links a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 3px;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.inap-links a:hover { text-decoration: underline; }
+.inap-links a > svg { color: var(--accent); }
+.inap-links small { display: block; margin-top: 4px; }

@@ -1,0 +1,40 @@
+name: Comprobar convocatorias INAP y BOE
+
+on:
+  schedule:
+    - cron: '17 1,7,13,19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: official-inap-data
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Comprobar el analizador
+        run: python3 -m unittest discover -s scripts -p 'test_check_inap.py'
+      - name: Actualizar el índice público
+        shell: bash
+        run: |
+          stage="$RUNNER_TEMP/tai-official-inap"
+          if git ls-remote --exit-code --heads origin refs/heads/official-data; then
+            git fetch --no-tags origin official-data
+            git worktree add --detach "$stage" FETCH_HEAD
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+            git worktree add --detach "$stage" HEAD
+            git -C "$stage" switch --orphan official-data
+          fi
+          python3 scripts/check_inap.py "$stage/official-inap.json" --baseline public/official-inap.json
+          git -C "$stage" add -- official-inap.json
+          if git -C "$stage" diff --cached --quiet; then exit 0; fi
+          git -C "$stage" -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Actualiza el índice oficial INAP y BOE'
+          git -C "$stage" push origin HEAD:refs/heads/official-data

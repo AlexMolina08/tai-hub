@@ -22,3 +22,11 @@ GitHub Actions verifica los cambios de `main`. GitHub Pages publica la rama `gh-
 - Toca un subrayado para quitarlo. Pulsa **Deshacer** o usa **⌘Z** en Mac y **Ctrl+Z** en otros teclados. También puedes deshacer o rehacer desde el panel de notas mientras el PDF siga abierto.
 - **Reproducir en Drive** abre la sesión autenticada de Google en otra pestaña. El reproductor de Drive gestiona la transmisión y los controles disponibles para el formato. Los originales también se pueden descargar.
 - **Ajustes → Importar carpeta** recibe un manifiesto v1 y la carpeta de archivos. La operación comprueba cuota, deduplica por huella y verifica tamaño y MD5 cuando el manifiesto lo contiene. Para reanudar tras cerrar la sesión, selecciona el mismo manifiesto y carpeta. Las cargas completas ya verificadas se omiten.
+
+## Fuentes oficiales
+
+La pestaña INAP enlaza a las fichas, documentos y exámenes del INAP. El índice incluye títulos y enlaces a los documentos oficiales. El BOE se comprueba con su API pública.
+
+El flujo **Comprobar convocatorias INAP y BOE** revisa las fuentes cada seis horas y escribe los avisos en la rama pública `official-data`. Para iniciar la primera comprobación al incorporar esta función, ejecuta `gh workflow run official-inap.yml --ref main`. El propio flujo crea la rama con el permiso `contents: write`. Puedes seguir la ejecución desde GitHub Actions. La copia incluida en la aplicación permite abrir los recursos durante una interrupción del feed. El historial de lectura de avisos se guarda en cada navegador.
+
+Para comprobar el analizador sin cambiar el índice distribuido, ejecuta `python3 -m unittest discover -s scripts -p 'test_check_inap.py'`. Una comprobación real en un archivo aparte se puede ejecutar con `python3 scripts/check_inap.py /tmp/tai-official-inap.json --baseline public/official-inap.json`.
