@@ -76,6 +76,18 @@ export class DriveFixture {
     file.description = JSON.stringify({ schema: 1, title, kind: 'html', source: 'Personal', topicId, tags: ['Apuntes ampliados'] })
   }
 
+  addLabPackage(id: string, content: unknown) {
+    const body = Buffer.from(JSON.stringify(content))
+    this.files.set(id, { id, name: 'Synthetic laboratory fixture', mimeType: 'application/json',
+      size: String(body.length), ownedByMe: true, headRevisionId: '1', appProperties: { taiHub: 'labPackage' } })
+    this.media.set(id, body)
+  }
+
+  labEvents() {
+    return [...this.files.values()].filter(file => file.appProperties.taiHub === 'labEvents')
+      .flatMap(file => (JSON.parse(this.media.get(file.id)!.toString()) as { events: unknown[] }).events)
+  }
+
   seedPdfAnnotations(resourceId: string, annotations: PdfAnnotation[]) {
     const version = this.files.get(resourceId)?.md5Checksum
     if (!version) throw new Error('Missing PDF fixture')

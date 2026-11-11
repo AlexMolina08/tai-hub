@@ -37,8 +37,8 @@ export function studyDocument(input: string): string {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>html{color-scheme:light;scroll-behavior:smooth}body{margin:0;color:#1a1a1a;background:#fff;font:17px/1.65 system-ui,sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}pre,.table-wrap{max-width:100%;overflow:auto}button{font:inherit;cursor:pointer}.copy-code{display:block;margin:.4rem 0 .8rem;padding:.3rem .65rem;background:#fff8e1;color:#714700;border:1px solid #c8820a;border-radius:5px}a{color:#825300}</style></head><body>${template.innerHTML}<script id="tai-reader-helper" nonce="${nonce}">${readerScript}</script></body></html>`
 }
 
-export function HtmlReader({ resource, library, connected, download }: {
-  resource: Resource; library: DriveLibrary; connected: boolean; download: () => void
+export function HtmlReader({ resource, library, connected, download, sectionId }: {
+  resource: Resource; library: DriveLibrary; connected: boolean; download: () => void; sectionId?: string
 }) {
   const [document, setDocument] = useState<string>()
   const [error, setError] = useState('')
@@ -87,6 +87,7 @@ export function HtmlReader({ resource, library, connected, download }: {
     {!connected ? <p className="form-hint" role="status">Conecta Drive para leer estos apuntes privados.</p>
       : error ? <div role="alert"><p>{error}</p><button className="button" onClick={() => setAttempt(value => value + 1)}>Reintentar</button></div>
         : !document ? <p className="form-hint" role="status">Cargando apuntes…</p>
-          : <iframe ref={frame} title={resource.title} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" srcDoc={document} />}
+          : <iframe ref={frame} title={resource.title} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" srcDoc={document}
+            onLoad={() => { if (sectionId) frame.current?.contentWindow?.postMessage({ type: 'tai-study-section', id: sectionId }, '*') }} />}
   </section>
 }

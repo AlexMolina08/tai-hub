@@ -1,4 +1,8 @@
 export const readerScript = `
+addEventListener('message', event => {
+  if (event.source !== parent || event.data?.type !== 'tai-study-section' || typeof event.data.id !== 'string' || event.data.id.length > 200) return;
+  document.getElementById(event.data.id)?.scrollIntoView({behavior:'instant',block:'start'});
+});
 document.addEventListener('click', event => {
   const anchor = event.target.closest('a');
   if (!anchor) return;

@@ -1,0 +1,192 @@
+import { requiredGates, type LabPackage, type EventBatch } from './model'
+import { familyConflicts } from './partitions'
+
+export class LabValidationError extends Error {
+  constructor(public readonly issues: string[]) {
+    super(issues.join('\n'))
+    this.name = 'LabValidationError'
+  }
+}
+type RecordValue = Record<string, unknown>
+const states = ['planned', 'authored', 'review', 'correction', 'validated', 'withdrawn']
+const phases = ['practice', 'immediate', 'reserved', 'delayed']
+const record = (v: unknown): v is RecordValue => !!v && typeof v === 'object' && !Array.isArray(v)
+const string = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0
+const strings = (v: unknown): v is string[] => Array.isArray(v) && v.every(string) && new Set(v).size === v.length
+const integer = (v: unknown) => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0
+const date = (v: unknown) => string(v) && /^\d{4}-\d\d-\d\dT/.test(v) && Number.isFinite(Date.parse(v))
+const fields = (v: RecordValue, names: string[]) => names.every(n => string(v[n]))
+const inList = (v: unknown, values: readonly string[]) => typeof v === 'string' && values.includes(v)
+const lists = (v: RecordValue, names: string[], nonempty = true) => names.every(n => strings(v[n]) && (!nonempty || v[n].length > 0))
+const claims = (v: unknown) => Array.isArray(v) && v.length > 0 && v.every(c => record(c) && fields(c, ['text', 'sourceId', 'locator']))
+function fail(issues: string[]): void { if (issues.length) throw new LabValidationError(issues) }
+
+/** Structural checks and editorial gates are separate: an authored package can be inspected but cannot be studied. */
+export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 'study'): LabPackage {
+  if (!record(input) || input.schema !== 1 || input.privacy !== 'tai-lab-private'
+    || !fields(input, ['id', 'version', 'title'])) throw new LabValidationError(['Paquete o versión de esquema no admitidos.'])
+  const issues: string[] = []
+  const collections = ['objectives', 'sources', 'lessons', 'activities', 'evidence'] as const
+  for (const name of collections) {
+    if (!Array.isArray(input[name]) || !(input[name] as unknown[]).every(record)) issues.push(`${name}: lista inválida`)
+  }
+  fail(issues)
+  for (const name of collections) {
+    const rows = input[name] as RecordValue[]
+    const ids = rows.map(r => r.id)
+    if (!ids.every(string) || new Set(ids).size !== ids.length) issues.push(`${name}: IDs vacíos o duplicados`)
+  }
+  for (const s of input.sources as RecordValue[]) {
+    if (!fields(s, ['title', 'url']) || !inList(s.verification, ['candidate', 'verified'])
+      || (s.verification === 'verified' && !fields(s, ['edition', 'locator', 'consultedOn']))
+      || !inList(s.authority, ['primary', 'secondary', 'execution'])
+      || !inList(s.rights, ['reference-only', 'original', 'licensed-private', 'open'])) issues.push(`${s.id}: fuente incompleta`)
+    try { const u = new URL(String(s.url)); if (u.protocol !== 'https:' || u.username || u.password) throw new Error() }
+    catch { issues.push(`${s.id}: URL de fuente no admitida`) }
+  }
+  for (const o of input.objectives as RecordValue[]) {
+    if (!fields(o, ['unitId', 'topicId', 'statement']) || !inList(o.depth, ['A', 'R', 'R/A']) || !inList(o.state, states)
+      || !lists(o, ['concepts', 'officialClauses', 'sourceIds', 'lessonIds', 'practiceIds', 'immediateIds', 'reservedIds', 'delayedIds'])) {
+      issues.push(`${o.id}: objetivo sin conceptos, fuentes o destinos L/P/E`)
+    }
+  }
+  for (const l of input.lessons as RecordValue[]) {
+    if (!fields(l, ['version', 'title']) || !lists(l, ['objectiveIds', 'activityIds']) || !lists(l, ['prerequisites'], false)
+      || !integer(l.minutes) || Number(l.minutes) < 1 || !inList(l.state, states) || !claims(l.claims)
+      || !record(l.material) || !fields(l.material, ['resourceId', 'sectionId'])
+      || !['explanation', 'workedExample'].every(k => Array.isArray(l[k]) && l[k].length > 0
+        && l[k].every(s => record(s) && fields(s, ['title', 'body'])))) issues.push(`${l.id}: lección incompleta`)
+  }
+  for (const a of input.activities as RecordValue[]) {
+    if (!fields(a, ['version', 'title', 'familyId', 'scenarioId', 'prompt', 'solution']) || !lists(a, ['objectiveIds'])
+      || !inList(a.state, states) || !inList(a.phase, phases) || !lists(a, ['hints'], false) || !claims(a.claims)
+      || !record(a.provenance) || !inList(a.provenance.kind, ['official-tai', 'official-other', 'adapted', 'original', 'didactic'])
+      || !inList(a.provenance.status, ['eligible', 'annulled', 'disputed', 'unreconciled'])
+      || !record(a.mode) || !inList(a.mode.kind, ['real', 'simulation', 'trace']) || !fields(a.mode, ['engine', 'version', 'limits'])) {
+      issues.push(`${a.id}: actividad incompleta`)
+      continue
+    }
+    if (['official-tai', 'official-other', 'adapted'].includes(String(a.provenance.kind)) && !string(a.provenance.originalId)) {
+      issues.push(`${a.id}: falta procedencia original`)
+    }
+    if (a.evaluationIntent !== undefined && (a.phase !== 'delayed' || !inList(a.evaluationIntent, ['retention', 'transfer']))) {
+      issues.push(`${a.id}: intención de evaluación inválida`)
+    }
+    if (a.kind === 'choice') {
+      if (!Array.isArray(a.options) || a.options.length < 2 || !a.options.every(o => record(o)
+        && fields(o, ['id', 'text', 'explanation']) && typeof o.correct === 'boolean')
+        || a.options.filter(o => (o as RecordValue).correct).length !== 1
+        || new Set(a.options.map(o => (o as RecordValue).id)).size !== a.options.length) issues.push(`${a.id}: opciones inválidas`)
+    } else if (a.kind === 'sql') {
+      if (typeof a.starter !== 'string' || !string(a.referenceQuery) || !inList(a.comparison, ['bag', 'set', 'ordered'])
+        || !Array.isArray(a.datasets) || a.datasets.length < 2
+        || !a.datasets.every(d => record(d) && fields(d, ['id', 'setup']))) issues.push(`${a.id}: casos SQL insuficientes`)
+    } else if (a.kind === 'code') {
+      if (!inList(a.language, ['python', 'javascript']) || typeof a.starter !== 'string' || a.starter.length > 50_000
+        || !Array.isArray(a.datasets) || a.datasets.length < 2 || a.datasets.length > 12
+        || !a.datasets.every(d => record(d) && string(d.id) && d.input !== undefined
+          && JSON.stringify(d.input).length <= 16_000 && Array.isArray(d.expectedOutput)
+          && d.expectedOutput.length <= 100 && d.expectedOutput.every(v => typeof v === 'string')
+          && JSON.stringify(d.expectedOutput).length <= 16_000)
+        || new Set(a.datasets.map(d => (d as RecordValue).id)).size !== a.datasets.length) issues.push(`${a.id}: casos de código inválidos`)
+    } else if (a.kind === 'html-css') {
+      if (!record(a.starter) || typeof a.starter.html !== 'string' || typeof a.starter.css !== 'string'
+        || a.starter.html.length + a.starter.css.length > 50_000
+        || !Array.isArray(a.cases) || a.cases.length < 2 || a.cases.length > 8
+        || !a.cases.every(c => record(c) && string(c.id) && integer(c.width) && Number(c.width) >= 320 && Number(c.width) <= 1440
+          && Array.isArray(c.checks) && c.checks.length > 0 && c.checks.length <= 30
+          && c.checks.every(k => record(k) && string(k.selector) && k.selector.length <= 200
+            && inList(k.kind, ['count', 'text', 'style', 'attribute']) && typeof k.expected === 'string' && k.expected.length <= 2000
+            && (!['style', 'attribute'].includes(String(k.kind)) || (string(k.property) && /^[a-zA-Z-]{1,64}$/.test(k.property)))))
+        || new Set(a.cases.map(c => (c as RecordValue).id)).size !== a.cases.length) issues.push(`${a.id}: casos HTML/CSS inválidos`)
+    } else issues.push(`${a.id}: modalidad no soportada`)
+  }
+  for (const e of input.evidence as RecordValue[]) {
+    if (!fields(e, ['subjectId', 'subjectVersion', 'environment', 'procedure', 'expected', 'observed', 'artifact'])
+      || !inList(e.gate, requiredGates) || !inList(e.method, ['source-review', 'execution', 'automated-browser', 'physical-device', 'manual'])
+      || !inList(e.result, ['pass', 'fail']) || !date(e.recordedAt) || !/^[a-f0-9]{64}$/.test(String(e.sha256))) issues.push(`${e.id}: evidencia incompleta`)
+  }
+  fail(issues)
+  const pack = input as unknown as LabPackage
+  const objectives = new Map(pack.objectives.map(o => [o.id, o]))
+  const lessons = new Map(pack.lessons.map(l => [l.id, l]))
+  const activities = new Map(pack.activities.map(a => [a.id, a]))
+  const sources = new Map(pack.sources.map(s => [s.id, s]))
+  const reference = (id: string, ids: string[], known: Map<string, unknown>) => {
+    for (const ref of ids) if (!known.has(ref)) issues.push(`${id}: referencia inexistente ${ref}`)
+  }
+  for (const o of pack.objectives) {
+    reference(o.id, o.sourceIds, sources)
+    if (o.state === 'planned') continue
+    reference(o.id, o.lessonIds, lessons)
+    for (const [key, phase] of [['practiceIds', 'practice'], ['immediateIds', 'immediate'], ['reservedIds', 'reserved'], ['delayedIds', 'delayed']] as const) {
+      reference(o.id, o[key], activities)
+      for (const id of o[key]) {
+        const a = activities.get(id)
+        if (a && (a.phase !== phase || !a.objectiveIds.includes(o.id))) issues.push(`${o.id}: destino ${id} no cubre objetivo/fase`)
+      }
+    }
+    for (const id of o.lessonIds) if (!lessons.get(id)?.objectiveIds.includes(o.id)) issues.push(`${o.id}: lección sin vínculo inverso`)
+  }
+  for (const a of pack.activities) {
+    reference(a.id, a.objectiveIds, objectives)
+  }
+  issues.push(...familyConflicts(pack.activities))
+  for (const l of pack.lessons) {
+    reference(l.id, l.objectiveIds, objectives)
+    reference(l.id, l.prerequisites, objectives)
+    reference(l.id, l.activityIds, activities)
+    const own = l.activityIds.map(id => activities.get(id)).filter(a => a !== undefined)
+    if (own.some(a => ['reserved', 'delayed'].includes(a.phase))) issues.push(`${l.id}: reserva expuesta en lección`)
+    if (l.state === 'validated' && (new Set(own.filter(a => a.phase === 'practice').map(a => a.familyId)).size < 2
+      || own.filter(a => a.phase === 'immediate').length < 3)) issues.push(`${l.id}: faltan familias o cierre`)
+  }
+  for (const subject of [...pack.lessons, ...pack.activities]) {
+    for (const c of subject.claims) reference(subject.id, [c.sourceId], sources)
+    if (subject.state !== 'validated') continue
+    for (const gate of requiredGates) {
+      const matches = pack.evidence.filter(e => e.subjectId === subject.id && e.subjectVersion === subject.version && e.gate === gate)
+      if (!matches.some(e => e.result === 'pass') || matches.some(e => e.result === 'fail')) issues.push(`${subject.id}: puerta ${gate} sin superar para esta versión`)
+    }
+  }
+  for (const a of pack.activities) {
+    if (a.state === 'validated' && (a.provenance.status !== 'eligible'
+      || (a.phase === 'practice' && a.hints.length < 3)
+      || (a.phase !== 'practice' && a.hints.length > 0))) issues.push(`${a.id}: procedencia o pistas incompatibles con evaluación`)
+  }
+  if (purpose === 'study') {
+    for (const source of pack.sources) if (source.verification !== 'verified') issues.push(`${source.id}: fuente todavía candidata`)
+    if (!pack.lessons.length || !pack.activities.length || !pack.objectives.length) issues.push('Paquete sin contenido estudiable')
+    for (const s of [...pack.objectives, ...pack.lessons, ...pack.activities]) if (s.state !== 'validated') issues.push(`${s.id}: contenido todavía no validado`)
+  }
+  fail(issues)
+  return structuredClone(pack)
+}
+
+export function parseEventBatch(input: unknown, accountId: string): EventBatch {
+  if (!record(input) || input.schema !== 1 || input.privacy !== 'tai-lab-private' || input.accountId !== accountId
+    || !Array.isArray(input.events)) throw new LabValidationError(['Historial incompatible o de otra cuenta.'])
+  const issues: string[] = []
+  for (const e of input.events) {
+    if (!record(e) || !fields(e, ['id', 'deviceId']) || e.accountId !== accountId || !date(e.createdAt)) {
+      issues.push('Evento inválido o de otra cuenta'); continue
+    }
+    if (e.kind === 'exposure') {
+      if (!string(e.familyId) || !inList(e.reason, ['presented', 'solution', 'external'])) issues.push(`${e.id}: exposición inválida`)
+    } else if (e.kind === 'attempt' || e.kind === 'draft' || e.kind === 'assistance') {
+      if (!fields(e, ['activityId', 'activityVersion', 'packageId', 'packageVersion'])) issues.push(`${e.id}: referencia de contenido incompleta`)
+      if (e.kind === 'draft') {
+        if (!string(e.attemptGroupId) || !lists(e, ['parentIds'], false) || (e.parentIds as string[]).includes(String(e.id))
+          || typeof e.value !== 'string' || !integer(e.position)) issues.push(`${e.id}: borrador inválido`)
+      } else if (e.kind === 'assistance') {
+        if (!string(e.attemptGroupId) || !integer(e.hintCount) || typeof e.solutionViewed !== 'boolean') issues.push(`${e.id}: ayuda inválida`)
+      } else if (!fields(e, ['familyId', 'attemptGroupId', 'feedback', 'gradingVersion']) || !lists(e, ['objectiveIds'])
+        || !integer(e.ordinal) || Number(e.ordinal) < 1 || !integer(e.hintCount) || !integer(e.activeMs)
+        || typeof e.solutionViewed !== 'boolean' || !inList(e.phase, phases)
+        || !inList(e.outcome, ['correct', 'incorrect', 'omitted']) || (e.answer !== null && typeof e.answer !== 'string')
+        || (e.outcome === 'omitted') !== (e.answer === null)) issues.push(`${e.id}: intento inválido`)
+    } else issues.push(`${e.id}: tipo de evento desconocido`)
+  }
+  fail(issues)
+  return structuredClone(input) as unknown as EventBatch
+}

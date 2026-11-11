@@ -428,6 +428,41 @@ export class DriveLibrary {
     );
   }
 
+  async listLabFiles(accountId: string, kind: 'labEvents' | 'labPackage'): Promise<DriveFile[]> {
+    const client = await this.#accountClient(accountId);
+    return client.list(appProperty(APP_KEY, kind), FILE_FIELDS);
+  }
+
+  async readLabFile(accountId: string, id: string, kind: 'labEvents' | 'labPackage'): Promise<unknown> {
+    const client = await this.#accountClient(accountId);
+    const file = await client.json<DriveFile>(filePath(id), { fields: FILE_FIELDS });
+    if (file.trashed || !file.ownedByMe || file.shared || file.appProperties?.[APP_KEY] !== kind) {
+      throw new Error('El laboratorio solo carga archivos privados de esta cuenta.');
+    }
+    const response = await client.media(filePath(id));
+    if (!response.body) throw new Error('El archivo del laboratorio está vacío.');
+    const reader = response.body.getReader();
+    const chunks: Uint8Array<ArrayBuffer>[] = [];
+    let size = 0;
+    try {
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        size += chunk.value.byteLength;
+        if (size > DOWNLOAD_LIMIT) { await reader.cancel(); throw new Error('El paquete excede el límite de descarga.'); }
+        chunks.push(new Uint8Array(chunk.value));
+      }
+    } finally { reader.releaseLock(); }
+    return JSON.parse(await new Blob(chunks).text()) as unknown;
+  }
+
+  async appendLabEvents(accountId: string, value: unknown): Promise<void> {
+    const client = await this.#accountClient(accountId);
+    const content = await jsonBlob(value);
+    await client.upload({ name: 'TAI Hub · Laboratorio ' + crypto.randomUUID(), mimeType: JSON_MIME,
+      appProperties: { [APP_KEY]: 'labEvents' }, parents: [await this.#ensureFolder(client)] }, content);
+  }
+
   #client(): DriveClient {
     return new DriveClient(this.#session);
   }

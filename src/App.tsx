@@ -17,6 +17,7 @@ import { ResourceForm } from './components/ResourceForm'
 import { ResourceView } from './components/ResourceView'
 
 const PdfReader = lazy(() => import('./components/PdfReader'))
+const Laboratory = lazy(() => import('./lab/Laboratory'))
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
@@ -29,9 +30,9 @@ const emptyStudy: StudyState = { favorites: {}, positions: {}, annotations: {} }
 const subscribeIdle = () => () => {}
 const getEmptyStudy = () => emptyStudy
 
-type View = { page: 'home' | 'general' | 'favorites' | 'recent' | 'review' | 'search' | 'inap' }
+type View = { page: 'home' | 'general' | 'favorites' | 'recent' | 'review' | 'search' | 'inap' | 'lab' }
   | { page: 'block' | 'topic'; id: string }
-  | { page: 'resource'; id: string; version?: string; initialPage?: number; position?: PdfReadingPosition; query?: string }
+  | { page: 'resource'; id: string; version?: string; initialPage?: number; position?: PdfReadingPosition; query?: string; sectionId?: string }
 type ListLocation = { view: View; scroll: number }
 type ReaderLocation = {
   accountId: string; view: Extract<View, { page: 'resource' }>; version: string;
@@ -350,14 +351,14 @@ export default function App() {
     }
     markOpened(resource, position, updatedAt)
   }
-  function open(resource: Resource, page?: number, highlight?: string) {
+  function open(resource: Resource, page?: number, highlight?: string, sectionId?: string) {
     search.current?.blur()
     const previous = study.positions[resource.id]
     const position: PdfReadingPosition = page !== undefined ? { page }
       : previous?.version === resource.version && isPdfReadingPosition(previous) ? previous : { page: 1 }
     if (view.page !== 'resource') setBack({ view, scroll: window.scrollY })
     markOpened(resource, resource.kind === 'pdf' ? position : { page: 0 })
-    navigate({ page: 'resource', id: resource.id, version: resource.version, position, query: highlight })
+    navigate({ page: 'resource', id: resource.id, version: resource.version, position, query: highlight, sectionId })
   }
   function favorite(resource: Resource) {
     apply({ kind: 'favorite', resourceId: resource.id, value: !study.favorites[resource.id] })
@@ -435,7 +436,7 @@ export default function App() {
   }
   const title = topic?.title ?? block?.title ?? ({
     home: 'Biblioteca', general: 'General', favorites: 'Favoritos', recent: 'Recientes',
-    review: 'Por revisar', search: 'Búsqueda', resource: current?.title ?? 'Recurso', topic: 'Tema', block: 'Bloque', inap: 'INAP y BOE',
+    review: 'Por revisar', search: 'Búsqueda', resource: current?.title ?? 'Recurso', topic: 'Tema', block: 'Bloque', inap: 'INAP y BOE', lab: 'Laboratorio TAI',
   })[view.page]
   const listProps = { open, favorite, study, index, connected }
   const loadingLibrary = !account && !!clientId && !error && network
@@ -462,6 +463,7 @@ export default function App() {
       <nav className="nav-primary">
         {mainNav.map(({ page, label, icon: Icon }) => <button key={page} aria-current={view.page === page ? 'page' : undefined}
           onClick={() => navigate({ page })}><Icon size={18} /> {label}</button>)}
+        <button aria-current={view.page === 'lab' ? 'page' : undefined} onClick={() => navigate({ page: 'lab' })}><BookOpen size={18} /> Laboratorio TAI</button>
         {(reviewCount > 0 || view.page === 'review') && <button aria-current={view.page === 'review' ? 'page' : undefined} onClick={() => navigate({ page: 'review' })}><List size={18} /> Por revisar <span className="nav-count">{reviewCount}</span></button>}
         <button aria-current={officialView ? 'page' : undefined} aria-label={inapLabel}
           onClick={() => navigate({ page: 'inap' })}><InapIcon unread={official.unread} /> Convocatorias INAP</button>
@@ -544,7 +546,9 @@ export default function App() {
           <section className="section"><div className="section-head"><h2>Accesos rápidos</h2></div>
             <div className="shortcut-grid">{mainNav.slice(1).map(({ page, label, icon: Icon }) => <button key={page} className="shortcut" onClick={() => navigate({ page })}><Icon size={19} /> {label}<ChevronRight size={16} /></button>)}</div>
           </section>
-        </> : officialView ? <OfficialInap {...official} /> : view.page === 'search' ? <>
+        </> : view.page === 'lab' ? <Suspense fallback={<p>Cargando laboratorio…</p>}><Laboratory library={library} accountId={accountId ?? session.localAccountId()} connected={connected}
+          openMaterial={(id, sectionId) => { const resource = resources.find(r => r.id === id || (id.startsWith('import:') && r.importKey === id.slice(7))); if (resource) open(resource, undefined, undefined, sectionId); else setError('El material no está disponible en esta biblioteca.') }} /></Suspense>
+        : officialView ? <OfficialInap {...official} /> : view.page === 'search' ? <>
           <div className="page-heading"><p className="context-label"><Search size={17} /> Biblioteca</p><h1>Búsqueda</h1><p>Busca por título, fuente y texto dentro de los PDF.</p></div>
           {loadingLibrary || (retryLibrary && !account) ? <div className="empty" role="status"><Cloud size={24} /><p>{libraryStatus}</p></div>
             : <SearchResults query={cleanQuery} pageResults={pageResults.documents === pdfVersions ? pageResults : emptyPageResults} error={searchError} resources={resources}
@@ -571,7 +575,7 @@ export default function App() {
               annotations={study.annotations[current.id]?.[current.version] ?? []}
               onPosition={position => recordReadingPosition(current, position)}
               apply={apply} reconnect={() => connect()} download={() => library.download(current)} />
-            : <ResourceView key={`${current.id}:${current.version}`} resource={current} library={library} connected={connected} download={() => download(current)} />}
+            : <ResourceView key={`${current.id}:${current.version}`} resource={current} library={library} connected={connected} sectionId={view.sectionId} download={() => download(current)} />}
         </> : <>
           {block && <button className="text-link back-link" onClick={() => navigate(topic ? { page: 'block', id: block.id } : { page: 'home' })}>
             <ArrowLeft size={17} /> {topic ? `Bloque ${block.roman}` : 'Biblioteca'}</button>}
@@ -638,7 +642,7 @@ export default function App() {
             <button className="button" onClick={() => setModal({ kind: 'import' })}><Upload size={16} /> Importar carpeta</button>
           </> : <button className="button primary" disabled={!clientId || !network || auth.status === 'loading' || auth.status === 'connecting' || working}
             onClick={() => auth.status === 'connected' ? void refresh() : connect()}><Cloud size={17} /> {auth.status === 'connected' ? 'Reintentar' : 'Conectar Drive'}</button>}
-            {(account || auth.status === 'connected') && <button className="button" onClick={() => { session.disconnect(); clearPrivate() }}><LogOut size={16} /> Desconectar</button>}
+            {(account || session.localAccountId() || auth.status === 'connected') && <button className="button" onClick={() => { session.disconnect(); clearPrivate() }}><LogOut size={16} /> Desconectar</button>}
           </div>
         </section>
         {account && <section><h3>Índice de búsqueda</h3><p>{indexStats.indexed} PDF indexados · {indexStats['no-text']} sin texto extraíble · {indexStats.pending} pendientes</p>

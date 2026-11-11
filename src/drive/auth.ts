@@ -128,6 +128,12 @@ export class GoogleSession {
 
   snapshot = (): AuthSnapshot => this.#snapshot;
 
+  /** Identity only, never a credential. Disconnect and cross-tab changes revoke local access. */
+  localAccountId(): string | undefined {
+    const saved = readBrowserAccount(this.#clientId);
+    return saved?.generation === this.#browserAccount?.generation ? saved?.id : undefined;
+  }
+
   subscribe = (listener: () => void): (() => void) => {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
