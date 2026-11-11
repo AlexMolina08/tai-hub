@@ -100,7 +100,11 @@
 .lab-lesson-heading > span { display: inline-block; margin-top: .4rem; font-size: .8rem; color: var(--muted); }
 .lab-session-columns { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(1.5rem, 3vw, 3rem); align-items: start; }
 .lab-explanation { padding: .2rem 0; }
-.lab-explanation > section { margin-bottom: 1.8rem; }
+.lab-explanation-content > section { margin-bottom: 1.8rem; }
+.lab-reference-note { margin-bottom: 1.4rem; padding: 1.15rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.lab-reference-note h3 { display: flex; align-items: center; gap: .55rem; }
+.lab-reference-note p { color: var(--muted); margin-bottom: .85rem; }
+.lab-reference-note button { min-height: 44px; }
 .lab-explanation h3 { font-size: 1.1rem; line-height: 1.4; margin-bottom: .65rem; letter-spacing: -.015em; }
 .lab-explanation p, .lab-activity > p { white-space: pre-wrap; line-height: 1.75; overflow-wrap: anywhere; max-width: 72ch; }
 .lab-example { border-left: 3px solid var(--line); padding: .2rem 0 .2rem 1.25rem; margin: 2rem 0 1.5rem; }
@@ -167,9 +171,8 @@
 .lab-html select{font:inherit;margin-left:.5rem;min-height:44px}
 
 .lab-learning { margin-block: 1.5rem 2rem; }
-.lab-learning > header { max-width: 46rem; margin-bottom: 1.2rem; }
+.lab-learning > header { max-width: 46rem; margin-block: 1.5rem .8rem; }
 .lab-learning > header h2 { margin-block: .25rem .5rem; }
-.lab-learning > header p:last-child { color: var(--muted); line-height: 1.6; }
 .lab-learning-dimensions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
 .lab-learning-dimensions > div { padding: 1.1rem; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); min-width: 0; }
 .lab-learning-dimensions svg { color: var(--muted); }
@@ -177,10 +180,15 @@
 .lab-learning-dimensions h3 { margin: 0; font-size: .95rem; }
 .lab-learning-dimensions p { margin: .4rem 0 0; font-size: .85rem; line-height: 1.5; color: var(--muted); }
 .lab-next-step { margin-block: 1rem; padding: 1.3rem; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
-.lab-next-step h3 { font-size: 1.2rem; margin: .3rem 0; overflow-wrap: anywhere; }
+.lab-next-step h2 { font-size: 1.25rem; margin: .3rem 0; overflow-wrap: anywhere; }
 .lab-next-step p { line-height: 1.6; }
 .lab-next-step .lab-actions { align-items: center; margin-bottom: 0; }
+@media (min-width: 1000px) {
+  .lab-next-step { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; }
+  .lab-next-step .lab-actions { margin-top: 0; }
+}
 .lab-learning-details { margin-block: 1rem; }
+.lab-learning-mobile-definitions { display: none; }
 .lab-learning-details summary, .lab-objective-progress summary { min-height: 44px; cursor: pointer; padding-block: .65rem; }
 .lab-learning-details p, .lab-objective-progress p, .lab-objective-progress li { line-height: 1.6; }
 .lab-objective-progress > details { border-top: 1px solid var(--line); padding: .4rem 0; }
@@ -189,12 +197,13 @@
 .lab-learning small { color: var(--muted); overflow-wrap: anywhere; }
 .lab-standalone { max-width: 54rem; margin: 1rem auto; padding: 1.2rem; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 @media (max-width: 520px) {
-  .lab-learning-dimensions { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
-  .lab-learning-dimensions > div { display: grid; grid-template-columns: 22px 2.2rem minmax(0, 1fr); column-gap: .65rem; align-items: center; padding: .85rem; }
-  .lab-learning-dimensions svg { grid-column: 1; grid-row: 1 / 3; }
-  .lab-learning-dimensions strong { grid-column: 2; grid-row: 1 / 3; font-size: 1.7rem; margin: 0; }
-  .lab-learning-dimensions h3 { grid-column: 3; font-size: .9rem; overflow-wrap: anywhere; }
-  .lab-learning-dimensions p { grid-column: 3; font-size: .85rem; margin-top: .2rem; }
+  .lab-learning-dimensions { gap: .4rem; }
+  .lab-learning-dimensions > div { text-align: center; padding: .7rem .25rem; }
+  .lab-learning-dimensions svg { display: none; }
+  .lab-learning-dimensions strong { font-size: 1.55rem; line-height: 1.15; margin: 0 0 .28rem; }
+  .lab-learning-dimensions h3 { font-size: .75rem; overflow-wrap: anywhere; }
+  .lab-learning-dimensions p { display: none; }
+  .lab-learning-mobile-definitions { display: block; line-height: 1.6; }
   .lab-next-step { padding: 1rem; }
   .lab-standalone { padding: .75rem; }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowLeft, ArrowRight, BookOpen, Check, Download, RefreshCw } from 'lucide-react'
 import type { DriveLibrary } from '../drive/library'
 import { blocks } from '../syllabus'
@@ -277,6 +277,8 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     return initialActivityId ? 'practice' : 'read'
   })
   const practice = useRef<HTMLElement>(null)
+  const referenceId = useId()
+  const [openReferenceFor, setOpenReferenceFor] = useState<string>()
   const [index, setIndex] = useState(() => {
     const explicit = activities.findIndex(activity => activity.id === initialActivityId)
     if (explicit >= 0) return explicit
@@ -290,12 +292,17 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
   }
   function chooseActivity(next: number) {
     setIndex(next)
+    if (next !== index) setOpenReferenceFor(undefined)
     onActivityChange?.(activities[next].id)
     if (mobile) requestAnimationFrame(() => practice.current?.scrollIntoView({ block: 'start', behavior: 'instant' }))
   }
   const answered = new Set(events.filter((event): event is Attempt => event.kind === 'attempt' && event.accountId === accountId
     && event.packageId === pack.id && event.packageVersion === pack.version && event.outcome !== 'omitted'
     && activities.some(activity => activity.id === event.activityId && activity.version === event.activityVersion)).map(event => event.activityId))
+  const activity = activities[index]
+  const isPractice = activity?.phase === 'practice'
+  const desktopReference = !mobile && (isPractice || !!activity && openReferenceFor === activity.id)
+  const readingVisible = mobile ? pane === 'read' : desktopReference
   return <article className="lab-session">
     <header className="lab-lesson-heading"><h2>{lesson.title}</h2><p>{lesson.minutes} minutos de contenido nuevo</p>
       <span>{activities.filter(a => answered.has(a.id)).length} de {activities.length} actividades respondidas</span></header>
@@ -305,20 +312,30 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     </div>}
     <div className="lab-session-columns">
       {(!mobile || pane === 'read') && <section aria-label="Explicación y ejemplo" className="lab-explanation">
-        <LearningReading pack={pack} lesson={lesson} accountId={accountId} deviceId={deviceId} events={events} record={record}>
-        {lesson.explanation.map((s, i) => <section key={i}><h3>{s.title}</h3><StudyText text={s.body} /></section>)}
-        <div className="lab-example"><h3>Ejemplo resuelto</h3>{lesson.workedExample.map((s, i) => <section key={i}><h4>{s.title}</h4><StudyText text={s.body} /></section>)}</div>
-        <button className="text-link" onClick={() => { choosePane('practice'); openMaterial(lesson.material.resourceId, lesson.material.sectionId) }}>Consultar material completo</button>
-        {mobile && <button className="button primary lab-start-practice" onClick={() => choosePane('practice')}>Empezar a practicar <ArrowRight size={17} /></button>}
-        </LearningReading>
+        {!mobile && !isPractice && <div className="lab-reference-note">
+          <h3><BookOpen size={18} aria-hidden="true" /> Explicación</h3>
+          {!desktopReference && <p>Intenta responder de memoria. Si abres la explicación antes de comprobar tu respuesta, contará como apoyo de lectura.</p>}
+          <button className="button" aria-expanded={desktopReference} aria-controls={referenceId}
+            onClick={() => setOpenReferenceFor(desktopReference ? undefined : activity?.id)}>
+            {desktopReference ? 'Ocultar explicación' : 'Consultar explicación'}
+          </button>
+        </div>}
+        <div id={referenceId} className="lab-explanation-content" hidden={!readingVisible}>
+          {readingVisible && <LearningReading pack={pack} lesson={lesson} accountId={accountId} deviceId={deviceId} events={events} record={record}>
+            {lesson.explanation.map((s, i) => <section key={i}><h3>{s.title}</h3><StudyText text={s.body} /></section>)}
+            <div className="lab-example"><h3>Ejemplo resuelto</h3>{lesson.workedExample.map((s, i) => <section key={i}><h4>{s.title}</h4><StudyText text={s.body} /></section>)}</div>
+            <button className="text-link" onClick={() => { choosePane('practice'); openMaterial(lesson.material.resourceId, lesson.material.sectionId) }}>Consultar material completo</button>
+            {mobile && <button className="button primary lab-start-practice" onClick={() => choosePane('practice')}>Empezar a practicar <ArrowRight size={17} /></button>}
+          </LearningReading>}
+        </div>
       </section>}
       {(!mobile || pane === 'practice') && <section ref={practice} className="lab-practice" aria-label="Práctica">
         <div className="lab-steps" aria-label="Actividades de la lección">{activities.map((a, i) => <button className="button" key={a.id}
           title={a.title + (answered.has(a.id) ? ' · Respondida' : '')} aria-current={index === i ? 'step' : undefined}
           onClick={() => chooseActivity(i)}>{i + 1}{answered.has(a.id) && <Check size={11} aria-hidden="true" />}</button>)}</div>
-        <div className="lab-activity-position"><span>Actividad {index + 1} de {activities.length}</span><span>{activities[index]?.phase === 'practice' ? 'Práctica con apoyo' : !mobile ? 'Comprobación con explicación disponible' : 'Comprobación sin pistas'}</span></div>
-        {activities[index] && <ActivityView key={activities[index].id} activity={activities[index]} pack={pack} accountId={accountId}
-          deviceId={deviceId} events={events} record={record} referenceVisible={!mobile} />}
+        <div className="lab-activity-position"><span>Actividad {index + 1} de {activities.length}</span><span>{isPractice ? 'Práctica' : desktopReference ? 'Comprobación con explicación disponible' : 'Comprobación sin pistas'}</span></div>
+        {activity && <ActivityView key={activity.id} activity={activity} pack={pack} accountId={accountId}
+          deviceId={deviceId} events={events} record={record} referenceVisible={desktopReference} />}
         <nav className="lab-activity-navigation" aria-label="Cambiar actividad">
           <button className="button" disabled={index === 0} onClick={() => chooseActivity(index - 1)}><ArrowLeft size={17} /> Anterior</button>
           {index < activities.length - 1 ? <button className="button" onClick={() => chooseActivity(index + 1)}>Siguiente <ArrowRight size={17} /></button>
@@ -383,11 +400,11 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const latest = attempts.reduce<typeof attempts[number] | undefined>((current, a) => a.kind === 'attempt'
     && (!current || (current.kind === 'attempt' && a.ordinal > current.ordinal)) ? a : current, undefined)
   const latestEvidence = useMemo(() => {
-    if (!latest) return undefined
+    if (!latest || activity.state !== 'validated') return undefined
     try { return deriveLearning({ accountId, packages: [pack], events, now: new Date().toISOString(), policy: DEFAULT_LEARNING_POLICY })
       .attempts.find(attempt => attempt.attemptId === latest.id) }
     catch { return undefined }
-  }, [accountId, pack, events, latest])
+  }, [accountId, activity.state, pack, events, latest])
   const [clock] = useState(() => new ActiveTime(performance.now(), document.visibilityState === 'visible'))
   useEffect(() => {
     const update = () => clock.visibility(performance.now(), document.visibilityState === 'visible')
@@ -396,8 +413,9 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   }, [clock])
   const activeMs = () => clock.take(performance.now(), document.visibilityState === 'visible')
   const learningTarget = () => ({ ...ref, kind: 'activity' as const, attemptGroupId: groupId })
+  const predictionId = activity.kind === 'ipv4-model' ? parseIPv4View(answer).predictionId : null
   const [presentation] = useState(() => capture.present(learningTarget(), activity,
-    activity.kind === 'ipv4-model' ? parseIPv4View(answer).predictionId : null, { referenceVisible }))
+    predictionId, { referenceVisible }))
   useEffect(() => {
     if (semantic.hasUnsaved()) return
     const batch = [...(heads.length ? [] : [initial]), ...presentation.events]
@@ -408,10 +426,9 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   useEffect(() => {
     if (!referenceVisible || semantic.hasUnsaved()) return
     const known = new Set([...eventSnapshot.current, ...semantic.events()].map(event => event.id))
-    const batch = capture.reference(learningTarget(), activity,
-      activity.kind === 'ipv4-model' ? parseIPv4View(answer).predictionId : null).filter(event => !known.has(event.id))
+    const batch = capture.reference(learningTarget(), activity, predictionId).filter(event => !known.has(event.id))
     if (batch.length) void semantic.save(batch[0], incoming => capture.write(incoming, record), batch.slice(1))
-  }, [referenceVisible, groupId, answer, semanticEntries])
+  }, [referenceVisible, groupId, predictionId, semanticEntries])
   const requestedGroupSaved = () => !!newAttemptGroupId && [...eventSnapshot.current,
     ...semantic.snapshot().filter(entry => entry.status === 'saved').flatMap(entry => [entry.note, ...(entry.companions ?? [])])]
     .some(event => event.kind === 'draft' && event.attemptGroupId === newAttemptGroupId && event.packageId === pack.id

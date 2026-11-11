@@ -15,19 +15,24 @@ export function LearningDashboard({ snapshot, packages, events, open }: {
   const labels = { insufficient: 'En aprendizaje', consolidated: 'Consolidado', 'review-open': 'Repaso abierto', uncertain: 'Evidencia incompleta' }
   const visible = expanded ? snapshot.objectives : snapshot.objectives.filter(objective => objective.qualifyingCorrectIds.length || objective.reviews.length).slice(0, 4)
   return <section className="lab-learning" aria-labelledby="lab-learning-heading">
-    <header><p className="context-label">Tu estudio</p><h2 id="lab-learning-heading">Comprender, recordar, aplicar</h2>
-      <p>Cada dimensión se apoya en respuestas guardadas. Completar una lección no equivale a consolidarla.</p></header>
+    {next ? <section className="lab-next-step" aria-label="Siguiente paso recomendado">
+      <div><p className="context-label">Siguiente paso</p><h2>{next.title}</h2><p>{next.message}</p></div>
+      <div className="lab-actions"><button className="button primary" onClick={() => open(next.target)}>Empezar propuesta <ArrowRight size={17} /></button>
+        <button className="text-link" onClick={() => setSkipped(current => [...current, next.id])}>Otra propuesta</button></div>
+    </section> : <p>No quedan propuestas en esta selección. Puedes explorar las lecciones o <button className="text-link" onClick={() => setSkipped([])}>restablecer propuestas</button>.</p>}
+    <header><p className="context-label">Tu progreso</p><h2 id="lab-learning-heading">Comprender, recordar, aplicar</h2></header>
     <div className="lab-learning-dimensions">
       <div><Lightbulb size={20} aria-hidden="true" /><strong>{count('understandingIds')}</strong><h3>Comprensión</h3><p>Primeras respuestas correctas sin ayuda.</p></div>
       <div><CalendarDays size={20} aria-hidden="true" /><strong>{count('retentionIds')}</strong><h3>Retención</h3><p>Recuperaciones tras el intervalo previsto.</p></div>
       <div><Layers size={20} aria-hidden="true" /><strong>{count('transferIds')}</strong><h3>Transferencia</h3><p>Resoluciones sin ayuda de familias nuevas.</p></div>
     </div>
-    {next ? <section className="lab-next-step" aria-label="Siguiente paso recomendado">
-      <div><p className="context-label">Siguiente paso</p><h3>{next.title}</h3><p>{next.message}</p></div>
-      <div className="lab-actions"><button className="button primary" onClick={() => open(next.target)}>Empezar propuesta <ArrowRight size={17} /></button>
-        <button className="text-link" onClick={() => setSkipped(current => [...current, next.id])}>Otra propuesta</button></div>
-    </section> : <p>No quedan propuestas en esta selección. Puedes explorar las lecciones o <button className="text-link" onClick={() => setSkipped([])}>restablecer propuestas</button>.</p>}
     <details className="lab-learning-details"><summary>Cómo avanza tu aprendizaje</summary>
+      <p>Cada dimensión se apoya en respuestas guardadas. Completar una lección no equivale a consolidarla.</p>
+      <ul className="lab-learning-mobile-definitions">
+        <li>Comprensión: primeras respuestas correctas sin ayuda.</li>
+        <li>Retención: recuperaciones tras el intervalo previsto.</li>
+        <li>Transferencia: resoluciones sin ayuda de familias nuevas.</li>
+      </ul>
       <p>Consolidación: tres aciertos sin ayuda, dos familias y dos días separados por al menos 24 horas; una recuperación diferida y una familia nueva. Los errores pendientes abren repaso.</p>
       <p>Los intervalos orientativos son 1, 3, 7, 14 y 30 días. Usamos las fechas de tus dispositivos y el historial disponible; la sincronización puede completar o revisar los indicadores.</p>
       <p>Las respuestas antiguas siguen guardadas. Si les faltan datos sobre presentación, ayudas o fechas, no se convierten en nueva evidencia.</p>

@@ -26,8 +26,8 @@ function Review({ pack }: { pack: LabPackage }) {
       accountId="editorial-review" deviceId="local-preview" events={events}
       record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))}
       openMaterial={(resourceId, sectionId) => setMaterial(`${resourceId} · #${sectionId}`)}
-      renderActivity={activity => <ActivityView key={activity.id} activity={activity} pack={pack} accountId="editorial-review" deviceId="local-preview"
-        events={events} record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))} />} />
+      renderActivity={(activity, referenceVisible) => <ActivityView key={activity.id} activity={activity} pack={pack} accountId="editorial-review" deviceId="local-preview"
+        events={events} referenceVisible={referenceVisible} record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))} />} />
     : pack.lessons[index] && <LessonView key={pack.lessons[index].id} pack={pack} lesson={pack.lessons[index]}
       accountId="editorial-review" deviceId="local-preview" events={events}
       record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))}

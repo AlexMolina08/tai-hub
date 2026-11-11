@@ -82,10 +82,17 @@ test('learning dashboard explains evidence and opens the next unanswered activit
   const panel = page.getByRole('region', { name: 'Comprender, recordar, aplicar', exact: true })
   await expect(panel).toBeVisible()
   for (const width of [320, 390, 1440]) {
-    await page.setViewportSize({ width, height: 900 })
+    const height = width === 320 ? 740 : width === 390 ? 844 : 900
+    await page.setViewportSize({ width, height })
+    await page.evaluate(() => window.scrollTo(0, 0))
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(await panel.locator('.lab-learning-dimensions > div').evaluateAll(cards => cards.every(card => card.scrollWidth <= card.clientWidth))).toBe(true)
     expect((await new AxeBuilder({ page }).include('.lab-learning').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+    if (width <= 390) {
+      const start = await panel.getByRole('button', { name: 'Empezar propuesta', exact: true }).boundingBox()
+      await page.screenshot({ path: testInfo.outputPath(`learning-first-screen-${width}.png`) })
+      expect(start && start.y >= 0 && start.y + start.height <= height - 65, JSON.stringify({ width, height, start })).toBe(true)
+    }
     await panel.screenshot({ path: testInfo.outputPath(`learning-panel-${width}.png`) })
   }
   // Reading before a new presentation is preparation; the mobile answer has no reference alongside it.
@@ -100,12 +107,12 @@ test('learning dashboard explains evidence and opens the next unanswered activit
   await panel.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Ejemplo sintético p2', exact: true })).toBeVisible()
 })
-for (const route of ['desktop-reference', 'mobile-reading-return', 'resize-reference', 'guided-reading-return'] as const) {
+for (const route of ['desktop-reference', 'desktop-memory', 'mobile-reading-return', 'resize-reference', 'guided-reading-return'] as const) {
   test(`learning records textual support through ${route}`, async ({ page, context, browserName }) => {
     const pack = sampleGuidedPackage(), drive = new DriveFixture()
     drive.addLabPackage('reading-support', pack)
     await drive.install(context, browserName === 'webkit')
-    await page.setViewportSize({ width: route === 'desktop-reference' ? 1440 : 390, height: 900 })
+    await page.setViewportSize({ width: route.startsWith('desktop-') ? 1440 : 390, height: 900 })
     await page.goto('/tai-hub/')
     await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
     await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
@@ -120,14 +127,28 @@ for (const route of ['desktop-reference', 'mobile-reading-return', 'resize-refer
       await stages.getByRole('button', { name: /4. Transferir/ }).click()
     } else {
       await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
+      if (route.startsWith('desktop-')) await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: '3', exact: true }).click()
       await expect(page.getByRole('radio', { name: 'Válida', exact: true })).toBeEnabled()
-      if (route === 'mobile-reading-return') {
+      if (route.startsWith('desktop-')) {
+        const disclosure = page.getByRole('button', { name: 'Consultar explicación', exact: true })
+        await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+        await expect(page.getByText('Compara cada opción.', { exact: true })).toHaveCount(0)
+        if (route === 'desktop-reference') {
+          await disclosure.press('Enter')
+          const hide = page.getByRole('button', { name: 'Ocultar explicación', exact: true })
+          await expect(hide).toBeFocused()
+          await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+          await hide.press('Enter')
+          await expect(disclosure).toBeFocused()
+        }
+      } else if (route === 'mobile-reading-return') {
         await page.getByRole('button', { name: 'Leer explicación', exact: true }).click()
         await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
         await showPractice(page)
       } else if (route === 'resize-reference') {
         await page.setViewportSize({ width: 1440, height: 900 })
+        await page.getByRole('button', { name: 'Consultar explicación', exact: true }).click()
         await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
         await expect(page.getByText('La explicación está disponible junto a esta actividad. La respuesta contará con apoyo de lectura.', { exact: true })).toBeVisible()
         await page.setViewportSize({ width: 390, height: 900 })
@@ -137,7 +158,11 @@ for (const route of ['desktop-reference', 'mobile-reading-return', 'resize-refer
     await expect(page.getByRole('heading', { name: 'Ejemplo sintético i1', exact: true })).toBeVisible()
     await page.getByRole('radio', { name: 'Válida', exact: true }).check()
     await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
-    await expect(page.getByText('Respuesta con apoyo de lectura. No acredita recuperación sin apoyo.', { exact: true })).toBeVisible()
+    if (route === 'desktop-memory') {
+      await expect(page.getByText('Respuesta correcta', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Consultar explicación', exact: true }).click()
+      await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+    } else await expect(page.getByText('Respuesta con apoyo de lectura. No acredita recuperación sin apoyo.', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
     await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
     const events = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
@@ -147,7 +172,8 @@ for (const route of ['desktop-reference', 'mobile-reading-return', 'resize-refer
       && event.target.kind === 'activity' && event.target.activityId === 'i1')).toHaveLength(1)
     const evidence = deriveLearning({ accountId: 'sample-account', packages: [pack], events,
       now: new Date().toISOString(), policy: DEFAULT_LEARNING_POLICY }).attempts.find(row => row.attemptId === attempt.id)
-    expect(evidence).toMatchObject({ referenceSupport: 'recorded', unaided: false, understanding: false, retention: false, transfer: false })
+    const memory = route === 'desktop-memory'
+    expect(evidence).toMatchObject({ referenceSupport: memory ? 'none' : 'recorded', unaided: memory, understanding: memory, retention: false, transfer: false })
     expect(events.filter(event => event.kind === 'assistance')).toHaveLength(0)
   })
 }
