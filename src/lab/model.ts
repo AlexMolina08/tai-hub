@@ -81,7 +81,7 @@ export interface ActivityBase {
     technicalAnswer?: string
     status: 'eligible' | 'annulled' | 'disputed' | 'unreconciled'
   }
-  mode: { kind: 'real' | 'simulation' | 'trace'; engine: string; version: string; limits: string }
+  mode: { kind: 'real' | 'simulation' | 'trace' | 'documentary'; engine: string; version: string; limits: string }
   prompt: string
   hints: string[]
   solution: string

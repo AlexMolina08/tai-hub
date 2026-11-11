@@ -6,6 +6,8 @@ El laboratorio carga contenido privado y versionado desde la biblioteca del prop
 
 `src/lab/model.ts` define objetivos, lecciones, actividades, fuentes, evidencias e historial. Un objetivo conserva sus destinos de explicación, práctica, comprobación inmediata, reserva y comprobación diferida. Un destino planificado no demuestra que exista una actividad terminada.
 
+La modalidad `documentary` identifica casos de elección respaldados por documentación, sin atribuirles una ejecución ni una traza observada. La interfaz muestra «Caso documental» y conserva la edición y los límites preparados. El contrato rechaza esta modalidad en actividades con ejecutor. Es una extensión aditiva previa a la publicación: el cliente actual sigue aceptando paquetes anteriores; un cliente anterior rechaza la modalidad desconocida y debe actualizarse antes de cargar esos paquetes.
+
 Los estados `planned`, `authored`, `review`, `correction`, `validated` y `withdrawn` describen el trabajo editorial. El modo `authoring` admite trabajo incompleto declarado. El modo `study` exige contenido validado, fuentes verificadas y evidencia correspondiente a cada versión en las seis puertas editoriales. La comprobación estructural no sustituye la lectura de fuentes ni demuestra por sí sola que una evidencia sea auténtica.
 
 Las familias y escenarios se comprueban tanto dentro de un paquete como contra las versiones ya guardadas en esa cuenta. Una reserva de transferencia no puede compartirlos con entrenamiento. Una actividad diferida puede declarar `evaluationIntent: "retention"` para revisar una familia entrenada; ese resultado no demuestra transferencia nueva. Si no declara intención, conserva la separación exigida a las variantes diferidas originales.

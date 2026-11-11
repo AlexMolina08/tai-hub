@@ -472,7 +472,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   }
   return <div className="lab-activity">
     <h3>{activity.title}</h3><p className="lab-mode">{activity.kind === 'ipv4-model' ? 'Modelo IPv4 · Cálculo local, sin tráfico de red'
-      : <>{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</>}</p>
+      : <>{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : activity.mode.kind === 'documentary' ? 'Caso documental' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</>}</p>
     {capture.warning && <p role="status">{capture.warning}</p>}
     {semanticBlocked && <section aria-label="Guardado de respuesta y ayuda">
       <p role="status">{semanticEntries.some(entry => entry.status === 'pending') ? 'Guardando respuesta o consulta…' : 'Hay una respuesta o consulta pendiente de guardar.'}</p>

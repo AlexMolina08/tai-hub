@@ -23,6 +23,7 @@ async function openStudyOptions(page: import('@playwright/test').Page) {
 }
 test('learning context survives reload and preserves the first response before later help', async ({ page, context, browserName }) => {
   const pack = samplePackage()
+  pack.activities[0].mode.kind = 'documentary'
   pack.activities[0].learning = { diagnostics: [{ id: 'fixture-critical', objectiveIds: ['o1'], severity: 'critical', choiceOptionIds: ['b'] }], rechecksDiagnosticIds: [] }
   const drive = new DriveFixture(); drive.addLabPackage('lab-learning', pack)
   await drive.install(context, browserName === 'webkit')
@@ -31,6 +32,7 @@ test('learning context survives reload and preserves the first response before l
   await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
   await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
   await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
+  await expect(page.locator('.lab-activity > .lab-mode')).toContainText('Caso documental')
   await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
   const sync = async () => {
     await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()

@@ -21,6 +21,14 @@ it('counts foreground time once per attempt and excludes hidden intervals', () =
 })
 
 describe('content contracts and publication gates', () => {
+  it('accepts documentary choices but rejects an executable activity with that declaration', () => {
+    const pack = samplePackage()
+    pack.activities[0].mode.kind = 'documentary'
+    expect(parsePackage(pack).activities[0].mode.kind).toBe('documentary')
+    pack.activities[0] = { ...pack.activities[0], kind: 'code', language: 'javascript', starter: 'console.log(input)',
+      datasets: [{ id: 'a', input: 1, expectedOutput: ['1'] }, { id: 'b', input: 2, expectedOutput: ['2'] }] }
+    expect(() => parsePackage(pack)).toThrow('un caso documental requiere respuesta preparada, sin ejecutor')
+  })
   it('requires bounded, distinct prepared code cases and a supported language', () => {
     const pack = samplePackage()
     pack.activities[0] = { ...pack.activities[0], kind: 'code', language: 'python', starter: 'print(sum(input))',

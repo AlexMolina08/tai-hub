@@ -85,9 +85,12 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
       || !inList(a.state, states) || !inList(a.phase, phases) || !lists(a, ['hints'], false) || !claims(a.claims)
       || !record(a.provenance) || !inList(a.provenance.kind, ['official-tai', 'official-other', 'adapted', 'original', 'didactic'])
       || !inList(a.provenance.status, ['eligible', 'annulled', 'disputed', 'unreconciled'])
-      || !record(a.mode) || !inList(a.mode.kind, ['real', 'simulation', 'trace']) || !fields(a.mode, ['engine', 'version', 'limits'])) {
+      || !record(a.mode) || !inList(a.mode.kind, ['real', 'simulation', 'trace', 'documentary']) || !fields(a.mode, ['engine', 'version', 'limits'])) {
       issues.push(`${a.id}: actividad incompleta`)
       continue
+    }
+    if (a.mode.kind === 'documentary' && a.kind !== 'choice') {
+      issues.push(`${a.id}: un caso documental requiere respuesta preparada, sin ejecutor`)
     }
     if (['official-tai', 'official-other', 'adapted'].includes(String(a.provenance.kind)) && !string(a.provenance.originalId)) {
       issues.push(`${a.id}: falta procedencia original`)
