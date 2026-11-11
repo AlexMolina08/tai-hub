@@ -7,6 +7,7 @@ import type { LabEvent } from '../src/lab/model'
 import { mergeEvents } from '../src/lab/history'
 import { SQL_GRADING_VERSION } from '../src/lab/sql-output'
 import { DEFAULT_LEARNING_POLICY, deriveLearning } from '../src/lab/learning'
+import { labHtmlPlugin } from '../scripts/lab-html.mjs'
 
 async function openLab(page: import('@playwright/test').Page) {
   const menu = page.getByRole('button', { name: 'Abrir navegación', exact: true })
@@ -1268,6 +1269,33 @@ test('Python is cached only when needed and runs after an offline reload', async
   await expect(page.getByText('Acceso sin conexión: por preparar', { exact: true })).toBeVisible()
 })
 
+test('HTML CSS inspection responds for a preview outside the viewport', async ({ page }) => {
+  const plugin = labHtmlPlugin()
+  const moduleSource = plugin.load(plugin.resolveId('virtual:lab-html'))!
+  const { bootstrap, hash } = await import('data:text/javascript,' + encodeURIComponent(moduleSource))
+  await page.setContent('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><div style="height:2400px"></div><iframe sandbox="allow-scripts"></iframe>')
+  const preview = page.locator('iframe')
+  await expect(preview).not.toBeInViewport()
+  const result = await preview.evaluate((frame: HTMLIFrameElement, { bootstrap, hash }) => new Promise(resolve => {
+    const timeout = window.setTimeout(() => finish(null), 4000)
+    function finish(value: unknown) {
+      window.clearTimeout(timeout)
+      window.removeEventListener('message', receive)
+      resolve(value)
+    }
+    function receive(event: MessageEvent) {
+      if (event.source !== frame.contentWindow) return
+      if (event.data?.kind === 'html-ready') {
+        frame.contentWindow!.postMessage({ kind: 'inspect', token: 'test', checks: [{ selector: 'p', kind: 'text' }] }, '*')
+      } else if (event.data?.kind === 'html-result' && event.data.token === 'test') finish(event.data.values)
+    }
+    window.addEventListener('message', receive)
+    frame.srcdoc = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src '${hash}'"><p>Vista sintética</p><script>${bootstrap}</script>`
+  }), { bootstrap, hash })
+  expect(result).toEqual(['Vista sintética'])
+  await expect(preview).not.toBeInViewport()
+})
+
 test('HTML CSS preview measures real responsive styles, removes active content and saves both editors', async ({ page, context, browserName }) => {
   const pack = samplePackage()
   const html = '<div id="box"><strong>Texto</strong></div>'
@@ -1317,8 +1345,14 @@ test('HTML CSS preview measures real responsive styles, removes active content a
   await page.getByRole('button', { name: 'Actualizar vista', exact: true }).click()
   await expect(page.getByText('La vista admite hasta 200 elementos.', { exact: true })).toBeVisible()
   await htmlEditor.fill(html); await cssEditor.fill(css)
+  const frame = page.locator('iframe[title="Resultado HTML y CSS"]')
+  await frame.evaluate(element => { element.parentElement!.style.marginTop = '320vh' })
+  await expect(frame).not.toBeInViewport()
+  expect(await frame.evaluate(element => element.getBoundingClientRect().top > innerHeight * 2)).toBe(true)
   await page.getByRole('button', { name: 'Comprobar HTML y CSS', exact: true }).click()
   await expect(page.getByText('El HTML y CSS cumplen los casos comprobados.', { exact: true })).toBeVisible()
+  await expect(frame).not.toBeInViewport()
+  await expect(preview.locator('#box')).toHaveCSS('display', 'flex')
   await page.getByRole('button', { name: 'Volver a las lecciones', exact: true }).click()
   await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
   await expect(htmlEditor).toHaveValue(html); await expect(cssEditor).toHaveValue(css)

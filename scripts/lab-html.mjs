@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto'
 const bootstrap = `(() => {
-  addEventListener('message', async event => {
+  addEventListener('message', event => {
     if (event.source !== parent || event.data?.kind !== 'inspect' || typeof event.data.token !== 'string') return;
     const { token, checks } = event.data;
     if (!Array.isArray(checks) || checks.length > 30) return;
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // The markup and inline styles precede this script. getComputedStyle resolves them on demand,
+    // even when the browser pauses animation callbacks for an offscreen preview.
     try {
       const values = checks.map(check => {
         const nodes = document.querySelectorAll(check.selector), node = nodes[0];
