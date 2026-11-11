@@ -1,4 +1,5 @@
 import type { AccessProfile } from './access-model'
+import type { ClosureProfile } from './closure-model'
 import type { FrameProfile } from './frame-model'
 import type { RelationProfile } from './relation-model'
 import type { SignalCase } from './signal-model'
@@ -154,7 +155,12 @@ export interface RelationModelActivity extends ActivityBase {
   phase: 'practice'
   profile: RelationProfile
 }
-export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
+export interface ClosureModelActivity extends ActivityBase {
+  kind: 'closure-model'
+  phase: 'practice'
+  profile: ClosureProfile
+}
+export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity | ClosureModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string

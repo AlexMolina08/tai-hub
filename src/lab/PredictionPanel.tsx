@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Attempt, PredictionActivity } from './model'
 import { describeFrame, frameControls } from './frame-model'
 import { accessControls, describeAccess } from './access-model'
+import { closureControls, describeClosure } from './closure-model'
 import { describeRelation, relationControls } from './relation-model'
 import { describeStack, stackControls } from './stack-model'
 import { matchesPredictionAnswer, parsePredictionDraft, predictionInputLimit, validPredictionAnswer } from './prediction'
@@ -14,6 +15,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: relationControls(activity.profile), describe: (values: string[]) => describeRelation(activity.profile, values) }
     case 'stack-model':
       return { controls: stackControls, describe: describeStack }
+    case 'closure-model':
+      return { controls: closureControls(activity.profile), describe: (values: string[]) => describeClosure(activity.profile, values) }
     case 'frame-model':
       return { controls: frameControls(activity.profile), describe: (values: string[]) => describeFrame(activity.profile, values) }
   }
@@ -35,13 +38,15 @@ export function PredictionPanel({ activity, saved, latest, disabled, save, onRes
   const locked = disabled || busy
   const complete = exercise.answers.every((answer, i) => validPredictionAnswer(answer, draft.answers[i]))
   const step = draft.step ?? 0
+  const manualStart = activity.kind === 'closure-model' ? activity.profile.attributes.length : controls.length
 
   function edit(next: typeof draft) {
     setDraft(next); setError('')
     void save(JSON.stringify(next)).catch(() => {}) // Shared draft controls own recovery.
   }
   function changeControl(index: number, value: string) {
-    const next = draft.controls.map((entry, i) => i === index ? value : entry)
+    const resetFollowing = index >= manualStart && value === controls[index].initial
+    const next = draft.controls.map((entry, i) => i === index ? value : resetFollowing && i > index ? controls[i].initial : entry)
     edit({ controls: next, answers: describe(next).answers.map(() => '') })
   }
   async function submit() {
@@ -58,7 +63,7 @@ export function PredictionPanel({ activity, saved, latest, disabled, save, onRes
     <fieldset disabled={locked} className="lab-frame-section">
       <legend>Parámetros</legend>
       <div className="lab-model-fields">
-        {controls.map((control, index) => control.toggle
+        {controls.map((control, index) => index > manualStart && draft.controls[index - 1] === controls[index - 1].initial ? null : control.toggle
           ? <label key={control.label} className="lab-frame-toggle">
             <input type="checkbox" checked={draft.controls[index] === '1'}
               onChange={event => changeControl(index, event.target.checked ? '1' : '0')} />
@@ -83,7 +88,7 @@ export function PredictionPanel({ activity, saved, latest, disabled, save, onRes
             {options ? <select value={draft.answers[index]} onChange={event => update(event.target.value)}>
               <option value="">Elige una opción</option>
               {options.map(option => <option key={option}>{option}</option>)}
-            </select> : format === 'signed-list' ? <textarea rows={2} maxLength={predictionInputLimit(answer)}
+            </select> : format === 'signed-list' || format === 'attribute-sets' ? <textarea rows={2} maxLength={predictionInputLimit(answer)}
               autoComplete="off" spellCheck={false} value={draft.answers[index]} onChange={event => update(event.target.value)} />
               : <input type="text" inputMode={format === 'integer' ? 'numeric' : 'text'} autoComplete="off"
                 spellCheck={false} maxLength={predictionInputLimit(answer)} value={draft.answers[index]} onChange={event => update(event.target.value)} />}

@@ -1,4 +1,5 @@
 import { ACCESS_MODEL_VERSION, validAccessProfile } from './access-model'
+import { CLOSURE_MODEL_VERSION, validClosureProfile } from './closure-model'
 import { FRAME_MODEL_VERSION, validFrameProfile } from './frame-model'
 import { RELATION_MODEL_VERSION, validRelationProfile } from './relation-model'
 import { SIGNAL_MODEL_VERSION, validSignalCases } from './signal-model'
@@ -141,6 +142,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
             && inList(k.kind, ['count', 'text', 'style', 'attribute']) && typeof k.expected === 'string' && k.expected.length <= 2000
             && (!['style', 'attribute'].includes(String(k.kind)) || (string(k.property) && /^[a-zA-Z-]{1,64}$/.test(k.property)))))
         || new Set(a.cases.map(c => (c as RecordValue).id)).size !== a.cases.length) issues.push(`${a.id}: casos HTML/CSS inválidos`)
+    } else if (a.kind === 'closure-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== CLOSURE_MODEL_VERSION
+        || !validClosureProfile(a.profile)) issues.push(`${a.id}: perfil de dependencias inválido`)
     } else if (a.kind === 'relation-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== RELATION_MODEL_VERSION
         || !validRelationProfile(a.profile)) issues.push(`${a.id}: perfil E/R inválido`)

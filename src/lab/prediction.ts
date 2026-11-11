@@ -2,7 +2,7 @@ import type { Activity, PredictionActivity } from './model'
 
 export function isPredictionActivity(activity: Activity): activity is PredictionActivity {
   return activity.kind === 'frame-model' || activity.kind === 'access-model'
-    || activity.kind === 'stack-model' || activity.kind === 'relation-model'
+    || activity.kind === 'stack-model' || activity.kind === 'relation-model' || activity.kind === 'closure-model'
 }
 
 export type PredictionControl = { label: string; options: string[]; initial: string; toggle?: true }
@@ -10,7 +10,7 @@ export type PredictionAnswer = {
   label: string
   expected: string
   options?: string[]
-  format?: 'sequence' | 'signed-list' | 'hex' | 'hex-or-dash' | 'integer' | 'fraction'
+  format?: 'sequence' | 'signed-list' | 'hex' | 'hex-or-dash' | 'integer' | 'fraction' | 'attribute-set' | 'attribute-sets'
 }
 export type PredictionExercise = {
   facts: string[]
@@ -21,7 +21,7 @@ export type PredictionExercise = {
 }
 
 export function predictionInputLimit(answer: PredictionAnswer) {
-  return answer.format === 'signed-list' ? 256 : 40
+  return answer.format === 'signed-list' || answer.format === 'attribute-sets' ? 256 : 40
 }
 
 export function parsePredictionDraft(raw: string, schema: PredictionControl[], describe: (values: string[]) => PredictionExercise) {
@@ -42,6 +42,12 @@ export function parsePredictionDraft(raw: string, schema: PredictionControl[], d
   }
 }
 
+function normalizeSet(text: string): string | undefined {
+  if (text.trim() === '-') return '-'
+  const letters = text.replace(/[\s,]+/g, '')
+  return /^[A-Z]+$/.test(letters) && new Set(letters).size === letters.length ? [...letters].sort().join('') : undefined
+}
+
 function normalize(answer: PredictionAnswer, raw: string): string | undefined {
   if (answer.options) return answer.options.includes(raw) ? raw : undefined
   const text = raw.trim().toUpperCase()
@@ -53,6 +59,12 @@ function normalize(answer: PredictionAnswer, raw: string): string | undefined {
     case 'signed-list':
       return text.length <= predictionInputLimit(answer) && /^-?\d{1,2}(?:(?:\s*,\s*|\s+)-?\d{1,2})*$/.test(text)
         ? text.split(/[\s,]+/).map(Number).join(',') : undefined
+    case 'attribute-set': return normalizeSet(text)
+    case 'attribute-sets': {
+      if (text.length > predictionInputLimit(answer)) return undefined
+      const sets = text.split('/').map(normalizeSet)
+      return sets.every(set => set !== undefined) && new Set(sets).size === sets.length ? sets.sort().join('/') : undefined
+    }
     case 'hex':
     case 'hex-or-dash': {
       const hexText = text.replace(/^0X/, '')

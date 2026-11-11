@@ -138,6 +138,8 @@ El modelo de acceso permite cambiar terminaciones de xDSL y FTTH, interrumpir un
 
 El modelo E/R permite añadir documentos para contrastar la unicidad de una clave y la representación de sus destinatarios. El perfil de cardinalidad permite editar enlaces y comprobar la participación mínima y máxima por elemento.
 
+El modelo de dependencias funcionales permite editar la semilla y proponer un orden de aplicación. Las reglas sin antecedentes satisfechos y las que no aportan atributos quedan explicadas en la traza. El orden automático completa el cierre, y el perfil de claves compara todas las claves mínimas por inclusión. Cambiar un paso conserva los anteriores y reinicia la predicción activa.
+
 El modelo de pila permite cambiar de función y de argumento inicial. Se guardan la predicción y la configuración antes de revelar las entradas, los retornos y los marcos activos. El paso de lectura se conserva en el borrador y el intento mantiene la respuesta original. Cada activación recibe un identificador propio.
 
 ## Disponibilidad sin conexión
