@@ -21,6 +21,9 @@ const fields = (v: RecordValue, names: string[]) => names.every(n => string(v[n]
 const inList = (v: unknown, values: readonly string[]) => typeof v === 'string' && values.includes(v)
 const lists = (v: RecordValue, names: string[], nonempty = true) => names.every(n => strings(v[n]) && (!nonempty || v[n].length > 0))
 const claims = (v: unknown) => Array.isArray(v) && v.length > 0 && v.every(c => record(c) && fields(c, ['text', 'sourceId', 'locator']))
+const options = (value: unknown, correctCount: number) => Array.isArray(value) && value.length >= 2
+  && value.every(o => record(o) && fields(o, ['id', 'text', 'explanation']) && typeof o.correct === 'boolean')
+  && value.filter(o => o.correct).length === correctCount && new Set(value.map(o => o.id)).size === value.length
 function fail(issues: string[]): void { if (issues.length) throw new LabValidationError(issues) }
 
 /** Structural checks and editorial gates are separate: an authored package can be inspected but cannot be studied. */
@@ -28,7 +31,8 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
   if (!record(input) || input.schema !== 1 || input.privacy !== 'tai-lab-private'
     || !fields(input, ['id', 'version', 'title'])) throw new LabValidationError(['Paquete o versión de esquema no admitidos.'])
   const issues: string[] = []
-  const collections = ['objectives', 'sources', 'lessons', 'activities', 'evidence', ...(input.sessions === undefined ? [] : ['sessions'])]
+  const collections = ['objectives', 'sources', 'lessons', 'activities', 'evidence',
+    ...['sessions', 'exams'].filter(key => input[key] !== undefined)]
   for (const name of collections) {
     if (!Array.isArray(input[name]) || !(input[name] as unknown[]).every(record)) issues.push(`${name}: lista inválida`)
   }
@@ -109,10 +113,7 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
             : d.choiceOptionIds === undefined))) issues.push(`${a.id}: diagnósticos preparados inválidos`)
     }
     if (a.kind === 'choice') {
-      if (!Array.isArray(a.options) || a.options.length < 2 || !a.options.every(o => record(o)
-        && fields(o, ['id', 'text', 'explanation']) && typeof o.correct === 'boolean')
-        || a.options.filter(o => (o as RecordValue).correct).length !== 1
-        || new Set(a.options.map(o => (o as RecordValue).id)).size !== a.options.length) issues.push(`${a.id}: opciones inválidas`)
+      if (!options(a.options, 1)) issues.push(`${a.id}: opciones inválidas`)
     } else if (a.kind === 'sql') {
       if (typeof a.starter !== 'string' || !string(a.referenceQuery) || !inList(a.comparison, ['bag', 'set', 'ordered'])
         || !Array.isArray(a.datasets) || a.datasets.length < 2
@@ -138,6 +139,41 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     } else if (a.kind === 'ipv4-model') {
       try { validateIPv4Activity(a) } catch (error) { issues.push(`${a.id}: ${String(error)}`) }
     } else issues.push(`${a.id}: modalidad no soportada`)
+  }
+  for (const form of (input.exams ?? []) as RecordValue[]) {
+    if (!fields(form, ['version', 'title']) || !inList(form.state, states)
+      || !inList(form.kind, ['topic', 'case-iii', 'full-iii']) || !inList(form.partition, ['training', 'reserved'])
+      || !integer(form.durationMinutes) || Number(form.durationMinutes) < 1 || Number(form.durationMinutes) > 120
+      || !Array.isArray(form.sections) || form.sections.length !== (form.kind === 'full-iii' ? 2 : 1)) {
+      issues.push(`${form.id}: formato de examen inválido`); continue
+    }
+    if (form.kind === 'full-iii' && form.durationMinutes !== 120) issues.push(`${form.id}: el examen completo dura 120 minutos`)
+    const ids = new Set<unknown>()
+    form.sections.forEach((section, index) => {
+      const general = form.kind === 'full-iii' && index === 0
+      const practical = form.kind === 'case-iii' || index === 1
+      if (!record(section) || !string(section.title) || (practical && !string(section.scenario))
+        || (section.scenario !== undefined && !string(section.scenario))
+        || !Array.isArray(section.questions) || section.questions.length !== (general ? 80 : 20)
+        || !Array.isArray(section.reserves) || section.reserves.length !== (form.kind === 'topic' ? 0 : 5)) {
+        issues.push(`${form.id}: parte de examen incompleta`); return
+      }
+      for (const question of [...section.questions, ...section.reserves]) {
+        const provenance = question?.provenance
+        if (!record(question) || !fields(question, ['id', 'prompt', 'familyId', 'scenarioId'])
+          || !lists(question, ['objectiveIds'], form.kind !== 'full-iii') || !claims(question.claims)
+          || !record(provenance) || !inList(provenance.kind, ['official-tai', 'adapted', 'original'])
+          || (provenance.kind !== 'original' && !string(provenance.originalId))
+          || !inList(provenance.status, ['eligible', 'annulled']) || !options(question.options, provenance.status === 'annulled' ? 0 : 1)
+          || ids.has(question.id)) {
+          issues.push(`${form.id}: pregunta de examen inválida o duplicada`); continue
+        }
+        ids.add(question.id)
+        if (form.partition === 'reserved' && provenance.kind !== 'original') {
+          issues.push(`${form.id}: una evaluación reservada requiere preguntas originales`)
+        }
+      }
+    })
   }
   for (const e of input.evidence as RecordValue[]) {
     if (!fields(e, ['subjectId', 'subjectVersion', 'environment', 'procedure', 'expected', 'observed', 'artifact'])
@@ -175,7 +211,7 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
   for (const a of pack.activities) {
     reference(a.id, a.objectiveIds, objectives)
   }
-  issues.push(...familyConflicts(pack.activities))
+  issues.push(...familyConflicts(pack.activities, [pack]))
   for (const l of pack.lessons) {
     reference(l.id, l.objectiveIds, objectives)
     reference(l.id, l.prerequisites, objectives)
@@ -209,7 +245,16 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     }
     for (const id of session.objectiveIds) if (!coveredObjectives.has(id)) issues.push(`${session.id}: objetivo ${id} sin cobertura en las etapas`)
   }
-  for (const subject of [...pack.lessons, ...pack.activities, ...(pack.sessions ?? [])]) {
+  for (const form of pack.exams ?? []) {
+    if (lessons.has(form.id) || activities.has(form.id) || pack.sessions?.some(session => session.id === form.id)) {
+      issues.push(`${form.id}: identidad de examen compartida con otro contenido`)
+    }
+    for (const { questions, reserves } of form.sections) for (const question of [...questions, ...reserves]) {
+      reference(question.id, question.objectiveIds, objectives)
+      reference(question.id, question.claims.map(c => c.sourceId), sources)
+    }
+  }
+  for (const subject of [...pack.lessons, ...pack.activities, ...(pack.sessions ?? []), ...(pack.exams ?? [])]) {
     if ('claims' in subject) for (const c of subject.claims) reference(subject.id, [c.sourceId], sources)
     if (subject.state !== 'validated') continue
     for (const gate of requiredGates) {
@@ -224,8 +269,8 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
   }
   if (purpose === 'study') {
     for (const source of pack.sources) if (source.verification !== 'verified') issues.push(`${source.id}: fuente todavía candidata`)
-    if (!pack.lessons.length || !pack.activities.length || !pack.objectives.length) issues.push('Paquete sin contenido estudiable')
-    for (const s of [...pack.objectives, ...pack.lessons, ...pack.activities, ...(pack.sessions ?? [])]) if (s.state !== 'validated') issues.push(`${s.id}: contenido todavía no validado`)
+    if ((!pack.lessons.length || !pack.activities.length || !pack.objectives.length) && !pack.exams?.length) issues.push('Paquete sin contenido estudiable')
+    for (const s of [...pack.objectives, ...pack.lessons, ...pack.activities, ...(pack.sessions ?? []), ...(pack.exams ?? [])]) if (s.state !== 'validated') issues.push(`${s.id}: contenido todavía no validado`)
   }
   fail(issues)
   return structuredClone(pack)
@@ -248,6 +293,23 @@ export function parseEventBatch(input: unknown, accountId: string): EventBatch {
           || target.kind === 'session' && target.purpose === 'reflection' && fields(target, ['sessionId', 'sessionVersion']))
         || !lists(e, ['parentIds'], false) || (e.parentIds as string[]).includes(String(e.id))
         || typeof e.value !== 'string' || e.value.length > 4000) issues.push(`${e.id}: nota personal inválida`)
+    } else if (e.kind === 'exam-revision') {
+      if (!fields(e, ['packageId', 'packageVersion', 'examId', 'examVersion', 'runId'])
+        || !lists(e, ['parentIds'], false) || (e.parentIds as string[]).includes(String(e.id))
+        || ((e.parentIds as string[]).length === 0) !== (e.id === e.runId)
+        || !date(e.startedAt) || !date(e.deadlineAt)
+        || Date.parse(String(e.deadlineAt)) <= Date.parse(String(e.startedAt))
+        || Date.parse(String(e.createdAt)) < Date.parse(String(e.startedAt))
+        || !(e.submitted === null || inList(e.submitted, ['manual', 'expired']))
+        || (e.submitted === 'expired' && Date.parse(String(e.createdAt)) < Date.parse(String(e.deadlineAt)))
+        || ((e.submitted === null || (e.parentIds as string[]).length < 2) && e.submitted !== 'expired'
+          && Date.parse(String(e.createdAt)) >= Date.parse(String(e.deadlineAt)))
+        || !Array.isArray(e.answers) || e.answers.length > 110
+        || !e.answers.every(answer => Array.isArray(answer) && answer.length === 2 && answer.every(string))
+        || new Set(e.answers.map(answer => answer[0])).size !== e.answers.length
+        || (e.id === e.runId && (e.answers.length > 0 || e.submitted !== null || e.createdAt !== e.startedAt))) {
+        issues.push(`${e.id}: revisión de examen inválida`)
+      }
     } else if (e.kind === 'session-position') {
       if (!fields(e, ['packageId', 'packageVersion', 'sessionId', 'sessionVersion', 'stageId'])
         || (e.activityId !== null && !string(e.activityId)) || typeof e.completed !== 'boolean') issues.push(`${e.id}: posición de sesión inválida`)

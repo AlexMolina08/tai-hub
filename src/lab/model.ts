@@ -144,6 +144,23 @@ export interface GuidedSession {
   state: EditorialState
   stages: GuidedStage[]
 }
+export type ExamQuestion = Pick<ChoiceActivity, 'id' | 'familyId' | 'scenarioId' | 'objectiveIds' | 'provenance' | 'prompt' | 'options' | 'claims'>
+export interface ExamSection {
+  title: string
+  scenario?: string
+  questions: ExamQuestion[]
+  reserves: ExamQuestion[]
+}
+export interface ExamForm {
+  id: string
+  version: string
+  title: string
+  state: EditorialState
+  kind: 'topic' | 'case-iii' | 'full-iii'
+  partition: 'training' | 'reserved'
+  durationMinutes: number
+  sections: ExamSection[]
+}
 export interface LabPackage {
   schema: 1
   privacy: 'tai-lab-private'
@@ -156,6 +173,7 @@ export interface LabPackage {
   activities: Activity[]
   evidence: Evidence[]
   sessions?: GuidedSession[]
+  exams?: ExamForm[]
 }
 
 export type Answer = string | null
@@ -257,6 +275,19 @@ export interface SessionPosition extends EventBase {
   activityId: string | null
   completed: boolean
 }
+export interface ExamRevision extends EventBase {
+  kind: 'exam-revision'
+  packageId: string
+  packageVersion: string
+  examId: string
+  examVersion: string
+  runId: string
+  parentIds: string[]
+  startedAt: string
+  deadlineAt: string
+  answers: [questionId: string, optionId: string][]
+  submitted: 'manual' | 'expired' | null
+}
 export type NoteTarget = (ActivityRef & { kind: 'activity'; purpose: 'prediction' })
   | { kind: 'session'; purpose: 'reflection'; packageId: string; packageVersion: string; sessionId: string; sessionVersion: string }
 /** Personal text is never graded. Concurrent revisions retain both branches until an explicit choice. */
@@ -292,7 +323,7 @@ export interface LearningContext extends EventBase {
 }
 export type LabEvent = Attempt | Draft | Exposure | Assistance | SessionPosition | NoteRevision
   | IPv4PredictionEvent | IPv4RevealEvent | IPv4ResetEvent
-  | LearningContext
+  | LearningContext | ExamRevision
 export interface EventBatch {
   schema: 1
   privacy: 'tai-lab-private'

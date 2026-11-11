@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { DriveFixture } from './fixtures'
-import { sampleGuidedPackage, sampleIPv4Package, samplePackage } from '../src/lab/fixtures.test-support'
+import { sampleExamPackage, sampleGuidedPackage, sampleIPv4Package, samplePackage } from '../src/lab/fixtures.test-support'
 import { readFile, writeFile } from 'node:fs/promises'
 import type { LabEvent } from '../src/lab/model'
 import { mergeEvents } from '../src/lab/history'
@@ -22,6 +22,93 @@ async function showPractice(page: import('@playwright/test').Page) {
 async function openStudyOptions(page: import('@playwright/test').Page) {
   if (await page.locator('.lab-tools').getAttribute('open') === null) await page.getByText('Opciones de estudio', { exact: true }).click()
 }
+test('exam resumes in two contexts, keeps corrections hidden, and scores only eligible reserves', async ({ browser, browserName, baseURL }) => {
+  test.setTimeout(90_000)
+  const drive = new DriveFixture()
+  drive.addLabPackage('exam-fixture', sampleExamPackage())
+  const contexts = await Promise.all([browser.newContext({ viewport: { width: 390, height: 844 } }), browser.newContext()])
+  try {
+    for (const context of contexts) await drive.install(context, browserName === 'webkit')
+    const [a, b] = await Promise.all(contexts.map(context => context.newPage()))
+    const connect = async (page: import('@playwright/test').Page) => {
+      await page.goto(baseURL + '/tai-hub/')
+      await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+      await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+      await openLab(page)
+      await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+      await page.getByRole('button', { name: /Supuesto sintético/ }).click()
+    }
+    const sync = async (page: import('@playwright/test').Page) => {
+      await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+      await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    }
+    await connect(a)
+    await a.getByRole('button', { name: 'Empezar evaluación' }).click()
+    await a.getByRole('radio', { name: 'A. Válida', exact: true }).check()
+    await expect(a.getByText('1 de 25 respondidas')).toBeVisible()
+    await sync(a)
+    await connect(b)
+    await expect(b.getByRole('radio', { name: 'A. Válida', exact: true })).toBeChecked()
+    await b.getByRole('radio', { name: 'B. Inválida', exact: true }).check()
+    await b.getByRole('button', { name: 'Dejar en blanco' }).click()
+    await expect(b.getByText('0 de 25 respondidas')).toBeVisible()
+    await b.getByRole('radio', { name: 'A. Válida', exact: true }).check()
+    await b.getByRole('button', { name: 'Siguiente', exact: true }).click()
+    await b.getByRole('radio', { name: 'B. Inválida', exact: true }).check()
+    await b.getByText('Ir a una pregunta', { exact: true }).click()
+    await b.getByRole('button', { name: 'Supuesto III, Reserva 2, en blanco', exact: true }).click()
+    await b.getByRole('radio', { name: 'A. Válida', exact: true }).check()
+    await expect(b.getByRole('heading', { name: 'Resultado del examen' })).toHaveCount(0)
+    await expect(b.getByText('Coincide con la regla del ejemplo.', { exact: true })).toHaveCount(0)
+    expect(await a.locator('.lab-exam').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    await b.getByRole('button', { name: 'Entregar examen' }).click()
+    await b.getByRole('button', { name: 'Confirmar entrega' }).click()
+    await expect(b.getByText('1,67 de 20 puntos · 2 aciertos · 1 error · 17 en blanco')).toBeVisible()
+    await expect(b.getByText('Reserva 1 · Anulada', { exact: true })).toBeVisible()
+    await expect(b.getByText('Reserva 2 · Correcta', { exact: true })).toBeVisible()
+    await expect(b.getByText('Reserva 3 · Reserva sin puntuar', { exact: true })).toBeVisible()
+    await sync(b)
+    await sync(a)
+    await expect(a.getByRole('heading', { name: 'Resultado del examen' })).toBeVisible()
+    await expect(a.getByRole('radio')).toHaveCount(0)
+    await a.reload()
+    await expect(a.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(a)
+    await expect(a.getByText('1,67 de 20 puntos · 2 aciertos · 1 error · 17 en blanco')).toBeVisible()
+    const events = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+    const finished = events.filter(event => event.kind === 'exam-revision' && event.submitted !== null)
+    expect(finished).toHaveLength(1)
+    expect(finished[0]).toMatchObject({ submitted: 'manual', answers: [['q1', 'a'], ['q2', 'b'], ['r2', 'a']] })
+  } finally { await Promise.all(contexts.map(context => context.close())) }
+})
+
+test('exam expiry while disconnected preserves the local answer and freezes edits', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture()
+  drive.addLabPackage('exam-expiry', sampleExamPackage())
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Supuesto sintético/ }).click()
+  await page.clock.install()
+  await page.getByRole('button', { name: 'Empezar evaluación' }).click()
+  await context.setOffline(true)
+  await page.getByRole('radio', { name: 'A. Válida', exact: true }).check()
+  await expect(page.getByRole('button', { name: 'Entregar examen' })).toBeEnabled()
+  await page.clock.fastForward(125_000)
+  await expect(page.getByText(/Entrega al agotar el tiempo/)).toBeVisible()
+  await expect(page.getByText(/1 de 20 puntos · 1 acierto/)).toBeVisible()
+  await expect(page.getByRole('radio')).toHaveCount(0)
+  await context.setOffline(false)
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+  const events = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+  expect(events.filter(event => event.kind === 'exam-revision' && event.submitted !== null))
+    .toMatchObject([{ submitted: 'expired', answers: [['q1', 'a']] }])
+})
+
 test('learning context survives reload and preserves the first response before later help', async ({ page, context, browserName }) => {
   const pack = samplePackage()
   pack.activities[0].mode.kind = 'documentary'

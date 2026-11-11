@@ -15,6 +15,8 @@ if (!path || !['study', 'authoring'].includes(mode)) {
     const pack = parsePackage(JSON.parse(await readFile(path, 'utf8')), mode)
     console.log(JSON.stringify({ mode, packageId: pack.id, version: pack.version,
       objectives: pack.objectives.length, lessons: pack.lessons.length, activities: pack.activities.length,
+      exams: pack.exams?.length ?? 0, examQuestions: (pack.exams ?? []).reduce((total, form) =>
+        total + form.sections.reduce((count, section) => count + section.questions.length + section.reserves.length, 0), 0),
       validatedObjectives: pack.objectives.filter(o => o.state === 'validated').length }))
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'Validación fallida')

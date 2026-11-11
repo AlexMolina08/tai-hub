@@ -47,7 +47,8 @@ export async function cachePackage(accountId: string, input: unknown): Promise<L
             failure = new Error('Esa versión ya existe con otro contenido. Conserva ambos paquetes y asigna una versión nueva.')
             tx.abort(); return
           }
-          const conflicts = familyConflicts([...req.result.flatMap(row => parsePackage(row.content).activities), ...content.activities])
+          const library = [...req.result.map(row => parsePackage(row.content)), content]
+          const conflicts = familyConflicts(library.flatMap(pack => pack.activities), library)
           if (conflicts.length) { failure = new Error(conflicts.join('\n')); tx.abort(); return }
           store.put({ accountId, id: content.id, version: content.version, content })
         } catch (error) { failure = error; tx.abort() }

@@ -48,6 +48,16 @@ El cierre puede guardar una interrupción con actividades pendientes. `completed
 
 Este tipo de evento se introduce antes de publicar el laboratorio. No se modifica el esquema ni se reescriben eventos antiguos; los clientes nuevos admiten los tipos previos. Una compilación anterior que desconozca `session-position` rechaza el lote completo, sin descartar selectivamente datos. Antes de habilitar contenido con sesiones deben actualizarse los clientes participantes. Una futura migración o reversión deberá preservar estos eventos; no se promete compatibilidad de escritura con clientes anteriores.
 
+## Evaluaciones y exámenes
+
+El campo opcional `exams` admite un formulario de tema de 20 preguntas, un supuesto III de 20 más 5 reservas, o un examen completo con 80 más 5 y un supuesto III de 20 más 5. El completo fija 120 minutos conjuntos. Los tiempos de tema y supuesto se configuran como tiempos de práctica. Las preguntas tienen vínculos a objetivos y fuentes, corrección de alternativas y procedencia. Los supuestos de entrenamiento y las evaluaciones reservadas tienen particiones explícitas. El visor editorial muestra solo los formularios de entrenamiento.
+
+La hoja admite cambios y respuestas en blanco hasta entregar o agotar el plazo. La corrección se muestra después de persistir la entrega. Cada parte sustituye sus anuladas por reservas elegibles en orden. Las demás reservas quedan fuera de puntuación. El cálculo conserva tercios enteros y muestra la puntuación directa, sin aplicar la transformación oficial. Una repetición se ofrece como práctica. Los resultados de examen se conservan en su propio historial y todavía no alimentan la recomendación por objetivo.
+
+Los eventos `exam-revision` guardan respuestas, plazo y edición exacta en IndexedDB y se sincronizan con el historial existente. La restauración admite antecesores fuera de orden. Las hojas concurrentes se conservan y requieren elección explícita. Una entrega conserva una hoja ya guardada y bloquea nuevas respuestas en su rama. Si hay dos hojas entregadas, resolver el conflicto elige una de las entregas existentes. El reloj continúa al salir de la pantalla. Se usa un plazo basado en el reloj del dispositivo, con tiempo monotónico mientras la vista permanece abierta. Esta referencia local no acredita un tiempo oficial entre dispositivos con relojes desajustados.
+
+El contrato exige las seis puertas editoriales por versión y no habilita formas en revisión. Los clientes previos rechazan los eventos que desconocen. La validez técnica y la novedad semántica de las preguntas se comprueban en la revisión editorial. Este contrato no acredita los seis supuestos ni la disponibilidad de un examen histórico importado.
+
 ## Notas personales
 
 Las actividades ofrecen una predicción opcional y las sesiones permiten anotar errores y el siguiente paso al cerrar. Son texto personal, hasta 4000 caracteres, separado de respuestas, ayudas y navegación. No se califica ni acredita haber predicho antes de ejecutar. La modalidad específica de un modelo puede imponer su propio paso previo, sin convertir esta nota general en esa evidencia.

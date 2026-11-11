@@ -196,6 +196,15 @@
 .lab-objective-progress summary small { display: block; margin: .35rem 0 0 1rem; color: var(--muted); }
 .lab-learning small { color: var(--muted); overflow-wrap: anywhere; }
 .lab-standalone { max-width: 54rem; margin: 1rem auto; padding: 1.2rem; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.lab-exam { max-width: 54rem; margin: 1rem auto; padding: clamp(.75rem, 3vw, 1.2rem); border: 1px solid var(--line); border-radius: 14px; overflow-wrap: anywhere; }
+.lab-exam fieldset { min-inline-size: 0; border: 0; padding: 0; margin: 1rem 0; }
+.lab-exam legend { font-weight: 700; }
+.lab-exam-status, .lab-exam-jump { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem; }
+.lab-exam-status [role="timer"] { font-variant-numeric: tabular-nums; }
+.lab-exam-jump { justify-content: start; margin-block: .6rem; }
+.lab-exam-jump button { min-width: 44px; min-height: 44px; }
+.lab-exam-jump button[aria-current] { border-color: var(--accent); background: var(--accent-soft); }
+.lab-exam-correction { margin-block: .65rem; }
 @media (max-width: 520px) {
   .lab-learning-dimensions { gap: .4rem; }
   .lab-learning-dimensions > div { text-align: center; padding: .7rem .25rem; }

@@ -28,6 +28,7 @@ import { LearningCapture } from './learning-capture'
 import { semanticWriteBuffer } from './semantic-buffer'
 import { LearningReading } from './LearningReading'
 import { LearningDashboard } from './LearningDashboard'
+import { ExamCatalog, ExamView } from './ExamView'
 import { DEFAULT_LEARNING_POLICY, deriveLearning } from './learning'
 import type { LearningDestination } from './recommendation'
 import './laboratory.css'
@@ -83,7 +84,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [deviceId] = useState(deviceIdentity)
   const [packages, setPackages] = useState<LabPackage[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [selected, setSelected] = useState<{ pack: string; lesson?: string; activity?: string; session?: string; positionId?: string; group?: string } | undefined>(() => {
+  const [selected, setSelected] = useState<{ pack: string; lesson?: string; activity?: string; session?: string; positionId?: string; group?: string; exam?: string } | undefined>(() => {
     try {
       const value = JSON.parse(sessionStorage.getItem('tai-lab-location:' + accountId) ?? 'null')
       if (typeof value?.pack === 'string' && typeof value?.lesson === 'string') return {
@@ -95,6 +96,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
       if (typeof value?.pack === 'string' && typeof value?.session === 'string') return {
         pack: value.pack, session: value.session, positionId: typeof value.positionId === 'string' ? value.positionId : undefined,
       }
+      if (typeof value?.pack === 'string' && typeof value?.exam === 'string') return { pack: value.pack, exam: value.exam }
     } catch { /* A missing location does not affect the durable event history. */ }
   })
   const [error, setError] = useState('')
@@ -104,6 +106,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const standalone = !selected?.lesson && !selected?.session && selected?.group
     ? currentPackage?.activities.find(activity => activity.id === selected?.activity) : undefined
   const currentSession = currentPackage?.sessions?.find(session => session.id === selected?.session)
+  const currentExam = currentPackage?.exams?.find(form => form.id === selected?.exam)
   const sessionPosition = history.events.find((event): event is SessionPosition => event.kind === 'session-position'
     && event.id === selected?.positionId && event.accountId === accountId && event.packageId === currentPackage?.id
     && event.packageVersion === currentPackage?.version && event.sessionId === currentSession?.id && event.sessionVersion === currentSession?.version)
@@ -178,7 +181,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   return <>
     <div className="lab-toolbar">
       <span role="status">{statusText[history.status]}{history.pendingIds.length > 0 && ` · ${history.pendingIds.length} cambios`}</span>
-      {!currentLesson && !currentSession && !standalone && <button className="button" disabled={!connected || busy} onClick={() => void loadDrive()}><RefreshCw size={16} /> Cargar lecciones de Drive</button>}
+      {!currentLesson && !currentSession && !currentExam && !standalone && <button className="button" disabled={!connected || busy} onClick={() => void loadDrive()}><RefreshCw size={16} /> Cargar lecciones de Drive</button>}
       <button className="button icon-button" aria-label="Sincronizar progreso" title="Sincronizar progreso" disabled={!sync || !connected} onClick={() => void sync?.refresh().catch(e => setError(message(e)))}><RefreshCw size={18} /></button>
       <details className="lab-tools"><summary>Opciones de estudio</summary><div>
         <button className="button" disabled={!sync || !loaded} onClick={() => download('laboratorio-progreso.json', exportHistory(accountId, history.events))}><Download size={16} /> Exportar progreso</button>
@@ -188,9 +191,11 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     </div>
     {!connected && <p>Copia local de tu biblioteca. Conecta Google Drive para verificar la cuenta y sincronizar.</p>}
     {(error || history.error) && <p className="banner error" role="alert">{error || history.error}</p>}
-    {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && (currentLesson || currentSession || standalone) ? <>
-      <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> {currentSession || standalone ? 'Volver al laboratorio' : 'Volver a las lecciones'}</button>
-      {standalone ? <article className="lab-standalone">
+    {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && (currentLesson || currentSession || currentExam || standalone) ? <>
+      <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> {currentLesson ? 'Volver a las lecciones' : 'Volver al laboratorio'}</button>
+      {currentExam ? <ExamView key={JSON.stringify([packageKey(currentPackage), currentExam.id])} pack={currentPackage} form={currentExam}
+        accountId={accountId} deviceId={deviceId} events={history.events} record={record} />
+      : standalone ? <article className="lab-standalone">
         <p className="context-label">{standalone.phase === 'delayed' ? 'Repaso diferido' : standalone.phase === 'reserved' ? 'Comprobación de transferencia' : 'Práctica recomendada'}</p>
         <p>Puedes retomar tu borrador al volver. Las respuestas y ayudas anteriores se conservan en el historial.</p>
         <ActivityView key={`${packageKey(currentPackage)}:${standalone.id}:${selected?.group}`} pack={currentPackage} activity={standalone}
@@ -231,7 +236,9 @@ function Workspace({ library, accountId, connected, openMaterial }: {
           <span><strong>{session.title}</strong><small>{sessionMinutes(session)} min orientativos · 5 etapas</small></span><ArrowRight size={19} aria-hidden="true" />
         </button>))}</div>
       </section>}
-      {packages.length > 0 && <LessonCatalog packages={packages} events={history.events} accountId={accountId}
+      <ExamCatalog packages={packages} events={history.events} accountId={accountId}
+        open={(pack, form) => setSelected({ pack: packageKey(pack), exam: form.id })} />
+      {packages.some(pack => pack.lessons.length) && <LessonCatalog packages={packages} events={history.events} accountId={accountId}
         openLesson={(pack, lesson) => setSelected({ pack: packageKey(pack), lesson: lesson.id })} />}
       {!packages.length && <div className="lab-empty"><h2>Las lecciones se están preparando</h2>
         <p>Se incorporarán al completar sus comprobaciones de contenido y funcionamiento.</p></div>}

@@ -1,4 +1,4 @@
-import { requiredGates, type Attempt, type ChoiceActivity, type GuidedSession, type LabPackage } from './model'
+import { requiredGates, type Attempt, type ChoiceActivity, type ExamForm, type ExamQuestion, type GuidedSession, type LabPackage } from './model'
 import { DEFAULT_INPUT, MODEL_VERSION } from './ipv4'
 
 /** Synthetic fixtures only. These are not editorial evidence or teaching materials. */
@@ -38,6 +38,28 @@ export function sampleAttempt(id = 'a1', deviceId = 'device-a'): Attempt {
     activityId: 'p1', activityVersion: '1', packageId: 'synthetic', packageVersion: '1', familyId: 'f-p1',
     objectiveIds: ['o1'], attemptGroupId: id, ordinal: 1, answer: 'a', outcome: 'correct', hintCount: 0,
     solutionViewed: false, activeMs: 1000, phase: 'practice', feedback: 'Coincide con la regla.', gradingVersion: 'choice-v1' }
+}
+
+export function sampleExamPackage(): LabPackage {
+  const pack = samplePackage()
+  const activity = pack.activities[0] as ChoiceActivity
+  const question = (id: string, annulled = false): ExamQuestion => ({
+    id, familyId: 'exam-family-' + id, scenarioId: 'exam-scenario',
+    objectiveIds: ['o1'], prompt: 'Enunciado sintético ' + id, claims: activity.claims,
+    provenance: { kind: 'original', status: annulled ? 'annulled' : 'eligible' },
+    options: activity.options.map(option => ({ ...option, correct: option.correct && !annulled })),
+  })
+  const form: ExamForm = { id: 'exam-fixture', version: '1', title: 'Supuesto sintético', state: 'validated',
+    kind: 'case-iii', partition: 'reserved', durationMinutes: 2,
+    sections: [{ title: 'Supuesto III', scenario: 'Caso compartido sintético.',
+      questions: Array.from({ length: 20 }, (_, i) => question('q' + (i + 1), i === 2)),
+      reserves: Array.from({ length: 5 }, (_, i) => question('r' + (i + 1), i === 0)) }],
+  }
+  pack.exams = [form]
+  pack.evidence.push(...pack.evidence.filter(e => e.subjectId === 'l1').map(e => ({
+    ...e, id: form.id + '-' + e.gate, subjectId: form.id,
+  })))
+  return pack
 }
 
 export function sampleIPv4Package(): LabPackage {
