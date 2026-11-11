@@ -4,6 +4,7 @@ import type { ClosureProfile } from './closure-model'
 import type { FrameProfile } from './frame-model'
 import type { RelationProfile } from './relation-model'
 import type { SignalCase } from './signal-model'
+import type { SwitchingProfile } from './switching-model'
 import type { IPv4Input, IPv4Prediction, IPv4Comparison } from './ipv4'
 
 /** Private content is loaded at runtime. Never import a real study package into the public bundle. */
@@ -166,7 +167,13 @@ export interface AlgorithmModelActivity extends ActivityBase {
   phase: 'practice'
   profile: AlgorithmProfile
 }
-export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity | ClosureModelActivity | AlgorithmModelActivity
+export interface SwitchingModelActivity extends ActivityBase {
+  kind: 'switching-model'
+  phase: 'practice'
+  profile: SwitchingProfile
+}
+export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
+  | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
