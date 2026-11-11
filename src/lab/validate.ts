@@ -26,7 +26,7 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
   if (!record(input) || input.schema !== 1 || input.privacy !== 'tai-lab-private'
     || !fields(input, ['id', 'version', 'title'])) throw new LabValidationError(['Paquete o versión de esquema no admitidos.'])
   const issues: string[] = []
-  const collections = ['objectives', 'sources', 'lessons', 'activities', 'evidence'] as const
+  const collections = ['objectives', 'sources', 'lessons', 'activities', 'evidence', ...(input.sessions === undefined ? [] : ['sessions'])]
   for (const name of collections) {
     if (!Array.isArray(input[name]) || !(input[name] as unknown[]).every(record)) issues.push(`${name}: lista inválida`)
   }
@@ -56,6 +56,27 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
       || !record(l.material) || !fields(l.material, ['resourceId', 'sectionId'])
       || !['explanation', 'workedExample'].every(k => Array.isArray(l[k]) && l[k].length > 0
         && l[k].every(s => record(s) && fields(s, ['title', 'body'])))) issues.push(`${l.id}: lección incompleta`)
+  }
+  const stageKinds = ['recover', 'understand', 'experiment', 'transfer', 'close']
+  const stageMinutes = [[4, 5], [6, 8], [12, 15], [6, 8], [2, 4]]
+  const indices = (value: unknown): value is number[] => Array.isArray(value) && value.every(integer) && new Set(value).size === value.length
+  for (const session of (input.sessions ?? []) as RecordValue[]) {
+    if (!fields(session, ['version', 'title']) || !lists(session, ['objectiveIds']) || !inList(session.state, states)
+      || !Array.isArray(session.stages) || session.stages.length !== 5 || !session.stages.every(record)) {
+      issues.push(`${session.id}: sesión incompleta`); continue
+    }
+    if (new Set(session.stages.map(stage => stage.id)).size !== 5) issues.push(`${session.id}: etapas duplicadas`)
+    session.stages.forEach((stage, index) => {
+      if (!fields(stage, ['id', 'title', 'instructions']) || stage.kind !== stageKinds[index]
+        || !integer(stage.minutes) || Number(stage.minutes) < stageMinutes[index][0] || Number(stage.minutes) > stageMinutes[index][1]
+        || !lists(stage, ['activityIds'], false) || !Array.isArray(stage.readings)
+        || !stage.readings.every(reading => record(reading) && string(reading.lessonId)
+          && indices(reading.explanationIndexes) && indices(reading.workedExampleIndexes)
+          && reading.explanationIndexes.length + reading.workedExampleIndexes.length > 0)) {
+        issues.push(`${session.id}: etapa inválida`); return
+      }
+      if (stage.kind !== 'close' && !(stage.activityIds as unknown[]).length && !stage.readings.length) issues.push(`${session.id}: etapa sin contenido`)
+    })
   }
   for (const a of input.activities as RecordValue[]) {
     if (!fields(a, ['version', 'title', 'familyId', 'scenarioId', 'prompt', 'solution']) || !lists(a, ['objectiveIds'])
@@ -141,8 +162,32 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     if (l.state === 'validated' && (new Set(own.filter(a => a.phase === 'practice').map(a => a.familyId)).size < 2
       || own.filter(a => a.phase === 'immediate').length < 3)) issues.push(`${l.id}: faltan familias o cierre`)
   }
-  for (const subject of [...pack.lessons, ...pack.activities]) {
-    for (const c of subject.claims) reference(subject.id, [c.sourceId], sources)
+  for (const session of pack.sessions ?? []) {
+    if (lessons.has(session.id) || activities.has(session.id)) issues.push(`${session.id}: identidad de sesión compartida con otro contenido`)
+    reference(session.id, session.objectiveIds, objectives)
+    const coveredObjectives = new Set<string>()
+    const ids = session.stages.flatMap(stage => stage.activityIds)
+    if (new Set(ids).size !== ids.length) issues.push(`${session.id}: actividad repetida entre etapas`)
+    reference(session.id, ids, activities)
+    for (const id of ids) {
+      const activity = activities.get(id)
+      activity?.objectiveIds.forEach(id => coveredObjectives.add(id))
+      if (activity && (!['practice', 'immediate'].includes(activity.phase) || activity.provenance.status !== 'eligible')) {
+        issues.push(`${session.id}: reserva o actividad no elegible expuesta en sesión`)
+      }
+      if (session.state === 'validated' && activity?.state !== 'validated') issues.push(`${session.id}: actividad todavía no validada`)
+    }
+    for (const stage of session.stages) for (const reading of stage.readings) {
+      const lesson = lessons.get(reading.lessonId)
+      lesson?.objectiveIds.forEach(id => coveredObjectives.add(id))
+      if (!lesson || reading.explanationIndexes.some(index => index >= lesson.explanation.length)
+        || reading.workedExampleIndexes.some(index => index >= lesson.workedExample.length)) issues.push(`${session.id}: lectura inexistente`)
+      if (session.state === 'validated' && lesson?.state !== 'validated') issues.push(`${session.id}: lectura todavía no validada`)
+    }
+    for (const id of session.objectiveIds) if (!coveredObjectives.has(id)) issues.push(`${session.id}: objetivo ${id} sin cobertura en las etapas`)
+  }
+  for (const subject of [...pack.lessons, ...pack.activities, ...(pack.sessions ?? [])]) {
+    if ('claims' in subject) for (const c of subject.claims) reference(subject.id, [c.sourceId], sources)
     if (subject.state !== 'validated') continue
     for (const gate of requiredGates) {
       const matches = pack.evidence.filter(e => e.subjectId === subject.id && e.subjectVersion === subject.version && e.gate === gate)
@@ -157,7 +202,7 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
   if (purpose === 'study') {
     for (const source of pack.sources) if (source.verification !== 'verified') issues.push(`${source.id}: fuente todavía candidata`)
     if (!pack.lessons.length || !pack.activities.length || !pack.objectives.length) issues.push('Paquete sin contenido estudiable')
-    for (const s of [...pack.objectives, ...pack.lessons, ...pack.activities]) if (s.state !== 'validated') issues.push(`${s.id}: contenido todavía no validado`)
+    for (const s of [...pack.objectives, ...pack.lessons, ...pack.activities, ...(pack.sessions ?? [])]) if (s.state !== 'validated') issues.push(`${s.id}: contenido todavía no validado`)
   }
   fail(issues)
   return structuredClone(pack)
@@ -173,6 +218,9 @@ export function parseEventBatch(input: unknown, accountId: string): EventBatch {
     }
     if (e.kind === 'exposure') {
       if (!string(e.familyId) || !inList(e.reason, ['presented', 'solution', 'external'])) issues.push(`${e.id}: exposición inválida`)
+    } else if (e.kind === 'session-position') {
+      if (!fields(e, ['packageId', 'packageVersion', 'sessionId', 'sessionVersion', 'stageId'])
+        || (e.activityId !== null && !string(e.activityId)) || typeof e.completed !== 'boolean') issues.push(`${e.id}: posición de sesión inválida`)
     } else if (e.kind === 'attempt' || e.kind === 'draft' || e.kind === 'assistance') {
       if (!fields(e, ['activityId', 'activityVersion', 'packageId', 'packageVersion'])) issues.push(`${e.id}: referencia de contenido incompleta`)
       if (e.kind === 'draft') {

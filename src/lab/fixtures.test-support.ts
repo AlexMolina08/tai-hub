@@ -1,4 +1,4 @@
-import { requiredGates, type Attempt, type ChoiceActivity, type LabPackage } from './model'
+import { requiredGates, type Attempt, type ChoiceActivity, type GuidedSession, type LabPackage } from './model'
 
 /** Synthetic fixtures only. These are not editorial evidence or teaching materials. */
 export function samplePackage(): LabPackage {
@@ -37,4 +37,21 @@ export function sampleAttempt(id = 'a1', deviceId = 'device-a'): Attempt {
     activityId: 'p1', activityVersion: '1', packageId: 'synthetic', packageVersion: '1', familyId: 'f-p1',
     objectiveIds: ['o1'], attemptGroupId: id, ordinal: 1, answer: 'a', outcome: 'correct', hintCount: 0,
     solutionViewed: false, activeMs: 1000, phase: 'practice', feedback: 'Coincide con la regla.', gradingVersion: 'choice-v1' }
+}
+
+export function sampleGuidedPackage(): LabPackage {
+  const pack = samplePackage()
+  const session: GuidedSession = { id: 'session-1', version: '1', title: 'Sesión sintética', state: 'validated', objectiveIds: ['o1'], stages: [
+    { id: 'recover', kind: 'recover', title: 'Recuperar', minutes: 5, instructions: 'Responde antes de consultar la explicación.', activityIds: ['p1'], readings: [] },
+    { id: 'understand', kind: 'understand', title: 'Comprender', minutes: 7, instructions: 'Lee el ejemplo.', activityIds: [], readings: [{ lessonId: 'l1', explanationIndexes: [0], workedExampleIndexes: [0] }] },
+    { id: 'experiment', kind: 'experiment', title: 'Experimentar', minutes: 13, instructions: 'Prueba la regla.', activityIds: ['p2'], readings: [] },
+    { id: 'transfer', kind: 'transfer', title: 'Transferir', minutes: 7, instructions: 'Aplica la regla a una variante.', activityIds: ['i1', 'i2'], readings: [] },
+    { id: 'close', kind: 'close', title: 'Cerrar', minutes: 4, instructions: 'Revisa lo que necesitas practicar.', activityIds: ['i3'], readings: [] },
+  ] }
+  pack.sessions = [session]
+  pack.evidence.push(...requiredGates.map(gate => ({ id: session.id + '-' + gate, subjectId: session.id,
+    subjectVersion: session.version, gate, method: 'manual' as const, environment: 'Synthetic fixture', procedure: 'Synthetic fixture',
+    expected: 'Synthetic pass', observed: 'Synthetic pass', result: 'pass' as const, artifact: 'synthetic-fixture',
+    sha256: '0'.repeat(64), recordedAt: '2026-11-11T10:00:00.000Z' })))
+  return pack
 }

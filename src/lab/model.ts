@@ -115,6 +115,23 @@ export interface HtmlActivity extends ActivityBase {
   cases: { id: string; width: number; checks: HtmlCheck[] }[]
 }
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity
+export interface GuidedStage {
+  id: string
+  kind: 'recover' | 'understand' | 'experiment' | 'transfer' | 'close'
+  title: string
+  minutes: number
+  instructions: string
+  activityIds: string[]
+  readings: { lessonId: string; explanationIndexes: number[]; workedExampleIndexes: number[] }[]
+}
+export interface GuidedSession {
+  id: string
+  version: string
+  title: string
+  objectiveIds: string[]
+  state: EditorialState
+  stages: GuidedStage[]
+}
 export interface LabPackage {
   schema: 1
   privacy: 'tai-lab-private'
@@ -126,6 +143,7 @@ export interface LabPackage {
   lessons: Lesson[]
   activities: Activity[]
   evidence: Evidence[]
+  sessions?: GuidedSession[]
 }
 
 export type Answer = string | null
@@ -169,7 +187,18 @@ export interface Exposure extends EventBase {
   familyId: string
   reason: 'presented' | 'solution' | 'external'
 }
-export type LabEvent = Attempt | Draft | Exposure | Assistance
+/** Navigation is append-only. Its date orders a resume suggestion, never answer conflicts or mastery. */
+export interface SessionPosition extends EventBase {
+  kind: 'session-position'
+  packageId: string
+  packageVersion: string
+  sessionId: string
+  sessionVersion: string
+  stageId: string
+  activityId: string | null
+  completed: boolean
+}
+export type LabEvent = Attempt | Draft | Exposure | Assistance | SessionPosition
 export interface EventBatch {
   schema: 1
   privacy: 'tai-lab-private'

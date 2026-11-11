@@ -4,20 +4,31 @@ import { useState } from 'react'
 import { parsePackage } from './validate'
 import { mergeEvents } from './history'
 import type { LabEvent, LabPackage } from './model'
-import { LessonView } from './Laboratory'
+import { ActivityView, LessonView } from './Laboratory'
+import { GuidedSessionView } from './GuidedSessionView'
 import '../style.css'
 
 function Review({ pack }: { pack: LabPackage }) {
   const [index, setIndex] = useState(0)
+  const [guided, setGuided] = useState<number | null>(null)
   const [events, setEvents] = useState<LabEvent[]>([])
   const [material, setMaterial] = useState('')
   return <main className="laboratory" style={{ padding: '1rem' }}>
     <p role="status">Revisión editorial privada. Contenido sin validar. Los intentos de revisión no cuentan como estudio ni se sincronizan.</p>
     <h1>{pack.title}</h1><p>Versión {pack.version}</p>
-    <label>Lección en revisión<select value={index} onChange={event => { setIndex(Number(event.target.value)); setMaterial('') }}>
+    <div className="lab-review-controls"><label>Lección en revisión<select aria-label="Lección en revisión" value={index} onChange={event => { setIndex(Number(event.target.value)); setGuided(null); setMaterial('') }}>
       {pack.lessons.map((lesson, i) => <option key={lesson.id} value={i}>{lesson.title}</option>)}
     </select></label>
-    {pack.lessons[index] && <LessonView key={pack.lessons[index].id} pack={pack} lesson={pack.lessons[index]}
+    {!!pack.sessions?.length && <label>Sesión en revisión<select aria-label="Sesión en revisión" value={guided ?? ''} onChange={event => { setGuided(event.target.value === '' ? null : Number(event.target.value)); setMaterial('') }}>
+      <option value="">Explorar una lección</option>{pack.sessions.map((session, i) => <option key={session.id} value={i}>{session.title}</option>)}
+    </select></label>}</div>
+    {guided !== null && pack.sessions?.[guided] ? <GuidedSessionView key={pack.sessions[guided].id} pack={pack} session={pack.sessions[guided]}
+      accountId="editorial-review" deviceId="local-preview" events={events}
+      record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))}
+      openMaterial={(resourceId, sectionId) => setMaterial(`${resourceId} · #${sectionId}`)}
+      renderActivity={activity => <ActivityView key={activity.id} activity={activity} pack={pack} accountId="editorial-review" deviceId="local-preview"
+        events={events} record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))} />} />
+    : pack.lessons[index] && <LessonView key={pack.lessons[index].id} pack={pack} lesson={pack.lessons[index]}
       accountId="editorial-review" deviceId="local-preview" events={events}
       record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))}
       openMaterial={(resourceId, sectionId) => setMaterial(`${resourceId} · #${sectionId}`)} />}

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { DriveFixture } from './fixtures'
-import { samplePackage } from '../src/lab/fixtures.test-support'
+import { sampleGuidedPackage, samplePackage } from '../src/lab/fixtures.test-support'
 import { readFile, writeFile } from 'node:fs/promises'
 import type { LabEvent } from '../src/lab/model'
 
@@ -20,6 +20,80 @@ async function showPractice(page: import('@playwright/test').Page) {
 async function openStudyOptions(page: import('@playwright/test').Page) {
   if (await page.locator('.lab-tools').getAttribute('open') === null) await page.getByText('Opciones de estudio', { exact: true }).click()
 }
+test('guided session resumes its stage and activity across devices and preserves completion', async ({ page, context, browser, browserName }) => {
+  const drive = new DriveFixture(); drive.addLabPackage('lab-guided', sampleGuidedPackage())
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Sesión sintética/ }).click()
+  await expect(page.getByText('Sesión guiada · 36 min orientativos', { exact: true })).toBeVisible()
+  const stages = page.getByRole('navigation', { name: 'Etapas de la sesión', exact: true })
+  await stages.getByRole('button', { name: /2. Comprender/ }).click()
+  await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+  await stages.getByRole('button', { name: /3. Experimentar/ }).click()
+  await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
+  await page.getByRole('button', { name: 'Pista 1', exact: true }).click()
+  await stages.getByRole('button', { name: /4. Transferir/ }).click()
+  await page.getByRole('navigation', { name: 'Actividades de esta etapa', exact: true }).getByRole('button', { name: '2', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Ejemplo sintético i2', exact: true })).toBeVisible()
+  await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+  await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect.poll(() => drive.labEvents().some((event: any) => event.kind === 'session-position' && event.activityId === 'i2')).toBe(true)
+  expect((await new AxeBuilder({ page }).include('.lab-guided').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+  await page.screenshot({ path: `test-results/laboratory-guided-${browserName}.png`, fullPage: true })
+  const other = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  try {
+    await drive.install(other, browserName === 'webkit')
+    const resumed = await other.newPage()
+    await resumed.goto(page.url())
+    await resumed.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+    await expect(resumed.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(resumed)
+    await resumed.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+    await expect(resumed.getByRole('region', { name: 'Retomar sesión guiada', exact: true })).toContainText('Transferir')
+    const positionIds = drive.labEvents().filter((event: any) => event.kind === 'session-position').map((event: any) => event.id).sort()
+    await resumed.getByRole('button', { name: 'Reanudar sesión guiada', exact: true }).click()
+    await expect(resumed.getByRole('heading', { name: 'Ejemplo sintético i2', exact: true })).toBeVisible()
+    await expect(resumed.getByRole('radio', { name: 'Válida', exact: true })).toBeChecked()
+    await resumed.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+    await expect(resumed.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    expect(drive.labEvents().filter((event: any) => event.kind === 'session-position').map((event: any) => event.id).sort()).toEqual(positionIds)
+    await resumed.getByText('Por qué cada opción', { exact: true }).click()
+    const otherStages = resumed.getByRole('navigation', { name: 'Etapas de la sesión', exact: true })
+    await otherStages.getByRole('button', { name: /3. Experimentar/ }).click()
+    await expect(resumed.getByRole('radio', { name: 'Inválida', exact: true })).toBeChecked()
+    await expect(resumed.getByText('Pista 1: Pista uno.', { exact: true })).toBeVisible()
+    await otherStages.getByRole('button', { name: /2. Comprender/ }).click()
+    await expect(resumed.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+    await resumed.reload()
+    await expect(resumed.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await expect(resumed.getByRole('button', { name: 'Abrir navegación', exact: true })).toBeVisible()
+    await openLab(resumed)
+    await expect(resumed.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+    for (const width of [320, 390]) {
+      await resumed.setViewportSize({ width, height: 844 })
+      expect(await resumed.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    await otherStages.getByRole('button', { name: /5. Cerrar/ }).click()
+    await expect(resumed.getByRole('region', { name: 'Respuestas guardadas', exact: true })).toContainText('1 de 5')
+    await resumed.getByText('Revisar respuestas y ayudas', { exact: true }).click()
+    const summary = resumed.getByRole('region', { name: 'Respuestas guardadas', exact: true })
+    await expect(summary.locator('p').filter({ has: resumed.getByText('Ejemplo sintético p2', { exact: true }) })).toContainText('Sin respuesta guardada. Hay pistas o soluciones consultadas.')
+    await expect(summary.locator('p').filter({ has: resumed.getByText('Ejemplo sintético i2', { exact: true }) })).toContainText('Hay pistas o soluciones consultadas.')
+    await resumed.getByRole('button', { name: 'Cerrar sesión de estudio', exact: true }).click()
+    await expect(resumed.getByText('Sesión cerrada. Tus respuestas y ayudas siguen guardadas.', { exact: true })).toBeVisible()
+    await resumed.reload(); await expect(resumed.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(resumed)
+    await expect(resumed.getByText('Sesión cerrada. Tus respuestas y ayudas siguen guardadas.', { exact: true })).toBeVisible()
+    await expect(resumed.locator('.lab-guided-practice')).toHaveCount(0)
+    await resumed.getByRole('button', { name: 'Volver al laboratorio', exact: true }).click()
+    await expect(resumed.getByRole('region', { name: 'Retomar sesión guiada', exact: true })).toHaveCount(0)
+  } finally { await other.close() }
+})
+
 test('catalogue filters topics and searches concepts without changing saved answers', async ({ page, context, browserName }) => {
   const programming = samplePackage(), networks = samplePackage()
   programming.objectives[0].topicId = 'III.4'

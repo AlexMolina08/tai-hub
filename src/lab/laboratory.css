@@ -1,7 +1,10 @@
 .laboratory { max-width: 1200px; margin: auto; }
-.laboratory:has(.lab-session) > .page-heading { margin-bottom: 12px; }
-.laboratory:has(.lab-session) > .page-heading h1 { font-size: 1.2rem; letter-spacing: -.025em; }
-.laboratory:has(.lab-session) > .page-heading p { display: none; }
+.lab-review-controls { display: grid; gap: 1rem; margin: 1rem 0; }
+.lab-review-controls label { display: block; min-width: 0; }
+.lab-review-controls select { display: block; appearance: none; width: 100%; min-width: 0; margin-top: .5rem; font: inherit; min-height: 44px; overflow: hidden; text-overflow: ellipsis; }
+.laboratory:has(.lab-session, .lab-guided) > .page-heading { margin-bottom: 12px; }
+.laboratory:has(.lab-session, .lab-guided) > .page-heading h1 { font-size: 1.2rem; letter-spacing: -.025em; }
+.laboratory:has(.lab-session, .lab-guided) > .page-heading p { display: none; }
 .lab-toolbar, .lab-actions, .lab-steps { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: 1rem 0; }
 .lab-toolbar { padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
 .lab-toolbar > span { flex: 1 1 auto; font-size: .8rem; color: var(--muted); }
@@ -17,6 +20,21 @@
 .lab-continuation p:not(.context-label) { margin: .65rem 0; line-height: 1.6; }
 .lab-continuation small { color: var(--muted); line-height: 1.5; }
 .lab-catalog { margin: 2rem 0; }
+.lab-guided-catalog { margin: 2rem 0; }
+.lab-guided-catalog > p { margin-top: .5rem; color: var(--muted); }
+.lab-guided-stages { display: flex; gap: .4rem; overflow-x: auto; margin: 1.5rem 0; padding: .25rem; }
+.lab-guided-stages button { flex: 1; min-width: 112px; min-height: 60px; padding: .7rem; text-align: left; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.lab-guided-stages button span, .lab-guided-stages small { display: block; }
+.lab-guided-stages small { margin-top: .3rem; }
+.lab-guided-stages [aria-current="step"] { color: var(--text); border-color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+.lab-guided-content { scroll-margin-top: 1rem; }
+.lab-guided-content > h3 { margin: .8rem 0; font-size: 1.4rem; }
+.lab-guided-reading { max-width: 76ch; margin: 1.5rem 0; }
+.lab-guided-reading h4 { margin: 1.5rem 0 .7rem; font-size: 1.05rem; }
+.lab-guided-practice { padding: 1.25rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-top: 1rem; }
+.lab-guided-summary { margin: 1.5rem 0; padding: 1.25rem 0; border-top: 1px solid var(--line); }
+.lab-guided-summary p { line-height: 1.6; margin: .7rem 0; }
+.lab-guided-summary details { margin: 1rem 0; }
 .lab-catalog > header h2 { font-size: 1.45rem; letter-spacing: -.025em; }
 .lab-catalog > header p { margin-top: .4rem; color: var(--muted); }
 .lab-catalog-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; margin: 1.2rem 0; }
@@ -94,6 +112,7 @@
 .lab-sql-table table { border-collapse: collapse; width: 100%; }
 .lab-sql-table td, .lab-sql-table th { padding: .6rem; border-bottom: 1px solid var(--line); text-align: left; }
 @media (max-width: 800px) {
+  .lab-guided-practice { padding: 1rem .8rem; }
   .lab-block-filter { width: 100%; }
   .lab-block-filter button { flex: 1; min-height: 44px; }
   .lab-continuation { padding: 1.1rem; }

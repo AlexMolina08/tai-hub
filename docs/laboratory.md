@@ -32,6 +32,18 @@ El catálogo agrupa las lecciones por tema oficial y permite filtrar III/IV, tem
 
 Una copia exportada identifica cuenta y esquema. Restaurarla combina eventos y rechaza otra cuenta o un esquema desconocido. No se realiza compactación destructiva. Las cuentas tienen claves separadas en IndexedDB. Desconectar revoca la selección local de cuenta y no conserva credenciales para el modo offline.
 
+## Sesiones guiadas
+
+El campo opcional `sessions` compone cinco etapas: recuperar, comprender, experimentar, transferir y cerrar. Sus rangos suman entre 30 y 40 minutos orientativos; no son un temporizador ni tiempo medido con estudiantes. Las etapas seleccionan actividades existentes y fragmentos concretos de lecciones. Los paquetes anteriores sin sesiones mantienen su significado.
+
+El contrato exige referencias existentes, cobertura de cada objetivo declarado y tiempos dentro del rango de cada etapa. Impide repetir actividades entre etapas, incluir reservas o comprobaciones diferidas y reutilizar la identidad de otra lección o actividad. Cada sesión validada necesita sus propias seis puertas y dependencias validadas. Reutilizar un fragmento no completa la lección de origen ni demuestra transferencia inédita.
+
+`session-position` conserva etapa y actividad mediante eventos inmutables de cuenta, paquete, sesión y versiones exactas. La navegación se guarda localmente antes de actualizar la vista. Restaurar una posición no genera un evento nuevo: evita que una recarga vuelva a abrir una sesión cerrada desde otro dispositivo. Los callbacks pendientes no regresan a la sesión después de salir al catálogo. La fecha solo ordena la sugerencia; los borradores e intentos conservan sus reglas de conflicto y todo su historial.
+
+El cierre puede guardar una interrupción con actividades pendientes. `completed` significa que se cerró ese recorrido, sin acreditar dominio ni responder automáticamente lo que falta. El resumen conserva primera y última respuesta y muestra ayudas solicitadas incluso sin responder o después de un acierto. Reabrir expresamente una etapa crea navegación nueva; restaurar un cierre mantiene el resumen sin abrir otra actividad. La posición fina dentro del texto sigue siendo local.
+
+Este tipo de evento se introduce antes de publicar el laboratorio. No se modifica el esquema ni se reescriben eventos antiguos; los clientes nuevos admiten los tipos previos. Una compilación anterior que desconozca `session-position` rechaza el lote completo, sin descartar selectivamente datos. Antes de habilitar contenido con sesiones deben actualizarse los clientes participantes. Una futura migración o reversión deberá preservar estos eventos; no se promete compatibilidad de escritura con clientes anteriores.
+
 ## Ejecución SQL
 
 PGlite se carga bajo demanda. El ejecutor vive en un worker descartable dentro de un iframe de origen opaco (`sandbox="allow-scripts"`). El iframe solo recibe código fijo del motor, archivos WASM y datos del ejercicio. Su CSP impide red, almacenamiento del origen y acceso al padre. El receptor exige la ventana emisora y un token de ejecución; mensajes ajenos no producen resultados.

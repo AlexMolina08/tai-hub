@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { ArrowLeft, ArrowRight, BookOpen, Check, Download, RefreshCw } from 'lucide-react'
 import type { DriveLibrary } from '../drive/library'
 import { blocks } from '../syllabus'
-import type { Activity, Attempt, Draft, LabEvent, LabPackage, Lesson, SqlActivity } from './model'
+import type { Activity, Attempt, Draft, LabEvent, LabPackage, Lesson, SessionPosition, SqlActivity } from './model'
 import { compareSqlRows } from './sql-comparison'
 import type { SqlResult } from './sql-runner'
 import { LabSync, type LabSnapshot } from './sync'
@@ -18,6 +18,8 @@ import { HtmlPanel } from './HtmlPanel'
 import { StudyText } from './StudyText'
 import { activityLocationKey, studyContinuation } from './continuation'
 import { LessonCatalog } from './LessonCatalog'
+import { GuidedSessionView } from './GuidedSessionView'
+import { sessionMinutes, sessionResume } from './guided'
 import './laboratory.css'
 
 const empty: LabSnapshot = { events: [], pendingIds: [], status: 'local' }
@@ -71,11 +73,14 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [deviceId] = useState(deviceIdentity)
   const [packages, setPackages] = useState<LabPackage[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [selected, setSelected] = useState<{ pack: string; lesson: string; activity?: string } | undefined>(() => {
+  const [selected, setSelected] = useState<{ pack: string; lesson?: string; activity?: string; session?: string; positionId?: string } | undefined>(() => {
     try {
       const value = JSON.parse(sessionStorage.getItem('tai-lab-location:' + accountId) ?? 'null')
       if (typeof value?.pack === 'string' && typeof value?.lesson === 'string') return {
         pack: value.pack, lesson: value.lesson, activity: typeof value.activity === 'string' ? value.activity : undefined,
+      }
+      if (typeof value?.pack === 'string' && typeof value?.session === 'string') return {
+        pack: value.pack, session: value.session, positionId: typeof value.positionId === 'string' ? value.positionId : undefined,
       }
     } catch { /* A missing location does not affect the durable event history. */ }
   })
@@ -83,7 +88,12 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [busy, setBusy] = useState(false)
   const currentPackage = packages.find(p => packageKey(p) === selected?.pack)
   const currentLesson = currentPackage?.lessons.find(l => l.id === selected?.lesson)
+  const currentSession = currentPackage?.sessions?.find(session => session.id === selected?.session)
+  const sessionPosition = history.events.find((event): event is SessionPosition => event.kind === 'session-position'
+    && event.id === selected?.positionId && event.accountId === accountId && event.packageId === currentPackage?.id
+    && event.packageVersion === currentPackage?.version && event.sessionId === currentSession?.id && event.sessionVersion === currentSession?.version)
   const continuation = useMemo(() => studyContinuation(packages, history.events, accountId), [packages, history.events, accountId])
+  const guidedContinuation = useMemo(() => sessionResume(packages, history.events, accountId), [packages, history.events, accountId])
   useEffect(() => {
     try {
       if (selected) sessionStorage.setItem('tai-lab-location:' + accountId, JSON.stringify(selected))
@@ -127,7 +137,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   return <>
     <div className="lab-toolbar">
       <span role="status">{statusText[history.status]}{history.pendingIds.length > 0 && ` · ${history.pendingIds.length} cambios`}</span>
-      {!currentLesson && <button className="button" disabled={!connected || busy} onClick={() => void loadDrive()}><RefreshCw size={16} /> Cargar lecciones de Drive</button>}
+      {!currentLesson && !currentSession && <button className="button" disabled={!connected || busy} onClick={() => void loadDrive()}><RefreshCw size={16} /> Cargar lecciones de Drive</button>}
       <button className="button icon-button" aria-label="Sincronizar progreso" title="Sincronizar progreso" disabled={!sync || !connected} onClick={() => void sync?.refresh().catch(e => setError(message(e)))}><RefreshCw size={18} /></button>
       <details className="lab-tools"><summary>Opciones de estudio</summary><div>
         <button className="button" disabled={!sync} onClick={() => download('laboratorio-progreso.json', exportHistory(accountId, history.events))}><Download size={16} /> Exportar progreso</button>
@@ -137,12 +147,24 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     </div>
     {!connected && <p>Copia local de tu biblioteca. Conecta Google Drive para verificar la cuenta y sincronizar.</p>}
     {(error || history.error) && <p className="banner error" role="alert">{error || history.error}</p>}
-    {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && currentLesson ? <>
-      <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> Volver a las lecciones</button>
-      <LessonView key={`${packageKey(currentPackage)}:${currentLesson.id}`} pack={currentPackage} lesson={currentLesson}
+    {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && (currentLesson || currentSession) ? <>
+      <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> {currentSession ? 'Volver al laboratorio' : 'Volver a las lecciones'}</button>
+      {currentSession ? <GuidedSessionView key={`${packageKey(currentPackage)}:session:${currentSession.id}`} pack={currentPackage} session={currentSession}
+        accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial} initialPosition={sessionPosition}
+        onPosition={position => setSelected(current => current?.pack === packageKey(currentPackage) && current.session === currentSession.id
+          ? { ...current, positionId: position.id } : current)}
+        renderActivity={activity => <ActivityView key={activity.id} pack={currentPackage} activity={activity} accountId={accountId}
+          deviceId={deviceId} events={history.events} record={record} />} />
+      : currentLesson && <LessonView key={`${packageKey(currentPackage)}:${currentLesson.id}`} pack={currentPackage} lesson={currentLesson}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial}
-        initialActivityId={selected?.activity} onActivityChange={activity => setSelected({ pack: packageKey(currentPackage), lesson: currentLesson.id, activity })} />
+        initialActivityId={selected?.activity} onActivityChange={activity => setSelected({ pack: packageKey(currentPackage), lesson: currentLesson.id, activity })} />}
     </> : <>
+      {guidedContinuation && <section className="lab-continuation" aria-label="Retomar sesión guiada">
+        <div><p className="context-label">Tu sesión guardada</p><h2>{guidedContinuation.session.title}</h2>
+          <p>{guidedContinuation.session.stages.find(stage => stage.id === guidedContinuation.position.stageId)?.title}</p></div>
+        <button className="button primary" onClick={() => setSelected({ pack: packageKey(guidedContinuation.pack), session: guidedContinuation.session.id,
+          positionId: guidedContinuation.position.id })}>Reanudar sesión guiada <ArrowRight size={17} /></button>
+      </section>}
       {continuation && <section className="lab-continuation" aria-label="Retomar el laboratorio">
         <div><p className="context-label">Tu última actividad guardada</p><h2>{continuation.lesson.title}</h2>
           <p>Actividad {continuation.activityIndex + 1}: {continuation.activity.title}</p>
@@ -152,6 +174,13 @@ function Workspace({ library, accountId, connected, openMaterial }: {
           catch { /* The explicit activity still opens if session storage is unavailable. */ }
           setSelected({ pack: packageKey(continuation.pack), lesson: continuation.lesson.id, activity: continuation.activity.id })
         }}>Reanudar actividad <ArrowRight size={17} /></button>
+      </section>}
+      {packages.some(pack => pack.sessions?.length) && <section className="lab-guided-catalog" aria-label="Sesiones guiadas">
+        <h2>Sesiones guiadas</h2><p>Recupera, comprende, practica y comprueba lo aprendido.</p>
+        <div className="lab-lesson-list">{packages.flatMap(pack => (pack.sessions ?? []).map(session => <button className="lab-lesson"
+          key={JSON.stringify([pack.id, pack.version, session.id])} onClick={() => setSelected({ pack: packageKey(pack), session: session.id })}>
+          <span><strong>{session.title}</strong><small>{sessionMinutes(session)} min orientativos · 5 etapas</small></span><ArrowRight size={19} aria-hidden="true" />
+        </button>))}</div>
       </section>}
       {packages.length > 0 && <LessonCatalog packages={packages} events={history.events} accountId={accountId}
         openLesson={(pack, lesson) => setSelected({ pack: packageKey(pack), lesson: lesson.id })} />}
@@ -248,7 +277,7 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
   </article>
 }
 
-function ActivityView({ activity, pack, accountId, deviceId, events, record }: {
+export function ActivityView({ activity, pack, accountId, deviceId, events, record }: {
   activity: Activity; pack: LabPackage; accountId: string; deviceId: string; events: LabEvent[];
   record: (events: LabEvent[]) => Promise<void>
 }) {
