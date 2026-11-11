@@ -17,9 +17,14 @@ addEventListener('message', async event => {
       startParams: [...PGlite.defaultStartParams, '-c', 'statement_timeout=3000'] })
     await db.exec(setup)
     stage = 'query'
-    const result = await db.query(query, [], { rowMode: 'array' })
-    if (result.rows.length > 200 || JSON.stringify(result).length > 100_000) throw new Error('La salida supera 200 filas o 100 KB. Reduce el resultado.')
-    postMessage({ kind: 'result', rows: result.rows, columns: result.fields.map(f => f.name) })
+    const result = await db.query<unknown[]>(query, [], { rowMode: 'array' })
+    const rows = result.rows.map(row => row.map(value => typeof value === 'bigint' ? value.toString() : value))
+    const columns = result.fields.map(field => field.name)
+    const columnTypes = result.fields.map(field => field.dataTypeID)
+    if (rows.length > 200 || JSON.stringify({ rows, columns, columnTypes }).length > 100_000) {
+      throw new Error('La salida supera 200 filas o 100 KB. Reduce el resultado.')
+    }
+    postMessage({ kind: 'result', rows, columns, columnTypes })
   } catch (error) {
     postMessage({ kind: 'error', stage, message: error instanceof Error ? error.message.slice(0, 2000) : 'Error de ejecución SQL.' })
   } finally { await db?.close() }

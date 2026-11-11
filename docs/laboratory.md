@@ -122,7 +122,7 @@ PGlite se carga bajo demanda. El ejecutor vive en un worker descartable dentro d
 
 Cada consulta empieza con una base temporal nueva. Se permite una sentencia, con límites de entrada, tres segundos de `statement_timeout`, doce segundos de supervisión externa y una salida máxima de 200 filas o 100 KB. La cancelación termina el worker. La descarga tiene un plazo separado y puede cancelarse desde la interfaz. Los límites de salida se verifican después de que PostgreSQL calcule el resultado: no equivalen a un límite duro de memoria.
 
-La corrección ejecuta varios conjuntos de datos y compara valores por posición. `bag` conserva multiplicidad, `set` permite eliminar duplicados y `ordered` exige orden. Los nombres de columna no se puntúan salvo que el requisito se amplíe expresamente. Los ejemplos sintéticos prueban NULL, duplicados, conjuntos vacíos, cancelación, salida excesiva, reinicio y accesos prohibidos. PostgreSQL no representa automáticamente otros dialectos.
+La corrección ejecuta varios conjuntos de datos y compara valores por posición. `bag` conserva multiplicidad, `set` permite eliminar duplicados y `ordered` exige orden. Los nombres de columna no se puntúan salvo que el requisito se amplíe expresamente. La versión `sql-datasets-v2` compara enteros y `numeric` por valor exacto cuando ambas columnas tienen un tipo numérico exacto. Conserva la precisión de `bigint` e ignora la escala decimal equivalente. Las columnas de texto mantienen su comparación literal. Los intentos anteriores conservan su versión y resultado. Los ejemplos sintéticos prueban NULL, duplicados, conjuntos vacíos, cancelación, salida excesiva, reinicio y accesos prohibidos. PostgreSQL no representa automáticamente otros dialectos.
 
 ## Disponibilidad sin conexión
 

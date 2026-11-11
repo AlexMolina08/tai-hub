@@ -5,7 +5,7 @@ import { draftHeads, draftKey, exportHistory, mergeEvents, restoreHistory } from
 import { LabSync, type LabTransport } from './sync'
 import type { Draft, EventBatch, LabEvent } from './model'
 import type { HistoryStore, StoredHistory } from './store'
-import { compareSqlRows } from './sql-comparison'
+import { compareSqlResults, compareSqlRows } from './sql-comparison'
 import { assistanceFor } from './grading'
 import { ActiveTime } from './active-time'
 import { familyConflicts } from './partitions'
@@ -146,6 +146,20 @@ describe('SQL requirement comparison', () => {
     expect(compareSqlRows([[null], [2]], [[2], [null]], 'ordered')).toBe(false)
     expect(compareSqlRows([], [], 'bag')).toBe(true)
     expect(compareSqlRows([[null]], [], 'bag')).toBe(false)
+  })
+
+  it('compares exact SQL numbers without rounding or changing text', () => {
+    const result = (oid: number, rows: unknown[][]) => ({ columns: ['value'], columnTypes: [oid], rows })
+    expect(compareSqlResults(result(1700, [['0.50']]), result(1700, [['0.5000']]), 'bag')).toBe(true)
+    expect(compareSqlResults(result(1700, [['0.5']]), result(1700, [['1.0']]), 'bag')).toBe(false)
+    expect(compareSqlResults(result(20, [['9007199254740993']]), result(1700, [['9007199254740993.00']]), 'bag')).toBe(true)
+    expect(compareSqlResults(result(20, [['9007199254740993']]), result(1700, [['9007199254740992.00']]), 'bag')).toBe(false)
+    expect(compareSqlResults(result(23, [[2]]), result(1700, [['2.00']]), 'bag')).toBe(true)
+    expect(compareSqlResults(result(25, [['0.50']]), result(25, [['0.5000']]), 'bag')).toBe(false)
+    const duplicates = result(1700, [['0.5'], ['0.50']])
+    const singleton = result(1700, [['0.500']])
+    expect(compareSqlResults(duplicates, singleton, 'set')).toBe(true)
+    expect(compareSqlResults(duplicates, singleton, 'bag')).toBe(false)
   })
 })
 

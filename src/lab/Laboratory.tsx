@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, BookOpen, Check, Download, RefreshCw } from 'luc
 import type { DriveLibrary } from '../drive/library'
 import { blocks } from '../syllabus'
 import type { Activity, Attempt, Draft, LabEvent, LabPackage, Lesson, SessionPosition, SqlActivity } from './model'
-import { compareSqlRows } from './sql-comparison'
+import { compareSqlResults } from './sql-comparison'
 import type { SqlResult } from './sql-runner'
 import { LabSync, type LabSnapshot } from './sync'
 import { browserHistoryStore } from './store'
@@ -580,7 +580,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
           familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
           answer: value, outcome: correct ? 'correct' : 'incorrect', ...attemptFacts(),
-          activeMs: activeMs(), phase: activity.phase, gradingVersion: 'sql-datasets-v1',
+          activeMs: activeMs(), phase: activity.phase, gradingVersion: 'sql-datasets-v2',
           feedback: feedback ?? (correct ? 'La consulta satisface los casos comprobados.' : 'La consulta no coincide con el resultado requerido en todos los casos.') }])
       }} />}
     {latest && latest.ordinal > 1 && <p className="lab-mode">Intento {latest.ordinal}. Tu primera respuesta se conserva.</p>}
@@ -630,7 +630,7 @@ function SqlPanel({ activity, saved, disabled, save, onResult }: {
         if (i === 0) setResult(actual)
         if (!check) break
         const expected = await runSql(dataset.setup, activity.referenceQuery, signal)
-        correct = correct && actual.columns.length === expected.columns.length && compareSqlRows(actual.rows, expected.rows, activity.comparison)
+        correct = correct && compareSqlResults(actual, expected, activity.comparison)
       }
       if (check) await onResult(query, correct)
       setStatus(check ? correct ? 'Correcta en los casos comprobados.' : 'Revisa la consulta: algún caso produce otro resultado.' : 'Consulta ejecutada. Puedes modificarla o comprobarla.')

@@ -3,7 +3,7 @@ import wasmUrl from '../../node_modules/@electric-sql/pglite/dist/pglite.wasm?ur
 import initdbUrl from '../../node_modules/@electric-sql/pglite/dist/initdb.wasm?url'
 import bundleUrl from '../../node_modules/@electric-sql/pglite/dist/pglite.data?url'
 
-export interface SqlResult { columns: string[]; rows: unknown[][] }
+export interface SqlResult { columns: string[]; columnTypes: number[]; rows: unknown[][] }
 let assets: Promise<ArrayBuffer[]> | undefined
 async function loadAssets() {
   assets ??= Promise.all([wasmUrl, initdbUrl, bundleUrl].map(async url => {
@@ -63,8 +63,10 @@ export async function runSql(setup: string, query: string, signal?: AbortSignal,
       if (data.kind === 'result') {
         if (!Array.isArray(data.rows) || data.rows.length > 200 || !data.rows.every(Array.isArray)
           || !Array.isArray(data.columns) || !data.columns.every((v: unknown) => typeof v === 'string')
+          || !Array.isArray(data.columnTypes) || data.columnTypes.length !== data.columns.length
+          || !data.columnTypes.every((v: unknown) => typeof v === 'number' && Number.isSafeInteger(v) && v > 0)
           || JSON.stringify(data).length > 110_000) finish(new Error('Respuesta no válida del motor.'))
-        else finish(undefined, { rows: data.rows, columns: data.columns })
+        else finish(undefined, { rows: data.rows, columns: data.columns, columnTypes: data.columnTypes })
       }
     }
     window.addEventListener('message', receive); signal?.addEventListener('abort', abort, { once: true })

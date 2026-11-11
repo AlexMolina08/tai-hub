@@ -892,6 +892,39 @@ test('SQL runs in a disposable isolated executor with real NULL and duplicate se
   await expect(page.locator('iframe[title="Motor SQL aislado"]')).toHaveCount(0)
 })
 
+test('SQL grades numerics without depending on decimal scale or losing bigint precision', async ({ page, context, browserName }) => {
+  test.setTimeout(90_000)
+  const pack = samplePackage()
+  pack.activities[0] = { ...pack.activities[0], kind: 'sql', starter: 'SELECT AVG(n), MAX(n) FROM demo',
+    referenceQuery: 'SELECT AVG(n), MAX(n) FROM demo', comparison: 'bag', datasets: [
+      { id: 'fractional', setup: 'CREATE TABLE demo(n bigint); INSERT INTO demo VALUES (0),(1);' },
+      { id: 'large', setup: 'CREATE TABLE demo(n bigint); INSERT INTO demo VALUES (9007199254740993),(9007199254740995);' },
+    ] }
+  const drive = new DriveFixture()
+  drive.addLabPackage('lab-exact-sql-numbers', pack)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click()
+  await showPractice(page)
+  const query = page.getByRole('textbox', { name: 'Consulta SQL' })
+  const check = page.getByRole('button', { name: 'Comprobar SQL', exact: true })
+
+  await query.fill('SELECT TRIM_SCALE(AVG(n)), MAX(n)::numeric FROM demo')
+  await check.click()
+  await expect(page.getByText('Correcta en los casos comprobados.', { exact: true })).toBeVisible({ timeout: 45_000 })
+  await expect(page.getByRole('cell', { name: '0.5', exact: true })).toBeVisible()
+
+  await query.fill('SELECT TRUNC(AVG(n)), MAX(n) FROM demo')
+  await check.click()
+  await expect(page.getByText('Revisa la consulta: algún caso produce otro resultado.', { exact: true })).toBeVisible({ timeout: 45_000 })
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect.poll(() => drive.labEvents().filter(e => e.kind === 'attempt' && e.gradingVersion === 'sql-datasets-v2').length).toBe(2)
+})
+
 test('lesson controls and content fit required screen widths', async ({ page, context, browserName }) => {
   const drive = new DriveFixture(); drive.addLabPackage('lab-responsive', samplePackage())
   await drive.install(context, browserName === 'webkit')
