@@ -3,6 +3,7 @@ import type { AlgorithmProfile } from './algorithm-model'
 import type { ClosureProfile } from './closure-model'
 import type { EthernetSwitchProfile } from './ethernet-switch-model'
 import type { FrameProfile } from './frame-model'
+import type { LanVlanProfile } from './lan-vlan-model'
 import type { InterleavingProfile } from './interleaving-model'
 import type { RadioProfile } from './radio-model'
 import type { DhcpProfile } from './dhcp-model'
@@ -220,10 +221,15 @@ export interface EthernetSwitchModelActivity extends ActivityBase {
   phase: 'practice'
   profile: EthernetSwitchProfile
 }
+export interface LanVlanModelActivity extends ActivityBase {
+  kind: 'lan-vlan-model'
+  phase: 'practice'
+  profile: LanVlanProfile
+}
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
   | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
   | TransactionModelActivity | VlsmModelActivity | RouteModelActivity | ContentionModelActivity | InterleavingModelActivity
-  | EthernetSwitchModelActivity
+  | EthernetSwitchModelActivity | LanVlanModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string

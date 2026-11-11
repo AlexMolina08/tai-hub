@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Attempt, PredictionActivity } from './model'
 import { describeEthernetSwitch, ethernetSwitchControls } from './ethernet-switch-model'
+import { describeLanVlan, lanVlanControls } from './lan-vlan-model'
 import { describeFrame, frameControls } from './frame-model'
 import { accessControls, describeAccess } from './access-model'
 import { algorithmControls, describeAlgorithm } from './algorithm-model'
@@ -43,6 +44,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: transactionControls(activity.profile), describe: (values: string[]) => describeTransaction(activity.profile, values) }
     case 'ethernet-switch-model':
       return { controls: ethernetSwitchControls(activity.profile), describe: (values: string[]) => describeEthernetSwitch(activity.profile, values) }
+    case 'lan-vlan-model':
+      return { controls: lanVlanControls(activity.profile), describe: (values: string[]) => describeLanVlan(activity.profile, values) }
     case 'contention-model':
       return { controls: contentionControls(activity.profile), describe: (values: string[]) => describeContention(activity.profile, values) }
     case 'route-model':
