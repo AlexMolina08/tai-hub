@@ -130,6 +130,8 @@ El corrector `sql-datasets-v3` conserva la representación de PostgreSQL de DATE
 
 El modelo local de señales pide resolver dos configuraciones del mismo experimento. Incluye clasificación de representación, transferencia, sincronización, sentido y extremos. La calculadora guía el trabajo con unidades y contrasta tasa útil, potencia y ruido, retardo y cotas de canal bajo hipótesis explícitas. Se guardan ambas respuestas antes de mostrar el cálculo y se conserva cada intento al reintentar o restablecer. El cálculo se ejecuta en la aplicación sin acceso a la red. Las configuraciones se preparan en el paquete y el modelo rechaza entradas no admitidas.
 
+El modelo de símbolos y tramas añade controles editables para constelación I/Q, ranuras TDM, códigos, paridad, checksum, FCS, recuperación XOR y parada y espera. Los casos usan datos sintéticos y cálculos locales. Cambiar parámetros limpia la predicción activa y conserva los intentos anteriores. La corrección muestra texto con coordenadas, posiciones, sumas, residuos o secuencias según el ejercicio. Los tamaños y los formatos se validan al importar. Las evaluaciones reservadas usan sus actividades de evaluación separadas.
+
 ## Disponibilidad sin conexión
 
 El usuario prepara explícitamente aplicación y motores. El manifiesto se genera desde archivos públicos emitidos por Vite; cada descarga verifica SHA-256. Cache Storage solo contiene esos archivos públicos. Paquetes y respuestas permanecen en IndexedDB por cuenta. El estado vuelve a comprobar la presencia de archivos y deja de mostrar disponibilidad si se elimina una dependencia.

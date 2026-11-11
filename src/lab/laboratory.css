@@ -219,3 +219,10 @@
 
 .lab-signal-comparison { margin: 1rem 0 0; padding-inline-start: 1.4rem; }
 .lab-signal-comparison p { margin: .2rem 0 .7rem; }
+
+.lab-frame-section { border: 0; min-width: 0; margin: 1.2rem 0; padding: 0; }
+.lab-frame-section legend { font-weight: 650; margin-bottom: .7rem; }
+.lab-model-fields .lab-frame-toggle { display: flex; align-items: center; gap: .65rem; min-height: 44px; }
+.lab-model-fields .lab-frame-toggle input { width: 1.2rem; min-height: 1.2rem; flex: none; }
+.lab-constellation { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .3rem; max-width: 14rem; }
+.lab-constellation span { background: var(--soft); padding: .3rem; text-align: center; }
