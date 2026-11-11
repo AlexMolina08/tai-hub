@@ -4,6 +4,7 @@ import { DriveFixture } from './fixtures'
 import { sampleGuidedPackage, sampleIPv4Package, samplePackage } from '../src/lab/fixtures.test-support'
 import { readFile, writeFile } from 'node:fs/promises'
 import type { LabEvent } from '../src/lab/model'
+import { mergeEvents } from '../src/lab/history'
 
 async function openLab(page: import('@playwright/test').Page) {
   const menu = page.getByRole('button', { name: 'Abrir navegación', exact: true })
@@ -20,6 +21,131 @@ async function showPractice(page: import('@playwright/test').Page) {
 async function openStudyOptions(page: import('@playwright/test').Page) {
   if (await page.locator('.lab-tools').getAttribute('open') === null) await page.getByText('Opciones de estudio', { exact: true }).click()
 }
+test('learning context survives reload and preserves the first response before later help', async ({ page, context, browserName }) => {
+  const pack = samplePackage()
+  pack.activities[0].learning = { diagnostics: [{ id: 'fixture-critical', objectiveIds: ['o1'], severity: 'critical', choiceOptionIds: ['b'] }], rechecksDiagnosticIds: [] }
+  const drive = new DriveFixture(); drive.addLabPackage('lab-learning', pack)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
+  await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
+  const sync = async () => {
+    await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+    await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+  }
+  const events = () => mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+  await sync()
+  const presented = events().filter(event => event.kind === 'learning-context' && event.action === 'present')
+  expect(presented).toHaveLength(1)
+  await page.reload(); await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page); await showPractice(page)
+  await expect(page.getByRole('radio', { name: 'Inválida', exact: true })).toBeChecked()
+  await sync()
+  expect(events().filter(event => event.kind === 'learning-context' && event.action === 'present')).toEqual(presented)
+  await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+  await expect(page.getByText('Revisa la respuesta', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Pista 1', exact: true }).click()
+  await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+  await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+  await expect(page.getByText('Respuesta correcta · Con ayuda', { exact: true })).toBeVisible()
+  await sync()
+  const history = events(), attempts = history.filter(event => event.kind === 'attempt').sort((a, b) => a.ordinal - b.ordinal)
+  expect(attempts).toHaveLength(2)
+  expect(attempts[0]).toMatchObject({ outcome: 'incorrect', hintCount: 0, diagnosticIds: ['fixture-critical'] })
+  expect(attempts[1]).toMatchObject({ outcome: 'correct', hintCount: 1 })
+  const first = history.find(event => event.kind === 'learning-context' && event.id === attempts[0].learningContextId)
+  const last = history.find(event => event.kind === 'learning-context' && event.id === attempts[1].learningContextId)
+  if (first?.kind !== 'learning-context' || last?.kind !== 'learning-context') throw Error('Missing captured answers')
+  expect(first.presentationId).toBe(presented[0].id)
+  expect(last.presentationId).toBe(first.presentationId)
+  expect(first.clock.zone).not.toBe('')
+  expect(first.clock.day).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  const help = history.find(event => event.kind === 'learning-context' && event.action === 'help')
+  if (help?.kind !== 'learning-context') throw Error('Missing captured assistance')
+  expect(help.parentIds).toContain(first.id)
+  expect(last.parentIds).toContain(help.id)
+  expect(history.some(event => event.kind === 'learning-context' && event.action === 'reading')).toBe(true)
+})
+test('learning dashboard explains evidence and opens the next unanswered activity on mobile and desktop', async ({ page, context, browserName }, testInfo) => {
+  const drive = new DriveFixture(); drive.addLabPackage('learning-panel', samplePackage())
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  const panel = page.getByRole('region', { name: 'Comprender, recordar, aplicar', exact: true })
+  await expect(panel).toBeVisible()
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(await panel.locator('.lab-learning-dimensions > div').evaluateAll(cards => cards.every(card => card.scrollWidth <= card.clientWidth))).toBe(true)
+    expect((await new AxeBuilder({ page }).include('.lab-learning').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+    await panel.screenshot({ path: testInfo.outputPath(`learning-panel-${width}.png`) })
+  }
+  await panel.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Ejemplo sintético p1', exact: true })).toBeVisible()
+  await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+  await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+  await expect(page.getByText('Respuesta correcta', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Volver a las lecciones', exact: true }).click()
+  await expect(panel.locator('.lab-learning-dimensions > div').first()).toContainText('1')
+  await panel.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Ejemplo sintético p2', exact: true })).toBeVisible()
+})
+test('an opened reserve resumes its original presentation across devices before and after selecting an answer', async ({ browser, browserName, baseURL }) => {
+  const drive = new DriveFixture(); drive.addLabPackage('reserve-continuity', samplePackage())
+  const contexts = await Promise.all([browser.newContext({ viewport: { width: 390, height: 844 } }), browser.newContext()])
+  try {
+    for (const context of contexts) await drive.install(context, browserName === 'webkit')
+    const [a, b] = await Promise.all(contexts.map(context => context.newPage()))
+    const open = async (page: import('@playwright/test').Page) => {
+      await page.goto(baseURL + '/tai-hub/')
+      await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+      await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+      await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+    }
+    const sync = async (page: import('@playwright/test').Page) => {
+      await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+      await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    }
+    const history = () => mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+    const reservePresentations = () => history().filter(event => event.kind === 'learning-context' && event.action === 'present'
+      && event.target.kind === 'activity' && event.target.activityId === 'r1')
+    await open(a)
+    for (const id of ['p1', 'p2', 'i1', 'i2', 'i3']) {
+      await a.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
+      await expect(a.getByRole('heading', { name: 'Ejemplo sintético ' + id, exact: true })).toBeVisible()
+      await a.getByRole('radio', { name: 'Válida', exact: true }).check()
+      await a.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+      await expect(a.getByText('Respuesta correcta', { exact: true })).toBeVisible()
+      await a.getByRole('button', { name: 'Volver a las lecciones', exact: true }).click()
+    }
+    await a.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
+    await expect(a.getByRole('heading', { name: 'Ejemplo sintético r1', exact: true })).toBeVisible()
+    await sync(a)
+    const original = reservePresentations(); expect(original).toHaveLength(1)
+    await a.getByRole('button', { name: 'Volver al laboratorio', exact: true }).click()
+    await open(b); await sync(b)
+    await b.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
+    await expect(b.getByRole('heading', { name: 'Ejemplo sintético r1', exact: true })).toBeVisible()
+    await expect(b.getByRole('radio', { name: 'Válida', exact: true })).not.toBeChecked()
+    await b.getByRole('radio', { name: 'Inválida', exact: true }).check(); await sync(b)
+    await sync(a)
+    await a.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
+    await expect(a.getByRole('radio', { name: 'Inválida', exact: true })).toBeChecked()
+    await a.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+    await expect(a.getByText('Revisa la respuesta', { exact: true })).toBeVisible(); await sync(a)
+    expect(reservePresentations()).toEqual(original)
+    const answers = history().filter(event => event.kind === 'attempt' && event.activityId === 'r1')
+    expect(answers).toHaveLength(1)
+    expect(answers[0]).toMatchObject({ ordinal: 1, answer: 'b', outcome: 'incorrect' })
+    const answerContext = history().find(event => event.kind === 'learning-context' && event.factIds.includes(answers[0].id))
+    expect(answerContext).toMatchObject({ presentationId: original[0].id })
+  } finally { await Promise.all(contexts.map(context => context.close())) }
+})
 test('IPv4 predictions persist before reveal, converge across devices and preserve omissions and resets', async ({ browser, browserName, baseURL }) => {
   test.setTimeout(90_000)
   const drive = new DriveFixture(); drive.addLabPackage('lab-ipv4', sampleIPv4Package())
@@ -38,7 +164,7 @@ test('IPv4 predictions persist before reveal, converge across devices and preser
       await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
       await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
     }
-    const remoteEvents = () => [...new Map(drive.labEvents().map(event => [event.id, event])).values()]
+    const remoteEvents = () => [...new Map((drive.labEvents() as LabEvent[]).map(event => [event.id, event])).values()]
     await open(a)
     await a.getByLabel('Predicción del límite inferior', { exact: true }).fill('192.168.20.64')
     await a.getByLabel('Predicción del límite superior', { exact: true }).fill('192.168.20.127')
@@ -61,7 +187,7 @@ test('IPv4 predictions persist before reveal, converge across devices and preser
     await sync(a); await sync(b); await sync(a)
     let attempts = remoteEvents().filter(event => event.kind === 'attempt')
     expect(attempts).toHaveLength(1)
-    for (const copy of drive.labEvents().filter(event => event.kind === 'attempt')) expect(copy).toEqual(attempts[0])
+    for (const copy of (drive.labEvents() as LabEvent[]).filter(event => event.kind === 'attempt')) expect(copy).toEqual(attempts[0])
     expect(attempts[0]).toMatchObject({ ordinal: 1, outcome: 'correct', hintCount: 0, solutionViewed: false })
     expect(remoteEvents().filter(event => event.kind === 'ipv4-reveal')).toHaveLength(2)
     await expect(a.getByRole('heading', { name: 'Hay dos borradores de esta actividad', exact: true })).toBeVisible()
@@ -116,7 +242,7 @@ test('IPv4 predictions persist before reveal, converge across devices and preser
     await restored.getByRole('button', { name: 'Reanudar actividad', exact: true }).click()
     await expect(restored.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toBeVisible()
     await sync(restored)
-    expect(restoredDrive.labEvents().filter(event => event.kind === 'attempt').map(event => event.id).sort()).toEqual(attemptIds)
+    expect((restoredDrive.labEvents() as LabEvent[]).filter(event => event.kind === 'attempt').map(event => event.id).sort()).toEqual(attemptIds)
   } finally { await Promise.all(contexts.map(context => context.close())) }
 })
 

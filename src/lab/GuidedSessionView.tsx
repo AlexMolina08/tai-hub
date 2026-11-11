@@ -4,6 +4,7 @@ import type { Activity, Attempt, GuidedSession, LabEvent, LabPackage, SessionPos
 import { sessionAssistance, sessionMinutes } from './guided'
 import { StudyText } from './StudyText'
 import { StudyNoteEditor } from './StudyNoteEditor'
+import { LearningReading } from './LearningReading'
 
 export function GuidedSessionView({ pack, session, accountId, deviceId, events, record, openMaterial, renderActivity, initialPosition, onPosition }: {
   pack: LabPackage; session: GuidedSession; accountId: string; deviceId: string; events: LabEvent[]
@@ -92,6 +93,8 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
       {stage.readings.map(reading => {
         const lesson = pack.lessons.find(lesson => lesson.id === reading.lessonId)!
         return <div key={reading.lessonId} className="lab-guided-reading">
+          <LearningReading key={`${stage.id}:${lesson.id}`} pack={pack} lesson={lesson} accountId={accountId}
+            deviceId={deviceId} events={events} record={record} />
           {reading.explanationIndexes.map(index => <section key={'explanation-' + index}><h4>{lesson.explanation[index].title}</h4><StudyText text={lesson.explanation[index].body} /></section>)}
           {reading.workedExampleIndexes.length > 0 && <div className="lab-example">{reading.workedExampleIndexes.map(index => <section key={'example-' + index}>
             <h4>{lesson.workedExample[index].title}</h4><StudyText text={lesson.workedExample[index].body} /></section>)}</div>}

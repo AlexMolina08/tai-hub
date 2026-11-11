@@ -1,6 +1,7 @@
 import { requiredGates, type LabPackage, type EventBatch } from './model'
 import { familyConflicts } from './partitions'
 import { validateIPv4Activity, validateIPv4Event } from './ipv4-workflow'
+import { validateLearningEvent } from './learning-context'
 
 export class LabValidationError extends Error {
   constructor(public readonly issues: string[]) {
@@ -94,6 +95,16 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     if (a.evaluationIntent !== undefined && (a.phase !== 'delayed' || !inList(a.evaluationIntent, ['retention', 'transfer']))) {
       issues.push(`${a.id}: intención de evaluación inválida`)
     }
+    if (a.learning !== undefined) {
+      const learning = a.learning
+      if (!record(learning) || !lists(learning, ['rechecksDiagnosticIds'], false) || !Array.isArray(learning.diagnostics)
+        || !learning.diagnostics.every(d => record(d) && string(d.id) && lists(d, ['objectiveIds'])
+          && (d.objectiveIds as string[]).every(id => (a.objectiveIds as string[]).includes(id))
+          && inList(d.severity, ['ordinary', 'critical']) && (a.kind === 'choice'
+            ? strings(d.choiceOptionIds) && d.choiceOptionIds.length > 0 && Array.isArray(a.options)
+              && d.choiceOptionIds.every(id => (a.options as RecordValue[]).some(o => o.id === id && o.correct === false))
+            : d.choiceOptionIds === undefined))) issues.push(`${a.id}: diagnósticos preparados inválidos`)
+    }
     if (a.kind === 'choice') {
       if (!Array.isArray(a.options) || a.options.length < 2 || !a.options.every(o => record(o)
         && fields(o, ['id', 'text', 'explanation']) && typeof o.correct === 'boolean')
@@ -135,6 +146,12 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
   const objectives = new Map(pack.objectives.map(o => [o.id, o]))
   const lessons = new Map(pack.lessons.map(l => [l.id, l]))
   const activities = new Map(pack.activities.map(a => [a.id, a]))
+  const diagnosticIds = pack.activities.flatMap(a => a.learning?.diagnostics.map(d => d.id) ?? [])
+  if (new Set(diagnosticIds).size !== diagnosticIds.length) issues.push('IDs de diagnóstico duplicados')
+  for (const a of pack.activities) for (const id of a.learning?.rechecksDiagnosticIds ?? []) {
+    const diagnostic = pack.activities.flatMap(v => v.learning?.diagnostics ?? []).find(d => d.id === id)
+    if (!diagnostic || !diagnostic.objectiveIds.every(id => a.objectiveIds.includes(id))) issues.push(`${a.id}: comprobación de diagnóstico inexistente o de otro objetivo`)
+  }
   const sources = new Map(pack.sources.map(s => [s.id, s]))
   const reference = (id: string, ids: string[], known: Map<string, unknown>) => {
     for (const ref of ids) if (!known.has(ref)) issues.push(`${id}: referencia inexistente ${ref}`)
@@ -243,10 +260,11 @@ export function parseEventBatch(input: unknown, accountId: string): EventBatch {
         || typeof e.solutionViewed !== 'boolean' || !inList(e.phase, phases)
         || !inList(e.outcome, e.ipv4 === undefined ? ['correct', 'incorrect', 'omitted'] : ['correct', 'incorrect', 'omitted', 'partial']) || (e.answer !== null && typeof e.answer !== 'string')
         || (e.outcome === 'omitted') !== (e.answer === null)) issues.push(`${e.id}: intento inválido`)
-    } else if (['ipv4-prediction', 'ipv4-reveal', 'ipv4-reset'].includes(String(e.kind))) {
+    } else if (['ipv4-prediction', 'ipv4-reveal', 'ipv4-reset', 'learning-context'].includes(String(e.kind))) {
       // The dedicated adapter checks the versioned action shape below.
     } else issues.push(`${e.id}: tipo de evento desconocido`)
     try { validateIPv4Event(e) } catch (error) { issues.push(`${e.id}: ${String(error)}`) }
+    try { validateLearningEvent(e) } catch (error) { issues.push(`${e.id}: ${String(error)}`) }
   }
   fail(issues)
   return structuredClone(input) as unknown as EventBatch

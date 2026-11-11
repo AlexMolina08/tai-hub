@@ -2,6 +2,7 @@ import type { Draft, EventBatch, LabEvent } from './model'
 import { LabValidationError, parseEventBatch } from './validate'
 import { validateNoteHistory } from './notes'
 import { validateIPv4History } from './ipv4-workflow'
+import { validateLearningHistory } from './learning-context'
 
 /** Stable serialization compares payloads, never wall clocks or insertion order. */
 export function canonical(value: unknown): string {
@@ -24,6 +25,7 @@ export function mergeEvents(accountId: string, ...groups: LabEvent[][]): LabEven
   validateNoteHistory(events)
   validateDraftHistory(events)
   try { validateIPv4History(events) } catch (error) { throw new LabValidationError([String(error)]) }
+  try { validateLearningHistory(events) } catch (error) { throw new LabValidationError([String(error)]) }
   return events.sort((a, b) => a.id.localeCompare(b.id))
 }
 export const draftKey = (d: Draft) => JSON.stringify([d.packageId, d.packageVersion, d.activityId, d.activityVersion])

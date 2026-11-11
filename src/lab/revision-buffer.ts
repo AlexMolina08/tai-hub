@@ -1,4 +1,4 @@
-import type { Draft, LabEvent, NoteRevision } from './model'
+import type { LabEvent } from './model'
 import { canonical } from './history'
 
 type Writer = (events: LabEvent[]) => Promise<void>
@@ -6,7 +6,7 @@ interface BufferedNote<T> { note: T; companions?: LabEvent[]; status: 'pending' 
 const entryEvents = <T extends LabEvent>(entry: BufferedNote<T>): LabEvent[] => [entry.note, ...(entry.companions ?? [])]
 
 /** Keeps local writes alive across editor navigation, including failures after unmount. */
-export class RevisionWriteBuffer<T extends NoteRevision | Draft> {
+export class RevisionWriteBuffer<T extends LabEvent> {
   #entries: BufferedNote<T>[] = []
   #listeners = new Set<() => void>()
   #writes = new Set<Promise<boolean>>()

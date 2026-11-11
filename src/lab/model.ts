@@ -86,6 +86,11 @@ export interface ActivityBase {
   hints: string[]
   solution: string
   claims: Claim[]
+  /** Prepared diagnostics only; feedback and personal notes are never interpreted. */
+  learning?: {
+    diagnostics: { id: string; objectiveIds: string[]; severity: 'ordinary' | 'critical'; choiceOptionIds?: string[] }[]
+    rechecksDiagnosticIds: string[]
+  }
 }
 export interface ChoiceActivity extends ActivityBase {
   kind: 'choice'
@@ -175,6 +180,8 @@ export interface Attempt extends EventBase, ActivityRef {
   phase: Phase
   feedback: string
   gradingVersion: string
+  learningContextId?: string
+  diagnosticIds?: string[]
   /** Numeric comparison only; the conceptual note is retained but never graded. */
   ipv4?: IPv4AttemptPayload
 }
@@ -191,11 +198,13 @@ export interface Assistance extends EventBase, ActivityRef {
   attemptGroupId: string
   hintCount: number
   solutionViewed: boolean
+  learningContextId?: string
 }
 export interface Exposure extends EventBase {
   kind: 'exposure'
   familyId: string
   reason: 'presented' | 'solution' | 'external'
+  learningContextId?: string
 }
 export interface IPv4AttemptPayload {
   modelVersion: string
@@ -216,6 +225,7 @@ export interface IPv4PredictionEvent extends EventBase, ActivityRef {
   hintCount: number
   solutionViewed: boolean
   activeMs: number
+  learningContextId?: string
 }
 /** Explicit causal links make reveal order independent of device wall clocks. */
 export interface IPv4RevealEvent extends EventBase, ActivityRef {
@@ -256,8 +266,31 @@ export interface NoteRevision extends EventBase {
   parentIds: string[]
   value: string
 }
+export interface LearningClock {
+  day: string
+  zone: string
+  /** Minutes east of UTC, as captured in the named zone. */
+  offsetMinutes: number
+  clockSessionId: string
+  monotonicMs: number
+}
+export type LearningTarget = (ActivityRef & { kind: 'activity'; attemptGroupId: string })
+  | { kind: 'lesson'; packageId: string; packageVersion: string; lessonId: string; lessonVersion: string }
+/** Prospective, declared device time and causal context. Never backfill older facts. */
+export interface LearningContext extends EventBase {
+  kind: 'learning-context'
+  contractVersion: 1
+  studySessionId: string
+  action: 'present' | 'answer' | 'help' | 'reading' | 'reset'
+  target: LearningTarget
+  factIds: string[]
+  parentIds: string[]
+  presentationId: string | null
+  clock: LearningClock
+}
 export type LabEvent = Attempt | Draft | Exposure | Assistance | SessionPosition | NoteRevision
   | IPv4PredictionEvent | IPv4RevealEvent | IPv4ResetEvent
+  | LearningContext
 export interface EventBatch {
   schema: 1
   privacy: 'tai-lab-private'
