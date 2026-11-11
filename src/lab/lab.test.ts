@@ -183,7 +183,7 @@ describe('local-first synchronization', () => {
     const b = new LabSync('account-a', memoryStore(), transport)
     return { files, transport, a, b, offline: (v: boolean) => { offline = v }, loseAck: () => { loseAck = true } }
   }
-  it('merges offline devices and duplicate uploads after a lost acknowledgement', async () => {
+  it('merges offline devices and confirms a previously uploaded batch after a lost acknowledgement', async () => {
     const s = setup(); s.offline(true)
     await s.a.record([sampleAttempt()]); await s.b.record([sampleAttempt('a2', 'device-b')])
     await expect(s.a.refresh()).rejects.toThrow('offline')
@@ -191,6 +191,7 @@ describe('local-first synchronization', () => {
     s.offline(false); s.loseAck()
     await expect(s.a.refresh()).rejects.toThrow('ack lost')
     await s.a.refresh(); await s.b.refresh(); await s.a.refresh()
+    expect(s.files.map(file => file.events.map(event => event.id))).toEqual([['a1'], ['a2']])
     expect(s.a.snapshot().events).toHaveLength(2)
     expect(s.a.snapshot().events).toEqual(s.b.snapshot().events)
     expect(s.a.snapshot().status).toBe('synced')

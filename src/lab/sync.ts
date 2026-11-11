@@ -50,13 +50,17 @@ export class LabSync {
         remote = mergeEvents(this.accountId, remote, parseEventBatch(await this.transport.read(file.id), this.accountId).events)
       }
       if (this.#closed) return
-      const combined = await this.store.update(state => ({ ...state, events: mergeEvents(this.accountId, state.events, remote) }))
+      const confirmed = new Set(remote.map(event => event.id))
+      const combined = await this.store.update(state => ({
+        events: mergeEvents(this.accountId, state.events, remote),
+        pendingIds: state.pendingIds.filter(id => !confirmed.has(id)),
+      }))
       this.#publish(combined, 'syncing')
       const sending = new Set(combined.pendingIds)
       if (sending.size) {
         await this.transport.append({ schema: 1, privacy: 'tai-lab-private', accountId: this.accountId,
           events: combined.events.filter(e => sending.has(e.id)) })
-        // Closing during an upload leaves the queue pending; re-upload is safe after reconnecting.
+        // Closing during an upload leaves the queue pending until the next refresh can confirm it.
         if (this.#closed) return
       }
       const saved = await this.store.update(state => ({ ...state, pendingIds: state.pendingIds.filter(id => !sending.has(id)) }))

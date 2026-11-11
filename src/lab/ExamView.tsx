@@ -260,7 +260,7 @@ function ExamResult({ section, answers, sources }: {
       <StudyText text={question.prompt} />
       <ul>{question.options.map(option => <li key={option.id}>
         <StudyText text={option.text} />
-        {option.id === selected && <strong> Tu respuesta.</strong>}{option.correct && <strong> Opción correcta.</strong>}
+        {option.id === selected && <strong> Tu respuesta.</strong>}{option.correct && <strong>{question.provenance.kind === 'official-tai' ? ' Clave oficial.' : ' Opción correcta.'}</strong>}
         <StudyText text={option.explanation} />
       </li>)}</ul>
       <ul aria-label="Referencias para la corrección">{question.claims.map((claim, index) => {
