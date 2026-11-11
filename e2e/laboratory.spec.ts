@@ -1716,3 +1716,62 @@ test('functional dependency practice persists a manual sequence and its trace', 
     controls: ['1','0','1','0','B → A','C → D','A → B'], answers: ['d, c, b, a','Sí','CB / CA'],
   })
 })
+
+test('algorithm practice restores a different case and keeps its earlier attempt', async ({ page, context, browserName }) => {
+  const pack = samplePackage()
+  pack.activities[0] = { ...pack.activities[0], kind: 'algorithm-model', phase: 'practice', title: 'Algoritmos sintéticos',
+    mode: { kind: 'simulation', engine: 'Bounded algorithm model', version: 'algorithm-model-v1', limits: 'Synthetic arrays.' },
+    profile: { kind: 'comparison', sorted: [1,5,7,9,11], present: 9, absent: 8,
+      sorts: [{ label: 'Mezclada', values: [7,1,5,0] }, { label: 'Repetidos', values: [1,1,2] }] } }
+  const drive = new DriveFixture()
+  drive.addLabPackage('lab-synthetic-algorithm', pack)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click()
+  await showPractice(page)
+
+  const sample = page.getByRole('combobox', { name: 'Caso', exact: true })
+  const grade = page.getByRole('button', { name: 'Comprobar predicción', exact: true })
+  const trace = page.getByRole('group', { name: 'Traza paso a paso' })
+  await sample.selectOption('Binaria, clave ausente')
+  await page.getByRole('textbox', { name: 'Valores examinados en orden' }).fill('7,9')
+  await page.getByRole('textbox', { name: 'Posiciones examinadas' }).fill('2')
+  await page.getByRole('combobox', { name: '¿Se encuentra la clave?' }).selectOption('No')
+  await expect(trace).toHaveCount(0)
+  await grade.click()
+  await expect(page.getByText('Predicción correcta.', { exact: true })).toBeVisible()
+  const next = trace.getByRole('button', { name: 'Paso siguiente' })
+  await next.click()
+  await next.click()
+  await expect(trace.getByText(/La clave no aparece/)).toBeVisible()
+
+  await sample.selectOption('Inserción · Mezclada')
+  await expect(trace).toHaveCount(0)
+  await expect(grade).toBeDisabled()
+  await page.getByRole('textbox', { name: 'Estado tras la primera pasada' }).fill('1 7 5 0')
+  await page.getByRole('textbox', { name: 'Comparaciones de claves' }).fill('6')
+  await page.getByRole('textbox', { name: 'Intercambios' }).fill('5')
+  await expect(page.getByRole('region', { name: 'Guardado del borrador' })).toHaveCount(0)
+  await page.reload()
+  await openLab(page)
+  await expect(sample).toHaveValue('Inserción · Mezclada')
+  await expect(page.getByRole('textbox', { name: 'Intercambios' })).toHaveValue('5')
+  await grade.click()
+  await expect(page.getByText('Predicción correcta.', { exact: true })).toBeVisible()
+  await next.click()
+  await expect(trace.getByText(/Al terminar la pasada 1 queda 1, 7, 5, 0/)).toBeVisible()
+  expect(await page.locator('.lab-algorithm').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+  const attempts = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+    .filter(event => event.kind === 'attempt' && event.gradingVersion === 'algorithm-model-v1')
+    .sort((a,b) => a.ordinal-b.ordinal)
+  expect(attempts.map(event => [event.outcome, JSON.parse(event.answer!).controls[0]])).toEqual([
+    ['correct','Binaria, clave ausente'], ['correct','Inserción · Mezclada'],
+  ])
+})

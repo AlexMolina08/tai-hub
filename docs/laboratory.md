@@ -142,6 +142,8 @@ El modelo de dependencias funcionales permite editar la semilla y proponer un or
 
 El modelo de pila permite cambiar de función y de argumento inicial. Se guardan la predicción y la configuración antes de revelar las entradas, los retornos y los marcos activos. El paso de lectura se conserva en el borrador y el intento mantiene la respuesta original. Cada activación recibe un identificador propio.
 
+El modelo de estructuras y algoritmos compara la retirada LIFO y FIFO, los cambios y recorridos de árboles de búsqueda, y el coste de búsquedas y de inserción por intercambios adyacentes. El paquete fija los datos y la operación que se cuenta. El reproductor conserva la configuración, la predicción y el paso de la traza. Las comparaciones de claves se cuentan aparte de los intercambios.
+
 ## Disponibilidad sin conexión
 
 El usuario prepara explícitamente aplicación y motores. El manifiesto se genera desde archivos públicos emitidos por Vite; cada descarga verifica SHA-256. Cache Storage solo contiene esos archivos públicos. Paquetes y respuestas permanecen en IndexedDB por cuenta. El estado vuelve a comprobar la presencia de archivos y deja de mostrar disponibilidad si se elimina una dependencia.

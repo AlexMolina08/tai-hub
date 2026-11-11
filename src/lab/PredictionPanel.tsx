@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Attempt, PredictionActivity } from './model'
 import { describeFrame, frameControls } from './frame-model'
 import { accessControls, describeAccess } from './access-model'
+import { algorithmControls, describeAlgorithm } from './algorithm-model'
 import { closureControls, describeClosure } from './closure-model'
 import { describeRelation, relationControls } from './relation-model'
 import { describeStack, stackControls } from './stack-model'
@@ -17,6 +18,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: stackControls, describe: describeStack }
     case 'closure-model':
       return { controls: closureControls(activity.profile), describe: (values: string[]) => describeClosure(activity.profile, values) }
+    case 'algorithm-model':
+      return { controls: algorithmControls(activity.profile), describe: (values: string[]) => describeAlgorithm(activity.profile, values) }
     case 'frame-model':
       return { controls: frameControls(activity.profile), describe: (values: string[]) => describeFrame(activity.profile, values) }
   }

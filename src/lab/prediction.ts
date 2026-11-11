@@ -3,6 +3,7 @@ import type { Activity, PredictionActivity } from './model'
 export function isPredictionActivity(activity: Activity): activity is PredictionActivity {
   return activity.kind === 'frame-model' || activity.kind === 'access-model'
     || activity.kind === 'stack-model' || activity.kind === 'relation-model' || activity.kind === 'closure-model'
+    || activity.kind === 'algorithm-model'
 }
 
 export type PredictionControl = { label: string; options: string[]; initial: string; toggle?: true }
@@ -57,6 +58,7 @@ function normalize(answer: PredictionAnswer, raw: string): string | undefined {
       return /^[A-Z0-9]+$|^-$/.test(sequence) ? sequence : undefined
     }
     case 'signed-list':
+      if (text === '-') return text
       return text.length <= predictionInputLimit(answer) && /^-?\d{1,2}(?:(?:\s*,\s*|\s+)-?\d{1,2})*$/.test(text)
         ? text.split(/[\s,]+/).map(Number).join(',') : undefined
     case 'attribute-set': return normalizeSet(text)
