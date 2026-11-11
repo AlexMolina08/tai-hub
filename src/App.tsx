@@ -107,6 +107,7 @@ export default function App() {
   const study = useSyncExternalStore(sync ? fn => sync.subscribe(fn) : subscribeIdle, sync ? () => sync.snapshot() : getEmptyStudy)
   const studyStatus = useSyncExternalStore(sync?.subscribe ?? subscribeIdle, sync?.status ?? (() => 'idle'))
   const accountId = account?.id
+  const labAccountId = view.page === 'lab' ? accountId ?? session.localAccountId() : undefined
   const current = view.page === 'resource' ? resources.find(item => item.id === view.id) : undefined
   const currentVersion = current?.version
   const readingPdf = current?.kind === 'pdf'
@@ -500,9 +501,9 @@ export default function App() {
 
       <main className={current ? 'content content-reader' : 'content'} id="main" tabIndex={-1}>
         {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && !officialView && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
-        {!officialView && account && !connected && <div className="banner" role="status"><CloudOff size={18} />
+        {!officialView && (account || labAccountId) && !connected && <div className="banner" role="status"><CloudOff size={18} />
           <span>{auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Renueva el acceso a Drive para abrir archivos y sincronizar.'}</span>
-          <button className="button" disabled={!network || auth.status === 'connecting' || working}
+          <button className="button" disabled={!network || auth.status === 'loading' || auth.status === 'connecting' || working}
             onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{auth.status === 'connected' ? 'Reintentar' : 'Reconectar'}</button></div>}
         {!officialView && (error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
           {!ios && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
@@ -546,7 +547,7 @@ export default function App() {
           <section className="section"><div className="section-head"><h2>Accesos rápidos</h2></div>
             <div className="shortcut-grid">{mainNav.slice(1).map(({ page, label, icon: Icon }) => <button key={page} className="shortcut" onClick={() => navigate({ page })}><Icon size={19} /> {label}<ChevronRight size={16} /></button>)}</div>
           </section>
-        </> : view.page === 'lab' ? <Suspense fallback={<p>Cargando laboratorio…</p>}><Laboratory library={library} accountId={accountId ?? session.localAccountId()} connected={connected}
+        </> : view.page === 'lab' ? <Suspense fallback={<p>Cargando laboratorio…</p>}><Laboratory library={library} accountId={labAccountId} connected={connected}
           openMaterial={(id, sectionId) => { const resource = resources.find(r => r.id === id || (id.startsWith('import:') && r.importKey === id.slice(7))); if (resource) open(resource, undefined, undefined, sectionId); else setError('El material no está disponible en esta biblioteca.') }} /></Suspense>
         : officialView ? <OfficialInap {...official} /> : view.page === 'search' ? <>
           <div className="page-heading"><p className="context-label"><Search size={17} /> Biblioteca</p><h1>Búsqueda</h1><p>Busca por título, fuente y texto dentro de los PDF.</p></div>
