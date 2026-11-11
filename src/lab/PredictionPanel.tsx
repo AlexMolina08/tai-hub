@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Attempt, PredictionActivity } from './model'
 import { describeEthernetSwitch, ethernetSwitchControls } from './ethernet-switch-model'
 import { describeLanRedundancy, lanRedundancyControls } from './lan-redundancy-model'
+import { describeServiceCapacity, serviceCapacityControls } from './service-capacity-model'
 import { describeLanVlan, lanVlanControls } from './lan-vlan-model'
 import { describeFrame, frameControls } from './frame-model'
 import { accessControls, describeAccess } from './access-model'
@@ -47,6 +48,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: ethernetSwitchControls(activity.profile), describe: (values: string[]) => describeEthernetSwitch(activity.profile, values) }
     case 'lan-redundancy-model':
       return { controls: lanRedundancyControls(activity.profile), describe: (values: string[]) => describeLanRedundancy(activity.profile, values) }
+    case 'service-capacity-model':
+      return { controls: serviceCapacityControls(activity.profile), describe: (values: string[]) => describeServiceCapacity(activity.profile, values) }
     case 'lan-vlan-model':
       return { controls: lanVlanControls(activity.profile), describe: (values: string[]) => describeLanVlan(activity.profile, values) }
     case 'contention-model':
