@@ -102,7 +102,7 @@ function readIPv4(raw: unknown, field: keyof IPv4Input): IPv4Failure | { ok: tru
   if (octets.some(x => x > 255)) return fail('IP_RANGE', field, 'Cada octeto debe estar entre 0 y 255.')
   return { ok: true, text: value, number: octets.reduce((n, x) => n * 256 + x, 0) }
 }
-const dotted = (n: number) => [24, 16, 8, 0].map(bits => Math.floor(n / 2 ** bits) % 256).join('.')
+export const formatIPv4 = (n: number) => [24, 16, 8, 0].map(bits => Math.floor(n / 2 ** bits) % 256).join('.')
 
 export function validateInput(raw: unknown): IPv4Failure | { ok: true; input: IPv4NormalizedInput } {
   if (!record(raw)) return fail('INPUT_SHAPE', 'input', 'La entrada debe ser un objeto de campos.')
@@ -149,7 +149,7 @@ export function calculate(raw: unknown): IPv4Failure | IPv4Calculation {
   const i = valid.input, addressCount = 2 ** (32 - i.prefix)
   // Number arithmetic keeps /0 and the unsigned IPv4 maximum intact; no signed bitwise coercion.
   const low = Math.floor(i.addressNumber / addressCount) * addressCount, high = low + addressCount - 1
-  const lower = dotted(low), upper = dotted(high), mask = dotted(2 ** 32 - addressCount)
+  const lower = formatIPv4(low), upper = formatIPv4(high), mask = formatIPv4(2 ** 32 - addressCount)
   const probeMember = i.probeNumber === null ? null : i.probeNumber >= low && i.probeNumber <= high
   const probePosition = i.probeNumber === null ? null : !probeMember ? 'outside' : low === high ? 'single'
     : i.probeNumber === low ? 'lower' : i.probeNumber === high ? 'upper' : 'interior'
@@ -179,7 +179,7 @@ export function calculate(raw: unknown): IPv4Failure | IPv4Calculation {
   } else {
     interpretation.kind = 'conventional-private'
     interpretation.directedBroadcast = upper
-    interpretation.conventionalInterior = { lower: dotted(low + 1), upper: dotted(high - 1), count: addressCount - 2 }
+    interpretation.conventionalInterior = { lower: formatIPv4(low + 1), upper: formatIPv4(high - 1), count: addressCount - 2 }
     interpretation.explanation = 'Bajo el contexto declarado de subred unicast convencional, el límite superior es su broadcast dirigido y el inferior su dirección de red. El intervalo interior es aritmético: no certifica direcciones libres, permitidas o correctamente configuradas.'
   }
   return { ok: true, modelVersion: MODEL_VERSION, address: i.address, prefix: i.prefix, mask, lower, upper,

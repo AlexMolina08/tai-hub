@@ -4,6 +4,7 @@ import type { ClosureProfile } from './closure-model'
 import type { FrameProfile } from './frame-model'
 import type { RadioProfile } from './radio-model'
 import type { DhcpProfile } from './dhcp-model'
+import type { VlsmProfile } from './vlsm-model'
 import type { TransactionProfile } from './transaction-model'
 import type { RelationProfile } from './relation-model'
 import type { SignalCase } from './signal-model'
@@ -190,9 +191,14 @@ export interface TransactionModelActivity extends ActivityBase {
   phase: 'practice'
   profile: TransactionProfile
 }
+export interface VlsmModelActivity extends ActivityBase {
+  kind: 'vlsm-model'
+  phase: 'practice'
+  profile: VlsmProfile
+}
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
   | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
-  | TransactionModelActivity
+  | TransactionModelActivity | VlsmModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
