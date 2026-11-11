@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Attempt, PredictionActivity } from './model'
+import { describeEthernetSwitch, ethernetSwitchControls } from './ethernet-switch-model'
 import { describeFrame, frameControls } from './frame-model'
 import { accessControls, describeAccess } from './access-model'
 import { algorithmControls, describeAlgorithm } from './algorithm-model'
@@ -40,6 +41,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: dhcpControls(activity.profile), describe: (values: string[]) => describeDhcp(activity.profile, values) }
     case 'transaction-model':
       return { controls: transactionControls(activity.profile), describe: (values: string[]) => describeTransaction(activity.profile, values) }
+    case 'ethernet-switch-model':
+      return { controls: ethernetSwitchControls(activity.profile), describe: (values: string[]) => describeEthernetSwitch(activity.profile, values) }
     case 'contention-model':
       return { controls: contentionControls(activity.profile), describe: (values: string[]) => describeContention(activity.profile, values) }
     case 'route-model':

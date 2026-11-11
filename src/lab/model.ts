@@ -1,6 +1,7 @@
 import type { AccessProfile } from './access-model'
 import type { AlgorithmProfile } from './algorithm-model'
 import type { ClosureProfile } from './closure-model'
+import type { EthernetSwitchProfile } from './ethernet-switch-model'
 import type { FrameProfile } from './frame-model'
 import type { InterleavingProfile } from './interleaving-model'
 import type { RadioProfile } from './radio-model'
@@ -214,9 +215,15 @@ export interface InterleavingModelActivity extends ActivityBase {
   phase: 'practice'
   profile: InterleavingProfile
 }
+export interface EthernetSwitchModelActivity extends ActivityBase {
+  kind: 'ethernet-switch-model'
+  phase: 'practice'
+  profile: EthernetSwitchProfile
+}
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
   | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
   | TransactionModelActivity | VlsmModelActivity | RouteModelActivity | ContentionModelActivity | InterleavingModelActivity
+  | EthernetSwitchModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
