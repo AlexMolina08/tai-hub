@@ -1,5 +1,6 @@
 import type { AccessProfile } from './access-model'
 import type { FrameProfile } from './frame-model'
+import type { RelationProfile } from './relation-model'
 import type { SignalCase } from './signal-model'
 import type { IPv4Input, IPv4Prediction, IPv4Comparison } from './ipv4'
 
@@ -144,7 +145,17 @@ export interface AccessModelActivity extends ActivityBase {
   phase: 'practice'
   profile: AccessProfile
 }
-export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | FrameModelActivity | AccessModelActivity
+export interface StackModelActivity extends ActivityBase {
+  kind: 'stack-model'
+  phase: 'practice'
+}
+export interface RelationModelActivity extends ActivityBase {
+  kind: 'relation-model'
+  phase: 'practice'
+  profile: RelationProfile
+}
+export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
+export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
   kind: 'recover' | 'understand' | 'experiment' | 'transfer' | 'close'

@@ -1,27 +1,45 @@
+import type { Activity, PredictionActivity } from './model'
+
+export function isPredictionActivity(activity: Activity): activity is PredictionActivity {
+  return activity.kind === 'frame-model' || activity.kind === 'access-model'
+    || activity.kind === 'stack-model' || activity.kind === 'relation-model'
+}
+
 export type PredictionControl = { label: string; options: string[]; initial: string; toggle?: true }
 export type PredictionAnswer = {
   label: string
   expected: string
   options?: string[]
-  format?: 'sequence' | 'hex' | 'hex-or-dash' | 'integer' | 'fraction'
+  format?: 'sequence' | 'signed-list' | 'hex' | 'hex-or-dash' | 'integer' | 'fraction'
 }
 export type PredictionExercise = {
   facts: string[]
   answers: PredictionAnswer[]
   steps: string[]
   points?: [number, number][]
+  trace?: string[]
+}
+
+export function predictionInputLimit(answer: PredictionAnswer) {
+  return answer.format === 'signed-list' ? 256 : 40
 }
 
 export function parsePredictionDraft(raw: string, schema: PredictionControl[], describe: (values: string[]) => PredictionExercise) {
-  let value: { controls?: unknown; answers?: unknown } | undefined
+  let value: { controls?: unknown; answers?: unknown; step?: unknown } | undefined
   try { value = JSON.parse(raw) } catch { value = undefined }
   const choices = Array.isArray(value?.controls) ? value.controls : []
   const predictions = Array.isArray(value?.answers) ? value.answers : []
   const valid = choices.length === schema.length && schema.every((control, i) => control.options.includes(choices[i]))
   const controls = valid ? choices as string[] : schema.map(control => control.initial)
-  const answers = describe(controls).answers.map((_, i) =>
-    valid && typeof predictions[i] === 'string' && predictions[i].length <= 40 ? predictions[i] : '')
-  return { controls, answers }
+  const exercise = describe(controls)
+  const answers = exercise.answers.map((answer, i) =>
+    valid && typeof predictions[i] === 'string' && predictions[i].length <= predictionInputLimit(answer) ? predictions[i] : '')
+  const step = value?.step
+  return {
+    controls, answers,
+    ...(valid && exercise.trace && typeof step === 'number' && Number.isInteger(step) && step >= 0
+      && step < exercise.trace.length ? { step } : {}),
+  }
 }
 
 function normalize(answer: PredictionAnswer, raw: string): string | undefined {
@@ -32,6 +50,9 @@ function normalize(answer: PredictionAnswer, raw: string): string | undefined {
       const sequence = text.replace(/[\s,]+/g, '')
       return /^[A-Z0-9]+$|^-$/.test(sequence) ? sequence : undefined
     }
+    case 'signed-list':
+      return text.length <= predictionInputLimit(answer) && /^-?\d{1,2}(?:(?:\s*,\s*|\s+)-?\d{1,2})*$/.test(text)
+        ? text.split(/[\s,]+/).map(Number).join(',') : undefined
     case 'hex':
     case 'hex-or-dash': {
       const hexText = text.replace(/^0X/, '')

@@ -134,6 +134,12 @@ El modelo de símbolos y tramas añade controles editables para constelación I/
 
 El modelo de acceso permite cambiar terminaciones de xDSL y FTTH, interrumpir un medio y conmutar entre puente y router. El perfil Ethernet contrasta la difusión y el segmento de colisión al variar equipos y enlaces. La traza explica dónde se interrumpe el recorrido. Todos los perfiles son sintéticos y se corrigen localmente con las funciones y el dúplex declarados.
 
+## Práctica de modelado y recursividad
+
+El modelo E/R permite añadir documentos para contrastar la unicidad de una clave y la representación de sus destinatarios. El perfil de cardinalidad permite editar enlaces y comprobar la participación mínima y máxima por elemento.
+
+El modelo de pila permite cambiar de función y de argumento inicial. Se guardan la predicción y la configuración antes de revelar las entradas, los retornos y los marcos activos. El paso de lectura se conserva en el borrador y el intento mantiene la respuesta original. Cada activación recibe un identificador propio.
+
 ## Disponibilidad sin conexión
 
 El usuario prepara explícitamente aplicación y motores. El manifiesto se genera desde archivos públicos emitidos por Vite; cada descarga verifica SHA-256. Cache Storage solo contiene esos archivos públicos. Paquetes y respuestas permanecen en IndexedDB por cuenta. El estado vuelve a comprobar la presencia de archivos y deja de mostrar disponibilidad si se elimina una dependencia.

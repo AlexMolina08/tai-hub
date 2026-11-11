@@ -20,7 +20,7 @@ import { HtmlPanel } from './HtmlPanel'
 import { IPv4Panel } from './IPv4Panel'
 import { SignalPanel } from './SignalPanel'
 import { PredictionPanel, predictionFor } from './PredictionPanel'
-import { parsePredictionDraft } from './prediction'
+import { isPredictionActivity, parsePredictionDraft } from './prediction'
 import { createIPv4View, parseIPv4View, serializeIPv4View } from './ipv4-workflow'
 import { StudyText } from './StudyText'
 import { activityLocationKey, studyContinuation } from './continuation'
@@ -384,7 +384,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const failed = buffered.filter(entry => entry.status === 'failed')
   const pending = buffered.some(entry => entry.status === 'pending')
   const initialValue = activity.kind === 'choice' ? '' : activity.kind === 'ipv4-model' ? serializeIPv4View(createIPv4View(activity))
-    : activity.kind === 'signal-model' ? '[]' : activity.kind === 'frame-model' || activity.kind === 'access-model' ? '{}'
+    : activity.kind === 'signal-model' ? '[]' : isPredictionActivity(activity) ? '{}'
       : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
   const [initial] = useState<Draft>(() => {
     const queued = semantic.events().find((event): event is Draft => event.kind === 'draft' && !!newAttemptGroupId
@@ -510,7 +510,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       phase: activity.phase, gradingVersion: activity.mode.version, feedback }])
   }
   function draftLabel(value: string, index: number) {
-    if (activity.kind === 'frame-model' || activity.kind === 'access-model') {
+    if (isPredictionActivity(activity)) {
       const schema = predictionFor(activity)
       const draft = parsePredictionDraft(value, schema.controls, schema.describe)
       const controls = schema.controls.map((control, i) =>
@@ -583,7 +583,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       unsaved={pending || failed.length > 0} events={events} context={{ accountId, deviceId, packageId: pack.id, packageVersion: pack.version, attemptGroupId: groupId }}
       takeActiveMs={activeMs} save={save} /> : activity.kind === 'signal-model' ? <SignalPanel activity={activity} saved={answer} latest={latest}
       disabled={heads.length === 0 || busy || semanticBlocked} save={save} onResult={submitModel} />
-      : activity.kind === 'frame-model' || activity.kind === 'access-model' ? <PredictionPanel activity={activity} saved={answer} latest={latest}
+      : isPredictionActivity(activity) ? <PredictionPanel activity={activity} saved={answer} latest={latest}
         disabled={heads.length === 0 || busy || semanticBlocked} save={save} onResult={submitModel} /> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy || semanticBlocked}
       save={save} onResult={async (value, correct, feedback) => {
         await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
