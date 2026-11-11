@@ -7,6 +7,7 @@ import { DHCP_MODEL_VERSION, validDhcpProfile } from './dhcp-model'
 import { TRANSACTION_MODEL_VERSION, validTransactionProfile } from './transaction-model'
 import { VLSM_MODEL_VERSION, validVlsmProfile } from './vlsm-model'
 import { ROUTE_MODEL_VERSION, validRouteProfile } from './route-model'
+import { CONTENTION_MODEL_VERSION, validContentionProfile } from './contention-model'
 import { RELATION_MODEL_VERSION, validRelationProfile } from './relation-model'
 import { SIGNAL_MODEL_VERSION, validSignalCases } from './signal-model'
 import { STACK_MODEL_VERSION } from './stack-model'
@@ -149,6 +150,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
             && inList(k.kind, ['count', 'text', 'style', 'attribute']) && typeof k.expected === 'string' && k.expected.length <= 2000
             && (!['style', 'attribute'].includes(String(k.kind)) || (string(k.property) && /^[a-zA-Z-]{1,64}$/.test(k.property)))))
         || new Set(a.cases.map(c => (c as RecordValue).id)).size !== a.cases.length) issues.push(`${a.id}: casos HTML/CSS inválidos`)
+    } else if (a.kind === 'contention-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== CONTENTION_MODEL_VERSION
+        || !validContentionProfile(a.profile)) issues.push(`${a.id}: perfil de acceso al medio inválido`)
     } else if (a.kind === 'route-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== ROUTE_MODEL_VERSION
         || !validRouteProfile(a.profile)) issues.push(`${a.id}: perfil de rutas inválido`)

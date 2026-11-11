@@ -5,6 +5,7 @@ export function isPredictionActivity(activity: Activity): activity is Prediction
     || activity.kind === 'stack-model' || activity.kind === 'relation-model' || activity.kind === 'closure-model'
     || activity.kind === 'algorithm-model' || activity.kind === 'switching-model' || activity.kind === 'radio-model'
     || activity.kind === 'dhcp-model' || activity.kind === 'transaction-model' || activity.kind === 'vlsm-model' || activity.kind === 'route-model'
+    || activity.kind === 'contention-model'
 }
 
 export type PredictionControl = { label: string; options: string[]; initial: string; toggle?: true }

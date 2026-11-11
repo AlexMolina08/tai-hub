@@ -6,6 +6,7 @@ import type { RadioProfile } from './radio-model'
 import type { DhcpProfile } from './dhcp-model'
 import type { VlsmProfile } from './vlsm-model'
 import type { RouteProfile } from './route-model'
+import type { ContentionProfile } from './contention-model'
 import type { TransactionProfile } from './transaction-model'
 import type { RelationProfile } from './relation-model'
 import type { SignalCase } from './signal-model'
@@ -202,9 +203,14 @@ export interface RouteModelActivity extends ActivityBase {
   phase: 'practice'
   profile: RouteProfile
 }
+export interface ContentionModelActivity extends ActivityBase {
+  kind: 'contention-model'
+  phase: 'practice'
+  profile: ContentionProfile
+}
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
   | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
-  | TransactionModelActivity | VlsmModelActivity | RouteModelActivity
+  | TransactionModelActivity | VlsmModelActivity | RouteModelActivity | ContentionModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
