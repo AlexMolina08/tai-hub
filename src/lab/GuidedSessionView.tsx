@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import type { Activity, Attempt, GuidedSession, LabEvent, LabPackage, SessionPosition } from './model'
 import { sessionAssistance, sessionMinutes } from './guided'
 import { StudyText } from './StudyText'
+import { StudyNoteEditor } from './StudyNoteEditor'
 
 export function GuidedSessionView({ pack, session, accountId, deviceId, events, record, openMaterial, renderActivity, initialPosition, onPosition }: {
   pack: LabPackage; session: GuidedSession; accountId: string; deviceId: string; events: LabEvent[]
@@ -89,6 +90,9 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
       {stage.kind === 'close' && <section className="lab-guided-summary" aria-label="Respuestas guardadas">
         <h4>{answered.size} de {allIds.length} actividades con respuesta guardada</h4>
         <p>Completar este recorrido no demuestra por sí solo comprensión, retención o transferencia.</p>
+        <StudyNoteEditor target={{ kind: 'session', purpose: 'reflection', packageId: pack.id, packageVersion: pack.version,
+          sessionId: session.id, sessionVersion: session.version }} accountId={accountId} deviceId={deviceId} events={events} record={record}
+          label="Errores y próximo paso" />
         <details><summary>Revisar respuestas y ayudas</summary>{allIds.map(id => {
           const own = attempts.filter(attempt => attempt.activityId === id).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id))
           const first = own[0], last = own.at(-1)

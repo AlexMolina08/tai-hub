@@ -198,7 +198,16 @@ export interface SessionPosition extends EventBase {
   activityId: string | null
   completed: boolean
 }
-export type LabEvent = Attempt | Draft | Exposure | Assistance | SessionPosition
+export type NoteTarget = (ActivityRef & { kind: 'activity'; purpose: 'prediction' })
+  | { kind: 'session'; purpose: 'reflection'; packageId: string; packageVersion: string; sessionId: string; sessionVersion: string }
+/** Personal text is never graded. Concurrent revisions retain both branches until an explicit choice. */
+export interface NoteRevision extends EventBase {
+  kind: 'note'
+  target: NoteTarget
+  parentIds: string[]
+  value: string
+}
+export type LabEvent = Attempt | Draft | Exposure | Assistance | SessionPosition | NoteRevision
 export interface EventBatch {
   schema: 1
   privacy: 'tai-lab-private'

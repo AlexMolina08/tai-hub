@@ -20,6 +20,7 @@ import { activityLocationKey, studyContinuation } from './continuation'
 import { LessonCatalog } from './LessonCatalog'
 import { GuidedSessionView } from './GuidedSessionView'
 import { sessionMinutes, sessionResume } from './guided'
+import { StudyNoteEditor } from './StudyNoteEditor'
 import './laboratory.css'
 
 const empty: LabSnapshot = { events: [], pendingIds: [], status: 'local' }
@@ -349,6 +350,10 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   return <div className="lab-activity">
     <h3>{activity.title}</h3><p className="lab-mode">{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</p>
     <StudyText text={activity.prompt} />
+    <details className="lab-prediction"><summary>Anotar una predicción (opcional)</summary>
+      <StudyNoteEditor target={{ ...ref, kind: 'activity', purpose: 'prediction' }} accountId={accountId} deviceId={deviceId}
+        events={events} record={record} label="Tu predicción" />
+    </details>
     {heads.length > 1 ? <div role="alert"><h4>Hay dos borradores de esta actividad</h4>
       <p>Elige cuál continuar. Las versiones anteriores se conservarán en el historial.</p>
       {heads.map(head => <button className="button" key={head.id} disabled={busy} onClick={() => void run(async () => {

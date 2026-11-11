@@ -94,6 +94,88 @@ test('guided session resumes its stage and activity across devices and preserves
   } finally { await other.close() }
 })
 
+test('personal notes preserve concurrent edits, closing reflections and export restoration', async ({ browser, browserName, baseURL }) => {
+  test.setTimeout(90_000)
+  const drive = new DriveFixture(); drive.addLabPackage('lab-notes', sampleGuidedPackage())
+  const contexts = await Promise.all([browser.newContext({ viewport: { width: 390, height: 844 } }), browser.newContext(), browser.newContext()])
+  try {
+    for (const context of contexts.slice(0, 2)) await drive.install(context, browserName === 'webkit')
+    const cleanDrive = new DriveFixture(); cleanDrive.addLabPackage('lab-notes-restored', sampleGuidedPackage())
+    await cleanDrive.install(contexts[2], browserName === 'webkit')
+    const [a, b, c] = await Promise.all(contexts.map(context => context.newPage()))
+    const connect = async (page: import('@playwright/test').Page) => {
+      await page.goto(baseURL + '/tai-hub/')
+      await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+      await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+      await openLab(page)
+      await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+    }
+    const sync = async (page: import('@playwright/test').Page) => {
+      await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+      await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    }
+    const predict = async (page: import('@playwright/test').Page) => {
+      await page.getByRole('button', { name: /Sesión sintética/ }).click()
+      await page.getByText('Anotar una predicción (opcional)', { exact: true }).click()
+      return page.getByRole('textbox', { name: 'Tu predicción', exact: true })
+    }
+    await connect(a)
+    const first = await predict(a)
+    await first.fill('Predicción inicial')
+    await expect(a.getByRole('region', { name: 'Tu predicción', exact: true })).toContainText('Nota guardada.')
+    await sync(a)
+    await connect(b)
+    const second = await predict(b)
+    await expect(second).toHaveValue('Predicción inicial')
+    for (const context of contexts.slice(0, 2)) await context.setOffline(true)
+    await first.fill('Revisión del teléfono')
+    await second.fill('Revisión del escritorio')
+    for (const page of [a, b]) await expect(page.getByRole('region', { name: 'Tu predicción', exact: true })).toContainText('Nota guardada.')
+    for (const i of [1, 0]) { await contexts[i].setOffline(false); await sync([a, b][i]) }
+    await expect(a.getByRole('heading', { name: 'Hay versiones distintas de esta nota', exact: true })).toBeVisible()
+    await expect(first).toBeDisabled()
+    const chosen = a.locator('.lab-note-version').filter({ hasText: 'Revisión del teléfono' })
+    await chosen.getByRole('button', { name: 'Continuar con esta versión', exact: true }).click()
+    await expect(first).toHaveValue('Revisión del teléfono')
+    await expect(first).toBeEnabled()
+    await sync(a); await sync(b)
+    await expect(second).toHaveValue('Revisión del teléfono')
+    await a.getByRole('navigation', { name: 'Etapas de la sesión', exact: true }).getByRole('button', { name: /5. Cerrar/ }).click()
+    const reflection = a.getByRole('textbox', { name: 'Errores y próximo paso', exact: true })
+    await reflection.fill('Revisar el caso límite y volver mañana.')
+    await expect(a.getByRole('region', { name: 'Errores y próximo paso', exact: true })).toContainText('Nota guardada.')
+    await sync(a)
+    await a.reload(); await expect(a.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(a)
+    await expect(reflection).toHaveValue('Revisar el caso límite y volver mañana.')
+    expect(await a.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect((await new AxeBuilder({ page: a }).include('.lab-note').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+    await a.screenshot({ path: test.info().outputPath('notes-mobile.png'), fullPage: true })
+    await openStudyOptions(a)
+    const downloading = a.waitForEvent('download')
+    await a.getByRole('button', { name: 'Exportar progreso', exact: true }).click()
+    const exported = await readFile((await (await downloading).path())!, 'utf8')
+    const events = JSON.parse(exported).events as LabEvent[]
+    const notes = events.filter(event => event.kind === 'note')
+    expect(notes).toHaveLength(5)
+    expect(notes.filter(note => note.parentIds.length === 2)).toHaveLength(1)
+    expect(events.some(event => event.kind === 'attempt' || event.kind === 'assistance')).toBe(false)
+    await connect(c)
+    await c.getByText('Paquetes y copia del progreso', { exact: true }).click()
+    const backupPath = test.info().outputPath('notes-history.json')
+    await writeFile(backupPath, exported)
+    await c.getByLabel('Restaurar progreso de esta cuenta', { exact: true }).setInputFiles(backupPath)
+    await expect(c.getByRole('region', { name: 'Retomar sesión guiada', exact: true })).toContainText('Cerrar')
+    await c.getByRole('button', { name: 'Reanudar sesión guiada', exact: true }).click()
+    await expect(c.getByRole('textbox', { name: 'Errores y próximo paso', exact: true })).toHaveValue('Revisar el caso límite y volver mañana.')
+    await c.getByRole('navigation', { name: 'Etapas de la sesión', exact: true }).getByRole('button', { name: /1. Recuperar/ }).click()
+    await c.getByText('Anotar una predicción (opcional)', { exact: true }).click()
+    await expect(c.getByRole('textbox', { name: 'Tu predicción', exact: true })).toHaveValue('Revisión del teléfono')
+    await sync(c)
+    const restoredNotes = cleanDrive.labEvents().filter((event: any) => event.kind === 'note')
+    expect(restoredNotes.sort((x: any, y: any) => x.id.localeCompare(y.id))).toEqual(notes)
+  } finally { await Promise.all(contexts.map(context => context.close())) }
+})
+
 test('explicit omission preserves the draft and first attempt without revealing a solution', async ({ page, context, browserName }) => {
   const drive = new DriveFixture(); drive.addLabPackage('lab-omission', samplePackage())
   await drive.install(context, browserName === 'webkit')
@@ -532,6 +614,8 @@ for (const language of ['python', 'javascript'] as const) {
     const loop = language === 'python' ? 'while True: pass' : 'while(true) {}'
     await execute(loop)
     await expect(page.getByText(/Límite de ejecución: 2 segundos/)).toBeVisible({ timeout: 25_000 })
+    // The runner removes a finished iframe after its cancellation handshake. Do not inspect that old frame as the next run.
+    await expect(page.locator('iframe[title="Motor de código aislado"]')).toHaveCount(0)
     await execute(loop)
     await expect(page.locator('iframe[title="Motor de código aislado"]')).toHaveCount(1)
     const sandbox = page.frames().find(f => f !== page.mainFrame() && f.url() === 'about:srcdoc')!

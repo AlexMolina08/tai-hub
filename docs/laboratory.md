@@ -44,6 +44,20 @@ El cierre puede guardar una interrupción con actividades pendientes. `completed
 
 Este tipo de evento se introduce antes de publicar el laboratorio. No se modifica el esquema ni se reescriben eventos antiguos; los clientes nuevos admiten los tipos previos. Una compilación anterior que desconozca `session-position` rechaza el lote completo, sin descartar selectivamente datos. Antes de habilitar contenido con sesiones deben actualizarse los clientes participantes. Una futura migración o reversión deberá preservar estos eventos; no se promete compatibilidad de escritura con clientes anteriores.
 
+## Notas personales
+
+Las actividades ofrecen una predicción opcional y las sesiones permiten anotar errores y el siguiente paso al cerrar. Son texto personal, hasta 4000 caracteres, separado de respuestas, ayudas y navegación. No se califica ni acredita haber predicho antes de ejecutar. La modalidad específica de un modelo puede imponer su propio paso previo, sin convertir esta nota general en esa evidencia.
+
+El evento `note` conserva cuenta, destino, edición exacta y revisiones inmutables. Predicciones de actividad y reflexiones de sesión tienen destinos distintos. Dos dispositivos que editan una misma revisión producen ramas conservadas; elegir una genera una revisión nueva con ambos padres. El reloj no selecciona el texto ganador. Exportación, restauración y sincronización usan el historial privado existente.
+
+Antes de combinar o guardar, se rechazan ciclos y padres conocidos de otra cuenta, destino, edición o tipo de evento. Los padres aún no recibidos pueden llegar después. El recorrido iterativo admite cadenas largas sin depender de la pila de llamadas. La llegada posterior de un padre incompatible rechaza ese lote sin borrar el historial anterior.
+
+Un buffer en memoria, separado del editor y ligado a cuenta/destino, conserva escrituras pendientes y fallidas al navegar. El reintento incluye todos los antecesores fallidos, aunque un descendiente se haya guardado. Solo observar el mismo ID **y contenido** en el historial permite retirar la copia del buffer. Una colisión conserva el texto local en modo de lectura, muestra el error y permite descargar una copia privada; no sobrescribe la copia guardada ni se resuelve reintentando a ciegas.
+
+Mientras exista una escritura sin guardar se registra un aviso de salida. Un navegador puede omitir ese aviso, especialmente en móviles. El buffer no garantiza supervivencia ante cierre, caída del proceso o desalojo si el almacenamiento ha fallado: se indica el fallo y se ofrecen reintento y copia descargable. Un guardado local correcto tampoco equivale a sincronización remota; el estado general de progreso informa de esa cola.
+
+Este evento se añade antes de publicar el laboratorio, sin reescribir datos anteriores. Los clientes antiguos rechazan lotes con tipos desconocidos; los dispositivos participantes deben actualizarse antes de activar el contenido. Ningún dato de notas entra en el bundle público ni se envía a un LLM.
+
 ## Ejecución SQL
 
 PGlite se carga bajo demanda. El ejecutor vive en un worker descartable dentro de un iframe de origen opaco (`sandbox="allow-scripts"`). El iframe solo recibe código fijo del motor, archivos WASM y datos del ejercicio. Su CSP impide red, almacenamiento del origen y acceso al padre. El receptor exige la ventana emisora y un token de ejecución; mensajes ajenos no producen resultados.

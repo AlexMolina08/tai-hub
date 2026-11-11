@@ -27,10 +27,10 @@ export function studyContinuation(packages: LabPackage[], events: LabEvent[], ac
       })
     }
   }
-  const candidates = events.filter(event => event.accountId === accountId && event.kind !== 'exposure' && event.kind !== 'session-position')
+  const candidates = events.filter((event): event is Extract<LabEvent, { kind: 'attempt' | 'draft' | 'assistance' }> => event.accountId === accountId
+    && (event.kind === 'attempt' || event.kind === 'draft' || event.kind === 'assistance'))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id.localeCompare(a.id))
   for (const event of candidates) {
-    if (event.kind === 'exposure' || event.kind === 'session-position') continue
     const destination = destinations.get(JSON.stringify([event.packageId, event.packageVersion, event.activityId, event.activityVersion]))
     if (destination) return { ...destination, savedAt: event.createdAt }
   }

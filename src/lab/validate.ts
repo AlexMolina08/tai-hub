@@ -218,6 +218,13 @@ export function parseEventBatch(input: unknown, accountId: string): EventBatch {
     }
     if (e.kind === 'exposure') {
       if (!string(e.familyId) || !inList(e.reason, ['presented', 'solution', 'external'])) issues.push(`${e.id}: exposición inválida`)
+    } else if (e.kind === 'note') {
+      const target = e.target
+      if (!record(target) || !fields(target, ['packageId', 'packageVersion'])
+        || !(target.kind === 'activity' && target.purpose === 'prediction' && fields(target, ['activityId', 'activityVersion'])
+          || target.kind === 'session' && target.purpose === 'reflection' && fields(target, ['sessionId', 'sessionVersion']))
+        || !lists(e, ['parentIds'], false) || (e.parentIds as string[]).includes(String(e.id))
+        || typeof e.value !== 'string' || e.value.length > 4000) issues.push(`${e.id}: nota personal inválida`)
     } else if (e.kind === 'session-position') {
       if (!fields(e, ['packageId', 'packageVersion', 'sessionId', 'sessionVersion', 'stageId'])
         || (e.activityId !== null && !string(e.activityId)) || typeof e.completed !== 'boolean') issues.push(`${e.id}: posición de sesión inválida`)
