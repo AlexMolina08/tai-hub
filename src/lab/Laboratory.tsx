@@ -15,6 +15,7 @@ import { ActiveTime } from './active-time'
 import { OfflineControls } from './OfflineControls'
 import { CodePanel } from './CodePanel'
 import { HtmlPanel } from './HtmlPanel'
+import { StudyText } from './StudyText'
 import './laboratory.css'
 
 const empty: LabSnapshot = { events: [], pendingIds: [], status: 'local' }
@@ -206,8 +207,8 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     </div>}
     <div className="lab-session-columns">
       {(!mobile || pane === 'read') && <section aria-label="Explicación y ejemplo" className="lab-explanation">
-        {lesson.explanation.map((s, i) => <section key={i}><h3>{s.title}</h3><p>{s.body}</p></section>)}
-        <div className="lab-example"><h3>Ejemplo resuelto</h3>{lesson.workedExample.map((s, i) => <section key={i}><h4>{s.title}</h4><p>{s.body}</p></section>)}</div>
+        {lesson.explanation.map((s, i) => <section key={i}><h3>{s.title}</h3><StudyText text={s.body} /></section>)}
+        <div className="lab-example"><h3>Ejemplo resuelto</h3>{lesson.workedExample.map((s, i) => <section key={i}><h4>{s.title}</h4><StudyText text={s.body} /></section>)}</div>
         <button className="text-link" onClick={() => { choosePane('practice'); openMaterial(lesson.material.resourceId, lesson.material.sectionId) }}>Consultar material completo</button>
         {mobile && <button className="button primary lab-start-practice" onClick={() => choosePane('practice')}>Empezar a practicar <ArrowRight size={17} /></button>}
       </section>}
@@ -285,7 +286,7 @@ function ActivityView({ activity, pack, accountId, deviceId, events, record }: {
   }
   return <div className="lab-activity">
     <h3>{activity.title}</h3><p className="lab-mode">{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</p>
-    <p>{activity.prompt}</p>
+    <StudyText text={activity.prompt} />
     {heads.length > 1 ? <div role="alert"><h4>Hay dos borradores de esta actividad</h4>
       <p>Elige cuál continuar. Las versiones anteriores se conservarán en el historial.</p>
       {heads.map(head => <button className="button" key={head.id} disabled={busy} onClick={() => void run(async () => {

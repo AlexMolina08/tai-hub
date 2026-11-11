@@ -18,6 +18,8 @@ npm run lab:review -- /ruta/privada/paquete.json
 
 La revisión editorial sirve el archivo únicamente en `127.0.0.1:5195`, mediante una URL temporal con token. Rechaza entradas dentro del repositorio y no cambia estados, no escribe en Drive y no mezcla sus intentos con el estudio. `TAI_REVIEW_PORT` permite otro puerto local. Las reservas no aparecen en el recorrido de lecciones. No se debe distribuir el servidor de revisión como aplicación publicada.
 
+Los enunciados y explicaciones admiten ejemplos delimitados por tres acentos graves, con una etiqueta de lenguaje opcional. Se muestran como texto en bloques de código ajustados al ancho disponible; no se interpreta HTML ni se ejecuta el contenido. El resto conserva la presentación de texto. El orden de las opciones pertenece a la versión del paquete y permanece estable durante el estudio.
+
 ## Historial y sincronización
 
 Cada intento, borrador, exposición y consulta de ayuda tiene identidad inmutable. IndexedDB guarda primero el evento; Drive recibe lotes nuevos, sin modificar un archivo compartido. La unión se realiza por ID, no por hora del dispositivo. Una colisión de ID con otro contenido produce un error visible. El reenvío tras perder una confirmación no duplica el evento lógico.

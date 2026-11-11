@@ -14,14 +14,14 @@ function Review({ pack }: { pack: LabPackage }) {
   return <main className="laboratory" style={{ padding: '1rem' }}>
     <p role="status">Revisión editorial privada. Contenido sin validar. Los intentos de revisión no cuentan como estudio ni se sincronizan.</p>
     <h1>{pack.title}</h1><p>Versión {pack.version}</p>
-    <label>Lección en revisión<select value={index} onChange={event => setIndex(Number(event.target.value))}>
+    <label>Lección en revisión<select value={index} onChange={event => { setIndex(Number(event.target.value)); setMaterial('') }}>
       {pack.lessons.map((lesson, i) => <option key={lesson.id} value={i}>{lesson.title}</option>)}
     </select></label>
     {pack.lessons[index] && <LessonView key={pack.lessons[index].id} pack={pack} lesson={pack.lessons[index]}
       accountId="editorial-review" deviceId="local-preview" events={events}
       record={async incoming => setEvents(current => mergeEvents('editorial-review', current, incoming))}
       openMaterial={(resourceId, sectionId) => setMaterial(`${resourceId} · #${sectionId}`)} />}
-    {material && <p>Destino del material: {material}</p>}
+    {material && <p style={{ overflowWrap: 'anywhere' }}>Destino del material: {material}</p>}
   </main>
 }
 const token = location.hash.slice(1)

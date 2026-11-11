@@ -33,6 +33,13 @@
 .lab-practice { padding: 1.4rem; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; min-width: 0; scroll-margin-top: 1rem; }
 .lab-activity h3 { font-size: 1.4rem; line-height: 1.3; letter-spacing: -.025em; margin: .4rem 0 .6rem; }
 .lab-activity > p:not(.lab-mode) { margin: 1.2rem 0; }
+.lab-study-text { min-width: 0; }
+.lab-study-text > p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; margin: 1.2rem 0; }
+.lab-study-text > p:empty { display: none; }
+.lab-code-example { margin: 1rem 0; min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); overflow: hidden; }
+.lab-code-example figcaption { padding: .5rem .85rem; border-bottom: 1px solid var(--line); font-size: .75rem; color: var(--muted); }
+.lab-code-example pre { margin: 0; padding: .85rem; white-space: pre-wrap; overflow-wrap: anywhere; font: .85rem/1.65 ui-monospace, monospace; tab-size: 2; }
+.lab-code-example code { font: inherit; background: none; padding: 0; color: inherit; }
 .lab-activity-position { display: flex; flex-wrap: wrap; gap: .4rem 1rem; justify-content: space-between; color: var(--muted); font-size: .75rem; margin: 1.3rem 0 .5rem; }
 .lab-activity-navigation { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--line); padding-top: 1.2rem; margin-top: 1.5rem; }
 .lab-activity-navigation span { font-size: .8rem; max-width: 22ch; color: var(--muted); text-align: right; }
