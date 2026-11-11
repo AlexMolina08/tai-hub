@@ -13,6 +13,7 @@ import { describeTransaction, transactionControls } from './transaction-model'
 import { describeVlsm, vlsmControls } from './vlsm-model'
 import { describeRoute, routeControls } from './route-model'
 import { contentionControls, describeContention } from './contention-model'
+import { describeInterleaving, interleavingControls } from './interleaving-model'
 import { matchesPredictionAnswer, parsePredictionDraft, predictionInputLimit, validPredictionAnswer } from './prediction'
 
 export function predictionFor(activity: PredictionActivity) {
@@ -24,7 +25,11 @@ export function predictionFor(activity: PredictionActivity) {
     case 'stack-model':
       return { controls: stackControls, describe: describeStack }
     case 'closure-model':
-      return { controls: closureControls(activity.profile), describe: (values: string[]) => describeClosure(activity.profile, values) }
+      return { controls: closureControls(activity.profile), describe: (values: string[]) => describeClosure(activity.profile, values),
+        manualStart: activity.profile.attributes.length }
+    case 'interleaving-model':
+      return { controls: interleavingControls(activity.profile), describe: (values: string[]) => describeInterleaving(activity.profile, values),
+        manualStart: 1 }
     case 'algorithm-model':
       return { controls: algorithmControls(activity.profile), describe: (values: string[]) => describeAlgorithm(activity.profile, values) }
     case 'switching-model':
@@ -51,7 +56,7 @@ export function PredictionPanel({ activity, saved, latest, disabled, save, onRes
   save: (value: string) => Promise<void>
   onResult: (value: string, correct: boolean, feedback: string) => Promise<void>
 }) {
-  const { controls, describe } = useMemo(() => predictionFor(activity), [activity])
+  const { controls, describe, manualStart = controls.length } = useMemo(() => predictionFor(activity), [activity])
   const [draft, setDraft] = useState(() => parsePredictionDraft(saved, controls, describe))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -60,9 +65,8 @@ export function PredictionPanel({ activity, saved, latest, disabled, save, onRes
   const serialized = JSON.stringify({ controls: draft.controls, answers: draft.answers })
   const graded = latest?.answer === serialized && latest.outcome !== 'omitted'
   const locked = disabled || busy
-  const complete = exercise.answers.every((answer, i) => validPredictionAnswer(answer, draft.answers[i]))
+  const complete = exercise.ready !== false && exercise.answers.every((answer, i) => validPredictionAnswer(answer, draft.answers[i]))
   const step = draft.step ?? 0
-  const manualStart = activity.kind === 'closure-model' ? activity.profile.attributes.length : controls.length
 
   function edit(next: typeof draft) {
     setDraft(next); setError('')
@@ -101,7 +105,7 @@ export function PredictionPanel({ activity, saved, latest, disabled, save, onRes
       </div>
     </fieldset>
     <ul>{exercise.facts.map(fact => <li key={fact}>{fact}</li>)}</ul>
-    <fieldset disabled={locked} className="lab-frame-section">
+    <fieldset disabled={locked || exercise.ready === false} className="lab-frame-section">
       <legend>Tu predicción</legend>
       <div className="lab-model-fields">
         {exercise.answers.map((answer, index) => {

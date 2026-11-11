@@ -5,7 +5,7 @@ export function isPredictionActivity(activity: Activity): activity is Prediction
     || activity.kind === 'stack-model' || activity.kind === 'relation-model' || activity.kind === 'closure-model'
     || activity.kind === 'algorithm-model' || activity.kind === 'switching-model' || activity.kind === 'radio-model'
     || activity.kind === 'dhcp-model' || activity.kind === 'transaction-model' || activity.kind === 'vlsm-model' || activity.kind === 'route-model'
-    || activity.kind === 'contention-model'
+    || activity.kind === 'contention-model' || activity.kind === 'interleaving-model'
 }
 
 export type PredictionControl = { label: string; options: string[]; initial: string; toggle?: true }
@@ -16,6 +16,7 @@ export type PredictionAnswer = {
   format?: 'sequence' | 'signed-list' | 'hex' | 'hex-or-dash' | 'integer' | 'fraction' | 'attribute-set' | 'attribute-sets'
 }
 export type PredictionExercise = {
+  ready?: boolean
   facts: string[]
   answers: PredictionAnswer[]
   steps: string[]

@@ -8,6 +8,7 @@ import { TRANSACTION_MODEL_VERSION, validTransactionProfile } from './transactio
 import { VLSM_MODEL_VERSION, validVlsmProfile } from './vlsm-model'
 import { ROUTE_MODEL_VERSION, validRouteProfile } from './route-model'
 import { CONTENTION_MODEL_VERSION, validContentionProfile } from './contention-model'
+import { INTERLEAVING_MODEL_VERSION, validInterleavingProfile } from './interleaving-model'
 import { RELATION_MODEL_VERSION, validRelationProfile } from './relation-model'
 import { SIGNAL_MODEL_VERSION, validSignalCases } from './signal-model'
 import { STACK_MODEL_VERSION } from './stack-model'
@@ -158,6 +159,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     } else if (a.kind === 'contention-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== CONTENTION_MODEL_VERSION
         || !validContentionProfile(a.profile)) issues.push(`${a.id}: perfil de acceso al medio inválido`)
+    } else if (a.kind === 'interleaving-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== INTERLEAVING_MODEL_VERSION
+        || !validInterleavingProfile(a.profile)) issues.push(`${a.id}: perfil de intercalados Java inválido`)
     } else if (a.kind === 'route-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== ROUTE_MODEL_VERSION
         || !validRouteProfile(a.profile)) issues.push(`${a.id}: perfil de rutas inválido`)

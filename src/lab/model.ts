@@ -2,6 +2,7 @@ import type { AccessProfile } from './access-model'
 import type { AlgorithmProfile } from './algorithm-model'
 import type { ClosureProfile } from './closure-model'
 import type { FrameProfile } from './frame-model'
+import type { InterleavingProfile } from './interleaving-model'
 import type { RadioProfile } from './radio-model'
 import type { DhcpProfile } from './dhcp-model'
 import type { VlsmProfile } from './vlsm-model'
@@ -208,9 +209,14 @@ export interface ContentionModelActivity extends ActivityBase {
   phase: 'practice'
   profile: ContentionProfile
 }
+export interface InterleavingModelActivity extends ActivityBase {
+  kind: 'interleaving-model'
+  phase: 'practice'
+  profile: InterleavingProfile
+}
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
   | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
-  | TransactionModelActivity | VlsmModelActivity | RouteModelActivity | ContentionModelActivity
+  | TransactionModelActivity | VlsmModelActivity | RouteModelActivity | ContentionModelActivity | InterleavingModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
