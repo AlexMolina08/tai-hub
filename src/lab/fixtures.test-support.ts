@@ -1,4 +1,5 @@
 import { requiredGates, type Attempt, type ChoiceActivity, type GuidedSession, type LabPackage } from './model'
+import { DEFAULT_INPUT, MODEL_VERSION } from './ipv4'
 
 /** Synthetic fixtures only. These are not editorial evidence or teaching materials. */
 export function samplePackage(): LabPackage {
@@ -37,6 +38,15 @@ export function sampleAttempt(id = 'a1', deviceId = 'device-a'): Attempt {
     activityId: 'p1', activityVersion: '1', packageId: 'synthetic', packageVersion: '1', familyId: 'f-p1',
     objectiveIds: ['o1'], attemptGroupId: id, ordinal: 1, answer: 'a', outcome: 'correct', hintCount: 0,
     solutionViewed: false, activeMs: 1000, phase: 'practice', feedback: 'Coincide con la regla.', gradingVersion: 'choice-v1' }
+}
+
+export function sampleIPv4Package(): LabPackage {
+  const pack = samplePackage()
+  const { options: _options, ...base } = pack.activities[0] as ChoiceActivity
+  pack.activities[0] = { ...base, kind: 'ipv4-model', phase: 'practice', title: 'Bloque IPv4 sintético',
+    mode: { kind: 'simulation', engine: 'tai-ipv4-block', version: MODEL_VERSION, limits: 'Modelo sintético sin tráfico de red.' },
+    prompt: 'Predice los límites del bloque antes de consultar el cálculo.', initialInput: { ...DEFAULT_INPUT } }
+  return pack
 }
 
 export function sampleGuidedPackage(): LabPackage {

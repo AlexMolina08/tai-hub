@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { DriveFixture } from './fixtures'
-import { sampleGuidedPackage, samplePackage } from '../src/lab/fixtures.test-support'
+import { sampleGuidedPackage, sampleIPv4Package, samplePackage } from '../src/lab/fixtures.test-support'
 import { readFile, writeFile } from 'node:fs/promises'
 import type { LabEvent } from '../src/lab/model'
 
@@ -20,6 +20,148 @@ async function showPractice(page: import('@playwright/test').Page) {
 async function openStudyOptions(page: import('@playwright/test').Page) {
   if (await page.locator('.lab-tools').getAttribute('open') === null) await page.getByText('Opciones de estudio', { exact: true }).click()
 }
+test('IPv4 predictions persist before reveal, converge across devices and preserve omissions and resets', async ({ browser, browserName, baseURL }) => {
+  test.setTimeout(90_000)
+  const drive = new DriveFixture(); drive.addLabPackage('lab-ipv4', sampleIPv4Package())
+  const contexts = await Promise.all([browser.newContext({ viewport: { width: 390, height: 844 } }), browser.newContext()])
+  try {
+    for (const context of contexts) await drive.install(context, browserName === 'webkit')
+    const [a, b] = await Promise.all(contexts.map(context => context.newPage()))
+    const open = async (page: import('@playwright/test').Page) => {
+      await page.goto(baseURL + '/tai-hub/')
+      await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+      await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+      await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+      await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
+    }
+    const sync = async (page: import('@playwright/test').Page) => {
+      await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+      await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    }
+    const remoteEvents = () => [...new Map(drive.labEvents().map(event => [event.id, event])).values()]
+    await open(a)
+    await a.getByLabel('Predicción del límite inferior', { exact: true }).fill('192.168.20.64')
+    await a.getByLabel('Predicción del límite superior', { exact: true }).fill('192.168.20.127')
+    await a.getByRole('combobox', { name: '¿La dirección de prueba pertenece al bloque?', exact: true }).selectOption('yes')
+    await a.getByLabel('Explica tu razonamiento (opcional)', { exact: true }).fill('El extremo superior todavía pertenece al bloque.')
+    await a.getByRole('button', { name: 'Guardar predicción', exact: true }).click()
+    await expect(a.getByText('Predicción guardada. Revela el cálculo para compararla.', { exact: true })).toBeVisible()
+    await expect(a.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toHaveCount(0)
+    await sync(a)
+    expect(remoteEvents().filter(event => event.kind === 'ipv4-prediction')).toHaveLength(1)
+    expect(remoteEvents().filter(event => event.kind === 'attempt')).toHaveLength(0)
+    await open(b)
+    await expect(b.getByRole('button', { name: 'Revelar cálculo', exact: true })).toBeVisible()
+    for (const context of contexts) await context.setOffline(true)
+    for (const page of [a, b]) {
+      await page.getByRole('button', { name: 'Revelar cálculo', exact: true }).click()
+      await expect(page.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toContainText('192.168.20.127')
+    }
+    for (const context of contexts) await context.setOffline(false)
+    await sync(a); await sync(b); await sync(a)
+    let attempts = remoteEvents().filter(event => event.kind === 'attempt')
+    expect(attempts).toHaveLength(1)
+    for (const copy of drive.labEvents().filter(event => event.kind === 'attempt')) expect(copy).toEqual(attempts[0])
+    expect(attempts[0]).toMatchObject({ ordinal: 1, outcome: 'correct', hintCount: 0, solutionViewed: false })
+    expect(remoteEvents().filter(event => event.kind === 'ipv4-reveal')).toHaveLength(2)
+    await expect(a.getByRole('heading', { name: 'Hay dos borradores de esta actividad', exact: true })).toBeVisible()
+    await a.getByRole('button', { name: /^Continuar: Versión 1:/ }).click()
+    await expect(a.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toBeVisible()
+    await a.getByRole('button', { name: 'Volver al caso inicial', exact: true }).click()
+    await expect(a.getByLabel('Predicción del límite inferior', { exact: true })).toHaveValue('')
+    await a.getByLabel('Explica tu razonamiento (opcional)', { exact: true }).fill('Conservo mi duda aunque omita los números.')
+    await a.getByRole('button', { name: 'Continuar sin predecir', exact: true }).click()
+    await a.getByRole('button', { name: 'Revelar cálculo', exact: true }).click()
+    await expect(a.getByText('Omitiste la predicción. El cálculo no cuenta como un acierto.', { exact: true })).toBeVisible()
+    await sync(a)
+    attempts = remoteEvents().filter(event => event.kind === 'attempt')
+    expect(attempts).toHaveLength(2)
+    expect(attempts.find(event => event.ordinal === 2)).toMatchObject({ answer: null, outcome: 'omitted', solutionViewed: true,
+      ipv4: { input: { address: '192.168.20.70' }, prediction: { interpretationNote: 'Conservo mi duda aunque omita los números.' } } })
+    expect(remoteEvents().filter(event => event.kind === 'ipv4-reset')).toHaveLength(1)
+    await a.getByRole('button', { name: 'Editar otro caso', exact: true }).click()
+    await a.getByLabel('Predicción del límite inferior', { exact: true }).fill('192.168.20.64')
+    await a.getByRole('button', { name: 'Guardar predicción', exact: true }).click()
+    await a.getByRole('button', { name: 'Revelar cálculo', exact: true }).click()
+    await sync(a)
+    expect(remoteEvents().find(event => event.kind === 'attempt' && event.ordinal === 3)).toMatchObject({ outcome: 'partial',
+      ipv4: { comparison: { lower: 'correct', upper: 'omitted', member: 'omitted' } } })
+    const attemptIds = remoteEvents().filter(event => event.kind === 'attempt').map(event => event.id).sort()
+    await a.reload(); await expect(a.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(a)
+    await expect(a.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toBeVisible()
+    for (const width of [320, 390]) {
+      await a.setViewportSize({ width, height: 844 })
+      expect(await a.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    expect((await new AxeBuilder({ page: a }).include('.lab-ipv4').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+    await a.screenshot({ path: test.info().outputPath('ipv4-result-mobile.png'), fullPage: true })
+    await openStudyOptions(a)
+    const downloading = a.waitForEvent('download')
+    await a.getByRole('button', { name: 'Exportar progreso', exact: true }).click()
+    const exported = JSON.parse(await readFile((await (await downloading).path())!, 'utf8'))
+    expect(exported.events.filter((event: LabEvent) => event.kind === 'attempt').map((event: LabEvent) => event.id).sort()).toEqual(attemptIds)
+    expect(exported.events.filter((event: LabEvent) => event.kind === 'ipv4-prediction')).toHaveLength(3)
+    const restoredContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
+    contexts.push(restoredContext)
+    const restoredDrive = new DriveFixture(); restoredDrive.addLabPackage('restored-ipv4', sampleIPv4Package())
+    await restoredDrive.install(restoredContext, browserName === 'webkit')
+    const restored = await restoredContext.newPage()
+    await restored.goto(baseURL + '/tai-hub/')
+    await restored.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+    await expect(restored.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(restored)
+    await restored.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+    await restored.getByText('Paquetes y copia del progreso', { exact: true }).click()
+    const path = test.info().outputPath('ipv4-history.json'); await writeFile(path, JSON.stringify(exported))
+    await restored.getByLabel('Restaurar progreso de esta cuenta', { exact: true }).setInputFiles(path)
+    await restored.getByRole('button', { name: 'Reanudar actividad', exact: true }).click()
+    await expect(restored.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toBeVisible()
+    await sync(restored)
+    expect(restoredDrive.labEvents().filter(event => event.kind === 'attempt').map(event => event.id).sort()).toEqual(attemptIds)
+  } finally { await Promise.all(contexts.map(context => context.close())) }
+})
+
+test('IPv4 input validation and context changes preserve numeric limits in the responsive editor', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture(); drive.addLabPackage('ipv4-context', sampleIPv4Package())
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/'); await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
+  await page.getByRole('combobox', { name: 'Formato', exact: true }).selectOption('mask')
+  await page.getByLabel('Máscara decimal', { exact: true }).fill('255.0.255.0')
+  await page.getByRole('button', { name: 'Continuar sin predecir', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('La máscara CIDR necesita unos contiguos')
+  await expect(page.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toHaveCount(0)
+  await page.getByLabel('Máscara decimal', { exact: true }).fill('255.255.255.254')
+  await page.getByLabel('Dirección IPv4', { exact: true }).fill('10.0.0.4')
+  await page.getByLabel('Dirección de prueba (opcional)', { exact: true }).fill('10.0.0.5')
+  await page.getByRole('combobox', { name: 'Contexto de interpretación', exact: true }).selectOption('p2p-compatible')
+  await page.getByLabel('Predicción del límite inferior', { exact: true }).fill('10.0.0.4')
+  await page.getByLabel('Predicción del límite superior', { exact: true }).fill('10.0.0.5')
+  await page.getByRole('combobox', { name: '¿La dirección de prueba pertenece al bloque?', exact: true }).selectOption('yes')
+  expect((await new AxeBuilder({ page }).include('.lab-ipv4').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+  await page.screenshot({ path: test.info().outputPath('ipv4-editor.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Guardar predicción', exact: true }).click()
+  await page.getByRole('button', { name: 'Revelar cálculo', exact: true }).click()
+  const result = page.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })
+  await expect(result).toContainText('Extremos del enlace declarado: 10.0.0.4 y 10.0.0.5.')
+  await expect(result).not.toContainText('Intervalo interior:')
+  await page.getByRole('button', { name: 'Volver al caso inicial', exact: true }).click()
+  await expect(page.getByLabel('Longitud del prefijo', { exact: true })).toHaveValue('26')
+  await expect(page.getByLabel('Dirección IPv4', { exact: true })).toHaveValue('192.168.20.70')
+  await page.getByLabel('Longitud del prefijo', { exact: true }).fill('0')
+  await page.getByRole('combobox', { name: 'Contexto de interpretación', exact: true }).selectOption('numeric')
+  await page.getByRole('button', { name: 'Continuar sin predecir', exact: true }).click()
+  await page.getByRole('button', { name: 'Revelar cálculo', exact: true }).click()
+  await expect(result).toContainText('4.294.967.296')
+  await expect(result).toContainText('0.0.0.0'); await expect(result).toContainText('255.255.255.255')
+  await expect(result).not.toContainText('Intervalo interior:')
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})
+
 test('guided session resumes its stage and activity across devices and preserves completion', async ({ page, context, browser, browserName }) => {
   const drive = new DriveFixture(); drive.addLabPackage('lab-guided', sampleGuidedPackage())
   await drive.install(context, browserName === 'webkit')

@@ -1,3 +1,5 @@
+import type { IPv4Input, IPv4Prediction, IPv4Comparison } from './ipv4'
+
 /** Private content is loaded at runtime. Never import a real study package into the public bundle. */
 export type EditorialState = 'planned' | 'authored' | 'review' | 'correction' | 'validated' | 'withdrawn'
 export type Phase = 'practice' | 'immediate' | 'reserved' | 'delayed'
@@ -114,7 +116,12 @@ export interface HtmlActivity extends ActivityBase {
   starter: { html: string; css: string }
   cases: { id: string; width: number; checks: HtmlCheck[] }[]
 }
-export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity
+export interface IPv4ModelActivity extends ActivityBase {
+  kind: 'ipv4-model'
+  phase: 'practice'
+  initialInput: IPv4Input
+}
+export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity
 export interface GuidedStage {
   id: string
   kind: 'recover' | 'understand' | 'experiment' | 'transfer' | 'close'
@@ -161,13 +168,15 @@ export interface Attempt extends EventBase, ActivityRef {
   attemptGroupId: string
   ordinal: number
   answer: Answer
-  outcome: 'correct' | 'incorrect' | 'omitted'
+  outcome: 'correct' | 'incorrect' | 'omitted' | 'partial'
   hintCount: number
   solutionViewed: boolean
   activeMs: number
   phase: Phase
   feedback: string
   gradingVersion: string
+  /** Numeric comparison only; the conceptual note is retained but never graded. */
+  ipv4?: IPv4AttemptPayload
 }
 export interface Draft extends EventBase, ActivityRef {
   kind: 'draft'
@@ -175,6 +184,7 @@ export interface Draft extends EventBase, ActivityRef {
   parentIds: string[]
   value: string
   position: number
+  valueFormat?: 'ipv4-model-v1'
 }
 export interface Assistance extends EventBase, ActivityRef {
   kind: 'assistance'
@@ -186,6 +196,45 @@ export interface Exposure extends EventBase {
   kind: 'exposure'
   familyId: string
   reason: 'presented' | 'solution' | 'external'
+}
+export interface IPv4AttemptPayload {
+  modelVersion: string
+  predictionId: string
+  input: IPv4Input
+  prediction: IPv4Prediction
+  comparison: IPv4Comparison
+}
+export interface IPv4PredictionEvent extends EventBase, ActivityRef {
+  kind: 'ipv4-prediction'
+  modelVersion: string
+  familyId: string
+  objectiveIds: string[]
+  attemptGroupId: string
+  ordinal: number
+  input: IPv4Input
+  prediction: IPv4Prediction
+  hintCount: number
+  solutionViewed: boolean
+  activeMs: number
+}
+/** Explicit causal links make reveal order independent of device wall clocks. */
+export interface IPv4RevealEvent extends EventBase, ActivityRef {
+  kind: 'ipv4-reveal'
+  modelVersion: string
+  attemptGroupId: string
+  familyId: string
+  predictionId: string
+  attemptId: string
+  assistanceId: string
+  exposureId: string
+}
+export interface IPv4ResetEvent extends EventBase, ActivityRef {
+  kind: 'ipv4-reset'
+  modelVersion: string
+  attemptGroupId: string
+  predictionId: string | null
+  revealId: string | null
+  initialInput: IPv4Input
 }
 /** Navigation is append-only. Its date orders a resume suggestion, never answer conflicts or mastery. */
 export interface SessionPosition extends EventBase {
@@ -208,6 +257,7 @@ export interface NoteRevision extends EventBase {
   value: string
 }
 export type LabEvent = Attempt | Draft | Exposure | Assistance | SessionPosition | NoteRevision
+  | IPv4PredictionEvent | IPv4RevealEvent | IPv4ResetEvent
 export interface EventBatch {
   schema: 1
   privacy: 'tai-lab-private'

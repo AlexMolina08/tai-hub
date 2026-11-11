@@ -1,5 +1,6 @@
 import { requiredGates, type LabPackage, type EventBatch } from './model'
 import { familyConflicts } from './partitions'
+import { validateIPv4Activity, validateIPv4Event } from './ipv4-workflow'
 
 export class LabValidationError extends Error {
   constructor(public readonly issues: string[]) {
@@ -120,6 +121,8 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
             && inList(k.kind, ['count', 'text', 'style', 'attribute']) && typeof k.expected === 'string' && k.expected.length <= 2000
             && (!['style', 'attribute'].includes(String(k.kind)) || (string(k.property) && /^[a-zA-Z-]{1,64}$/.test(k.property)))))
         || new Set(a.cases.map(c => (c as RecordValue).id)).size !== a.cases.length) issues.push(`${a.id}: casos HTML/CSS inválidos`)
+    } else if (a.kind === 'ipv4-model') {
+      try { validateIPv4Activity(a) } catch (error) { issues.push(`${a.id}: ${String(error)}`) }
     } else issues.push(`${a.id}: modalidad no soportada`)
   }
   for (const e of input.evidence as RecordValue[]) {
@@ -238,9 +241,12 @@ export function parseEventBatch(input: unknown, accountId: string): EventBatch {
       } else if (!fields(e, ['familyId', 'attemptGroupId', 'feedback', 'gradingVersion']) || !lists(e, ['objectiveIds'])
         || !integer(e.ordinal) || Number(e.ordinal) < 1 || !integer(e.hintCount) || !integer(e.activeMs)
         || typeof e.solutionViewed !== 'boolean' || !inList(e.phase, phases)
-        || !inList(e.outcome, ['correct', 'incorrect', 'omitted']) || (e.answer !== null && typeof e.answer !== 'string')
+        || !inList(e.outcome, e.ipv4 === undefined ? ['correct', 'incorrect', 'omitted'] : ['correct', 'incorrect', 'omitted', 'partial']) || (e.answer !== null && typeof e.answer !== 'string')
         || (e.outcome === 'omitted') !== (e.answer === null)) issues.push(`${e.id}: intento inválido`)
+    } else if (['ipv4-prediction', 'ipv4-reveal', 'ipv4-reset'].includes(String(e.kind))) {
+      // The dedicated adapter checks the versioned action shape below.
     } else issues.push(`${e.id}: tipo de evento desconocido`)
+    try { validateIPv4Event(e) } catch (error) { issues.push(`${e.id}: ${String(error)}`) }
   }
   fail(issues)
   return structuredClone(input) as unknown as EventBatch

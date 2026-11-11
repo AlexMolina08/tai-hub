@@ -66,6 +66,20 @@ La vista muestra un único aviso de guardado con reintento y descarga privada. L
 
 Una revisión remota única actualiza el editor abierto y determina el padre y el grupo de la siguiente edición. Las ramas concurrentes requieren una elección expresa, que conserva ambos padres y el grupo elegido. Se rechazan ciclos y padres conocidos de otra cuenta, contenido, versión o tipo antes de guardar o sincronizar. La validación iterativa admite cadenas largas. Una colisión de ID con otro contenido conserva la copia local seleccionable y descargable; no sobrescribe datos ni permite reintentar a ciegas.
 
+## Modelo editable de IPv4
+
+La actividad de práctica `ipv4-model` calcula límites, máscara, pertenencia y tamaño del bloque con el motor local versionado `tai-ipv4-block-0.1.0`. No enumera direcciones ni transmite tráfico. La interpretación operativa es un paso separado: se acota a bloques RFC1918 completos y al contexto declarado. Un /31 exige distinguir el enlace punto a punto compatible; un /32 representa una coincidencia exacta. El cálculo numérico no certifica asignabilidad ni una configuración de red real.
+
+El recorrido separa editar, guardar predicción u omisión y revelar el cálculo. Antes de mostrar resultados, se guarda un único lote local con la revisión y todos sus eventos acompañantes. La vista necesita tanto la cadena causal completa como la confirmación del lote completo; recibir solo acompañantes desde otro dispositivo no confirma el borrador. El buffer conserva y permite descargar todo el lote si falla, con los mismos límites ante cierre descritos anteriormente.
+
+Los eventos `ipv4-prediction`, `ipv4-reveal` e `ipv4-reset` conservan entradas, acciones y relaciones causales. El borrador `ipv4-model-v1` contiene solo la vista actual, con tamaño acotado. Editar o reiniciar oculta el resultado anterior sin borrar predicciones ni intentos. Los padres desconocidos pueden llegar después; enlaces conocidos incompatibles se rechazan antes de combinar o guardar.
+
+La identidad del intento deriva de la predicción. Dos dispositivos que revelan la misma predicción generan un único intento lógico, aunque cada revelación y consulta de solución conserva su evento. El intento mantiene el dispositivo, fecha, tiempo activo y ayudas de la predicción original. Su propia revelación no la convierte retrospectivamente en una respuesta ayudada; sí expone la familia para predicciones posteriores.
+
+Se comparan límites y, cuando se solicita, pertenencia. Un valor incorrecto produce `incorrect`; una parte correcta y otra omitida produce `partial`; omitir todas las respuestas numéricas produce `omitted` con respuesta nula, conservando entradas y texto. La explicación conceptual no se califica. Variar parámetros sigue siendo práctica de la misma familia, sin acreditar transferencia nueva ni dominio.
+
+Esta modalidad y sus eventos se añaden antes de publicar el laboratorio. Los clientes nuevos aceptan paquetes e historial anteriores; los antiguos rechazan los tipos desconocidos. Se deben actualizar los dispositivos participantes antes de habilitar este contenido. No se reescribe el historial existente ni se promete compatibilidad de escritura con compilaciones anteriores.
+
 ## Ejecución SQL
 
 PGlite se carga bajo demanda. El ejecutor vive en un worker descartable dentro de un iframe de origen opaco (`sandbox="allow-scripts"`). El iframe solo recibe código fijo del motor, archivos WASM y datos del ejercicio. Su CSP impide red, almacenamiento del origen y acceso al padre. El receptor exige la ventana emisora y un token de ejecución; mensajes ajenos no producen resultados.

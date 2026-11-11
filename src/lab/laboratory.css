@@ -1,5 +1,29 @@
 .laboratory { max-width: 1200px; margin: auto; }
 .lab-review-controls { display: grid; gap: 1rem; margin: 1rem 0; }
+.lab-draft-option { display: block; width: 100%; max-width: 100%; min-width: 0; margin: .65rem 0; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.lab-ipv4 { margin-top: 1.5rem; }
+.lab-ipv4 fieldset { border: 0; padding: 0; margin: 1.5rem 0; min-width: 0; }
+.lab-ipv4 legend { font-weight: 650; margin-bottom: .75rem; }
+.lab-ipv4-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1rem; }
+.lab-ipv4-fields label { display: grid; align-content: start; gap: .4rem; min-width: 0; font-size: .9rem; }
+.lab-ipv4-fields input, .lab-ipv4-fields select, .lab-ipv4-fields textarea { width: 100%; min-width: 0; min-height: 44px; padding: .7rem; border: 1px solid var(--line); border-radius: 8px; font: inherit; color: var(--text); background: var(--surface); }
+.lab-ipv4-fields textarea { resize: vertical; }
+.lab-ipv4-wide { grid-column: 1 / -1; }
+.lab-ipv4-result { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.lab-ipv4-result h4 { margin: 1rem 0 .5rem; font-size: 1rem; }
+.lab-ipv4-bits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0; }
+.lab-ipv4-octet > span { display: block; text-align: center; margin-bottom: .3rem; font-size: .8rem; color: var(--muted); }
+.lab-ipv4-octet > div { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.lab-ipv4-octet > div > span { text-align: center; padding: .35rem 0; background: var(--soft); font: .8rem ui-monospace, monospace; border-radius: 3px; }
+.lab-ipv4-octet .lab-ipv4-prefix-bit { color: var(--accent); background: var(--accent-soft); border-bottom: 2px solid var(--accent); }
+.lab-ipv4-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: .65rem; }
+.lab-ipv4-values > div { padding: .85rem; background: var(--bg); border-radius: 8px; min-width: 0; }
+.lab-ipv4-values dt { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+.lab-ipv4-values dd { margin: .4rem 0 0; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.lab-ipv4-comparisons { list-style: none; padding: 0; }
+.lab-ipv4-comparisons li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .3rem .7rem; padding: .65rem 0; border-bottom: 1px solid var(--line); font-size: .85rem; overflow-wrap: anywhere; }
+.lab-ipv4-comparisons li > span:last-child { color: var(--muted); }
+.lab-ipv4-note { white-space: pre-wrap; overflow-wrap: anywhere; }
 .lab-review-controls label { display: block; min-width: 0; }
 .lab-review-controls select { display: block; appearance: none; width: 100%; min-width: 0; margin-top: .5rem; font: inherit; min-height: 44px; overflow: hidden; text-overflow: ellipsis; }
 .laboratory:has(.lab-session, .lab-guided) > .page-heading { margin-bottom: 12px; }

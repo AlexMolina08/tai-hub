@@ -75,7 +75,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
     && pack.activities.some(activity => activity.id === event.activityId && activity.version === event.activityVersion))
   const answered = new Set(attempts.filter(attempt => attempt.outcome !== 'omitted').map(attempt => attempt.activityId))
   const helped = sessionAssistance(pack, session, events, accountId)
-  const names = { correct: 'Correcta', incorrect: 'Por revisar', omitted: 'Sin respuesta' }
+  const names = { correct: 'Correcta', incorrect: 'Por revisar', omitted: 'Sin respuesta', partial: 'Parcial, con campos sin responder' }
   return <article className="lab-guided" aria-label="Sesión guiada">
     <header className="lab-lesson-heading"><p className="context-label">Sesión guiada · {sessionMinutes(session)} min orientativos</p>
       <h2>{session.title}</h2><p>Avanza a tu ritmo. Puedes parar y continuar desde otro dispositivo cuando se sincronice.</p></header>

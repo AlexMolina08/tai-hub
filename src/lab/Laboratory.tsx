@@ -16,6 +16,8 @@ import { ActiveTime } from './active-time'
 import { OfflineControls } from './OfflineControls'
 import { CodePanel } from './CodePanel'
 import { HtmlPanel } from './HtmlPanel'
+import { IPv4Panel } from './IPv4Panel'
+import { createIPv4View, parseIPv4View, serializeIPv4View } from './ipv4-workflow'
 import { StudyText } from './StudyText'
 import { activityLocationKey, studyContinuation } from './continuation'
 import { LessonCatalog } from './LessonCatalog'
@@ -291,7 +293,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const eventSnapshot = useRef(events)
   eventSnapshot.current = events
   const key = JSON.stringify([pack.id, pack.version, activity.id, activity.version])
-  const currentHeads = () => draftHeads(mergeEvents(accountId, eventSnapshot.current, buffer.snapshot().map(entry => entry.note)), key)
+  const currentHeads = () => draftHeads(mergeEvents(accountId, eventSnapshot.current, buffer.events()), key)
   const revisions = useMemo(() => {
     try { return { heads: currentHeads(), error: '' } }
     catch (failure) { return { heads: draftHeads(buffered.map(entry => entry.note), key), error: message(failure) } }
@@ -299,9 +301,11 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const heads = revisions.heads
   const failed = buffered.filter(entry => entry.status === 'failed')
   const pending = buffered.some(entry => entry.status === 'pending')
-  const initialValue = activity.kind === 'choice' ? '' : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
+  const initialValue = activity.kind === 'choice' ? '' : activity.kind === 'ipv4-model' ? serializeIPv4View(createIPv4View(activity))
+    : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
   const [initial] = useState<Draft>(() => ({ ...ref, id: crypto.randomUUID(), kind: 'draft', deviceId, accountId,
-    createdAt: new Date().toISOString(), attemptGroupId: heads[0]?.attemptGroupId ?? crypto.randomUUID(), parentIds: [], value: initialValue, position: 0 }))
+    createdAt: new Date().toISOString(), attemptGroupId: heads[0]?.attemptGroupId ?? crypto.randomUUID(), parentIds: [], value: initialValue, position: 0,
+    ...(activity.kind === 'ipv4-model' ? { valueFormat: 'ipv4-model-v1' as const } : {}) }))
   const answer = heads.length === 1 ? heads[0].value : initialValue
   const groupId = heads.length === 1 ? heads[0].attemptGroupId : initial.attemptGroupId
   const [busy, setBusy] = useState(false)
@@ -329,14 +333,14 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   useEffect(() => {
     void record(heads.length ? [exposure] : [initial, exposure]).catch(e => setError(message(e)))
   }, []) // The immutable initial event is reused if React replays this effect.
-  async function save(value: string) {
+  async function save(value: string, companions: LabEvent[] = []) {
     const parents = currentHeads()
     if (parents.length > 1) throw new Error('Elige qué borrador continuar antes de editar.')
-    if (parents[0]?.value !== value) {
+    if (parents[0]?.value !== value || companions.length) {
       const draft: Draft = { ...initial, id: crypto.randomUUID(), createdAt: new Date().toISOString(), value,
         attemptGroupId: parents[0]?.attemptGroupId ?? initial.attemptGroupId, parentIds: (parents.length ? parents : [initial]).map(d => d.id) }
       // Begin every local transaction immediately; navigation may close this controller afterward.
-      if (!await buffer.save(draft, record)) throw new Error('El borrador sigue pendiente de guardar. Puedes reintentarlo o descargar una copia.')
+      if (!await buffer.save(draft, record, companions)) throw new Error('El borrador sigue pendiente de guardar. Puedes reintentarlo o descargar una copia.')
     }
     if (!await buffer.flush()) throw new Error('Hay revisiones pendientes de guardar. Reintenta el guardado antes de continuar.')
   }
@@ -359,13 +363,24 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
       answer: value, ...result, ...attemptFacts(), activeMs: activeMs(), phase: activity.phase, gradingVersion: 'choice-v1' }])
   }
+  function draftLabel(value: string, index: number) {
+    if (activity.kind !== 'ipv4-model') return value || 'Sin respuesta'
+    try {
+      const view = parseIPv4View(value)
+      const phase = { editing: 'en edición', predicted: 'predicción guardada', revealed: 'cálculo consultado' }[view.phase]
+      const contexts: Record<string, string> = { numeric: 'solo numérico', conventional: 'subred convencional', 'p2p-compatible': 'enlace /31 compatible' }
+      const context = contexts[view.input.context] ?? 'contexto pendiente'
+      return `Versión ${index + 1}: ${view.input.address}, ${view.input.format === 'prefix' ? '/' : 'máscara '}${view.input.value}; ${context}; prueba ${view.input.probe || 'vacía'}; ${phase}. Predicción: ${view.prediction.lower || 'sin límite inferior'}–${view.prediction.upper || 'sin límite superior'}, pertenencia ${view.prediction.member === 'yes' ? 'dentro' : view.prediction.member === 'no' ? 'fuera' : 'sin responder'}.${view.prediction.interpretationNote ? ' Nota: ' + view.prediction.interpretationNote : ''}`
+    } catch { return `Versión ${index + 1}: copia conservada para revisión` }
+  }
   return <div className="lab-activity">
-    <h3>{activity.title}</h3><p className="lab-mode">{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</p>
+    <h3>{activity.title}</h3><p className="lab-mode">{activity.kind === 'ipv4-model' ? 'Modelo IPv4 · Cálculo local, sin tráfico de red'
+      : <>{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</>}</p>
     <StudyText text={activity.prompt} />
-    <details className="lab-prediction"><summary>Anotar una predicción (opcional)</summary>
+    {activity.kind !== 'ipv4-model' && <details className="lab-prediction"><summary>Anotar una predicción (opcional)</summary>
       <StudyNoteEditor target={{ ...ref, kind: 'activity', purpose: 'prediction' }} accountId={accountId} deviceId={deviceId}
         events={events} record={record} label="Tu predicción" />
-    </details>
+    </details>}
     {(pending || failed.length > 0) && <section aria-label="Guardado del borrador">
       <p role="status">{pending ? 'Guardando borrador…' : 'Borrador pendiente de guardar.'}</p>
       {failed.length > 0 && <><p role="alert">{failed[0].error} El texto sigue disponible en esta pestaña. {failed.some(entry => entry.collision)
@@ -374,15 +389,15 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
           buffer.retry(record)
           void buffer.flush().then(saved => { if (saved) setError('') })
         }}>Reintentar guardar borrador</button>
-          <button className="button" onClick={() => download('laboratorio-borradores-pendientes.json', exportHistory(accountId, buffered.map(entry => entry.note)))}>Guardar copia del borrador pendiente</button></div></>}
+          <button className="button" onClick={() => download('laboratorio-borradores-pendientes.json', exportHistory(accountId, buffer.events()))}>Guardar copia del borrador pendiente</button></div></>}
     </section>}
     {revisions.error ? <div role="alert"><p>{revisions.error}</p><label>Borrador pendiente<textarea readOnly rows={8} value={answer} /></label></div>
       : heads.length > 1 ? <div role="alert"><h4>Hay dos borradores de esta actividad</h4>
       <p>Elige cuál continuar. Las versiones anteriores se conservarán en el historial.</p>
-      {heads.map(head => <button className="button" key={head.id} disabled={busy || pending || failed.length > 0} onClick={() => void run(async () => {
+      {heads.map((head, index) => <button className="button lab-draft-option" key={head.id} disabled={busy || pending || failed.length > 0} onClick={() => void run(async () => {
         const resolved = { ...head, id: crypto.randomUUID(), deviceId, createdAt: new Date().toISOString(), parentIds: heads.map(d => d.id) }
         if (!await buffer.save(resolved, record)) throw new Error('La elección del borrador sigue pendiente de guardar.')
-      })}>Continuar: {head.value || 'Sin respuesta'}</button>)}
+      })}>Continuar: {draftLabel(head.value, index)}</button>)}
     </div> : activity.kind === 'choice' ? <>
       <fieldset disabled={busy || heads.length === 0}><legend>Elige una respuesta</legend>
         {activity.options.map(option => <label key={option.id} className="lab-option"><input type="radio" name={activity.id}
@@ -396,7 +411,9 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         <p>{latest.feedback}</p>{latest.outcome !== 'omitted' && <details onToggle={event => {
           if (event.currentTarget.open && !assistance.solutionViewed) void run(revealSolution)
         }}><summary>Por qué cada opción</summary>{activity.options.map(o => <p key={o.id}><strong>{o.text}:</strong> {o.explanation}</p>)}</details>}</div>}
-    </> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy}
+    </> : activity.kind === 'ipv4-model' ? <IPv4Panel activity={activity} saved={answer} disabled={heads.length === 0 || busy}
+      unsaved={pending || failed.length > 0} events={events} context={{ accountId, deviceId, packageId: pack.id, packageVersion: pack.version, attemptGroupId: groupId }}
+      takeActiveMs={activeMs} save={save} /> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy}
       save={save} onResult={async (value, correct, feedback) => {
         await record([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
           familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
@@ -430,6 +447,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
     </>}
     {error && <p role="alert">{error}</p>}
     <details><summary>Fuentes y límites</summary><p>{activity.mode.limits}</p>
+      {activity.kind === 'ipv4-model' && <p>Versión del modelo: {activity.mode.version}.</p>}
       {activity.claims.map((claim, i) => { const source = pack.sources.find(s => s.id === claim.sourceId)!; return <p key={i}>{claim.text} · <a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>, {source.edition}, {claim.locator}</p> })}
     </details>
   </div>
