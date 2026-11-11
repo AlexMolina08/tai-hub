@@ -151,6 +151,7 @@ export function ExamView(props: ExamViewProps) {
   const items = form.sections.flatMap(section => [...section.questions, ...section.reserves].map((question, index) => ({
     question, section, label: index < section.questions.length ? `Pregunta ${index + 1}` : `Reserva ${index - section.questions.length + 1}`,
   })))
+  const reserveCount = form.sections.reduce((count, section) => count + section.reserves.length, 0)
   const item = items[questionIndex]
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000))
   const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
@@ -174,8 +175,11 @@ export function ExamView(props: ExamViewProps) {
       <button className="button" onClick={downloadPending}>Descargar hoja pendiente</button>
     </div></div>}
     {!runId && !state.error && <>
-      <p>{items.length} preguntas, incluidas las reservas. Dispones de {form.durationMinutes} minutos desde el inicio. El reloj sigue al salir.</p>
-      <p>Cada error descuenta un tercio. Las reservas puntúan por orden si hay anulaciones en su parte.</p>
+      <p>{items.length} preguntas{reserveCount > 0 ? `, con ${reserveCount} de reserva.` : '.'}
+        {' '}Dispones de {form.durationMinutes} minutos desde el inicio. El reloj sigue al salir.</p>
+      <p>Cada error descuenta un tercio.
+        {reserveCount > 0 && ' Las reservas puntúan por orden si hay anulaciones en su parte.'}</p>
+      {form.partition === 'reserved' && <p>La primera entrega queda guardada. Las repeticiones sirven para practicar.</p>}
       <button className="button primary" disabled={unsaved} onClick={start}>Empezar evaluación</button>
     </>}
     {runId && !ready && !unsaved && !state.error && <p role="status">Faltan revisiones del intento. Sincroniza o restaura su historial para continuar.</p>}

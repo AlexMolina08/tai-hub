@@ -44,6 +44,7 @@ test('exam resumes in two contexts, keeps corrections hidden, and scores only el
       await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
     }
     await connect(a)
+    await expect(a.getByText(/^25 preguntas, con 5 de reserva\./)).toBeVisible()
     await a.getByRole('button', { name: 'Empezar evaluación' }).click()
     await a.getByRole('radio', { name: 'A. Válida', exact: true }).check()
     await expect(a.getByText('1 de 25 respondidas')).toBeVisible()
@@ -81,6 +82,49 @@ test('exam resumes in two contexts, keeps corrections hidden, and scores only el
     expect(finished).toHaveLength(1)
     expect(finished[0]).toMatchObject({ submitted: 'manual', answers: [['q1', 'a'], ['q2', 'b'], ['r2', 'a']] })
   } finally { await Promise.all(contexts.map(context => context.close())) }
+})
+
+test('a reserved topic form describes 20 questions and keeps its first result after practice', async ({ page, context, browserName }) => {
+  const pack = sampleExamPackage()
+  const form = pack.exams![0]
+  form.kind = 'topic'
+  form.title = 'Tema sintético reservado'
+  const section = form.sections[0]
+  section.reserves = []
+  const first = section.questions[0]
+  section.questions = section.questions.map(question => ({
+    ...question, provenance: first.provenance, options: first.options,
+  }))
+  const drive = new DriveFixture()
+  drive.addLabPackage('topic-exam-fixture', pack)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Tema sintético reservado/ }).click()
+
+  await expect(page.getByText(/^20 preguntas\. Dispones de/)).toBeVisible()
+  await expect(page.getByText('Cada error descuenta un tercio.', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Las reservas puntúan por orden/)).toHaveCount(0)
+  await expect(page.getByText(/La primera entrega queda guardada/)).toBeVisible()
+  await page.getByRole('button', { name: 'Empezar evaluación' }).click()
+  await expect(page.getByText('0 de 20 respondidas')).toBeVisible()
+  await page.getByRole('radio', { name: 'A. Válida', exact: true }).check()
+  await expect(page.getByText('1 de 20 respondidas')).toBeVisible()
+  await page.getByRole('button', { name: 'Entregar examen' }).click()
+  await page.getByRole('button', { name: 'Confirmar entrega' }).click()
+  await expect(page.getByText('1 de 20 puntos · 1 acierto · 0 errores · 19 en blanco')).toBeVisible()
+  await page.getByRole('button', { name: 'Repetir como práctica' }).click()
+  await expect(page.getByText('0 de 20 respondidas')).toBeVisible()
+  await page.getByRole('radio', { name: 'B. Inválida', exact: true }).check()
+  await expect(page.getByText('1 de 20 respondidas')).toBeVisible()
+  await page.getByRole('button', { name: 'Entregar examen' }).click()
+  await page.getByRole('button', { name: 'Confirmar entrega' }).click()
+  await expect(page.getByText('-0,33 de 20 puntos · 0 aciertos · 1 error · 19 en blanco')).toBeVisible()
+  await page.getByRole('combobox', { name: 'Intento guardado' }).selectOption({ label: 'Intento 1' })
+  await expect(page.getByText('1 de 20 puntos · 1 acierto · 0 errores · 19 en blanco')).toBeVisible()
 })
 
 test('exam expiry while disconnected preserves the local answer and freezes edits', async ({ page, context, browserName }) => {
