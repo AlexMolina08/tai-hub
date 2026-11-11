@@ -5,6 +5,7 @@ import { sampleExamPackage, sampleGuidedPackage, sampleIPv4Package, samplePackag
 import { readFile, writeFile } from 'node:fs/promises'
 import type { LabEvent } from '../src/lab/model'
 import { mergeEvents } from '../src/lab/history'
+import { SQL_GRADING_VERSION } from '../src/lab/sql-output'
 import { DEFAULT_LEARNING_POLICY, deriveLearning } from '../src/lab/learning'
 
 async function openLab(page: import('@playwright/test').Page) {
@@ -922,7 +923,7 @@ test('SQL grades numerics without depending on decimal scale or losing bigint pr
   await check.click()
   await expect(page.getByText('Revisa la consulta: algún caso produce otro resultado.', { exact: true })).toBeVisible({ timeout: 45_000 })
   await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
-  await expect.poll(() => drive.labEvents().filter(e => e.kind === 'attempt' && e.gradingVersion === 'sql-datasets-v2').length).toBe(2)
+  await expect.poll(() => drive.labEvents().filter(e => e.kind === 'attempt' && e.gradingVersion === SQL_GRADING_VERSION).length).toBe(2)
 })
 
 test('lesson controls and content fit required screen widths', async ({ page, context, browserName }) => {
@@ -1307,4 +1308,135 @@ test('laboratory supports keyboard answers, enlarged text and automated accessib
   await page.evaluate(() => document.documentElement.style.fontSize = '200%')
   await expect(check).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('signal experiments compare two conditions and retain the calculation across a reload', async ({ page, context, browserName }) => {
+  test.setTimeout(90_000)
+  const pack = samplePackage()
+  const model = { kind: 'signal-model' as const, phase: 'practice' as const,
+    mode: { kind: 'simulation' as const, engine: 'Synthetic signal model', version: 'signal-model-v1', limits: 'Local synthetic observations.' } }
+  pack.activities[0] = { ...pack.activities[0], ...model, title: 'Transmisión sintética', cases: [
+    { id: 'before', title: 'Antes', kind: 'transmission', signal: 'discrete', lanes: 1, timing: 'frame', direction: 'alternate', nodes: 2 },
+    { id: 'after', title: 'Después', kind: 'transmission', signal: 'discrete', lanes: 1, timing: 'frame', direction: 'simultaneous', nodes: 2 },
+  ] }
+  pack.activities[1] = { ...pack.activities[1], ...model, title: 'Canal sintético', cases: [
+    { id: 'before', title: 'Canal A', kind: 'limits', bandwidthHz: 3000, levels: 4, snrDb: 20 },
+    { id: 'after', title: 'Canal B', kind: 'limits', bandwidthHz: 3000, levels: 4, snrDb: 0 },
+  ] }
+  const drive = new DriveFixture()
+  drive.addLabPackage('lab-synthetic-signals', pack)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click()
+  await showPractice(page)
+
+  const check = page.getByRole('button', { name: 'Comprobar los dos casos', exact: true })
+  await expect(check).toBeDisabled()
+  for (const title of ['Antes', 'Después']) {
+    const item = page.getByRole('group', { name: title, exact: true })
+    await item.getByRole('combobox', { name: 'Señal', exact: true }).selectOption('Digital')
+    await item.getByRole('combobox', { name: 'Transferencia', exact: true }).selectOption('Serie')
+    await item.getByRole('combobox', { name: 'Temporización', exact: true }).selectOption('Asíncrona')
+    await item.getByRole('combobox', { name: 'Sentido', exact: true }).selectOption('Half dúplex')
+    await item.getByRole('combobox', { name: 'Extremos', exact: true }).selectOption('Punto a punto')
+  }
+  await expect(page.getByRole('list', { name: 'Corrección de Después' })).toHaveCount(0)
+  await check.click()
+  await expect(page.getByText('Compara tus respuestas con el resultado de cada configuración.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Corrección de Después' }).getByText(/Full dúplex/)).toBeVisible()
+  await page.getByRole('group', { name: 'Después', exact: true }).getByRole('combobox', { name: 'Sentido', exact: true }).selectOption('Full dúplex')
+  await check.click()
+  await expect(page.getByText('Has acertado en ambas configuraciones.', { exact: true })).toBeVisible()
+
+  await page.locator('.lab-steps').getByRole('button').nth(1).click()
+  await expect(page.getByRole('heading', { name: 'Canal sintético' })).toBeVisible()
+  const a = page.getByRole('group', { name: 'Canal A', exact: true })
+  const b = page.getByRole('group', { name: 'Canal B', exact: true })
+  await a.getByLabel('Cota de Nyquist (kbit/s)', { exact: true }).fill('12')
+  await a.getByLabel('Capacidad de Shannon (kbit/s)', { exact: true }).fill('19,97')
+  await b.getByLabel('Cota de Nyquist (kbit/s)', { exact: true }).fill('12')
+  await b.getByLabel('Capacidad de Shannon (kbit/s)', { exact: true }).fill('3')
+  await expect(check).toBeEnabled()
+  await expect(page.getByRole('region', { name: 'Guardado del borrador' })).toHaveCount(0)
+
+  if (browserName !== 'webkit') {
+    await openStudyOptions(page)
+    await page.getByText('Acceso sin conexión: por preparar', { exact: true }).click()
+    await page.getByRole('button', { name: 'Preparar acceso sin conexión', exact: true }).click()
+    await expect(page.getByText('Acceso sin conexión: preparado', { exact: true })).toBeVisible({ timeout: 45_000 })
+    await context.setOffline(true)
+  }
+  await page.reload()
+  await openLab(page)
+  await expect(a.getByLabel('Capacidad de Shannon (kbit/s)', { exact: true })).toHaveValue('19,97')
+  await check.click()
+  await expect(page.getByText('Has acertado en ambas configuraciones.', { exact: true })).toBeVisible()
+  expect(await page.locator('.lab-signal').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+  await page.getByRole('button', { name: 'Restablecer respuestas', exact: true }).click()
+  await expect(a.getByLabel('Capacidad de Shannon (kbit/s)', { exact: true })).toHaveValue('')
+  await expect(check).toBeDisabled()
+
+  if (browserName !== 'webkit') {
+    await context.setOffline(false)
+    await page.getByRole('button', { name: 'Inicio', exact: true }).click()
+    await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(page)
+  }
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+  const events = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+  const attempts = events.filter(event => event.kind === 'attempt' && event.gradingVersion === 'signal-model-v1')
+  expect(attempts.map(attempt => [attempt.activityId, attempt.ordinal, attempt.outcome]).sort()).toEqual([
+    ['p1', 1, 'incorrect'], ['p1', 2, 'correct'], ['p2', 1, 'correct'],
+  ])
+})
+
+test('SQL distinguishes dates, timestamp microseconds and integer array bounds', async ({ page, context, browserName }) => {
+  test.setTimeout(90_000)
+  const pack = samplePackage()
+  pack.activities[0] = { ...pack.activities[0], kind: 'sql', starter: 'SELECT d,t,a FROM demo',
+    referenceQuery: 'SELECT d,t,a FROM demo', comparison: 'bag', datasets: [
+      { id: 'precise', setup: "CREATE TABLE demo(d date,t timestamp,a bigint[]); INSERT INTO demo VALUES ('2024-01-01','2024-01-01 12:34:56.123456','[0:1]={9007199254740993,NULL}');" },
+      { id: 'nulls', setup: "CREATE TABLE demo(d date,t timestamp,a bigint[]); INSERT INTO demo VALUES (NULL,NULL,NULL),('2024-02-29',NULL,'{}');" },
+    ] }
+  const drive = new DriveFixture()
+  drive.addLabPackage('lab-synthetic-temporal', pack)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click()
+  await showPractice(page)
+  const query = page.getByRole('textbox', { name: 'Consulta SQL' })
+  const check = page.getByRole('button', { name: 'Comprobar SQL', exact: true })
+  const result = page.getByRole('region', { name: 'Resultado de la consulta' })
+
+  await query.fill('SELECT d, (t::text)::timestamp, a FROM demo')
+  await check.click()
+  await expect(page.getByText('Correcta en los casos comprobados.', { exact: true })).toBeVisible({ timeout: 25_000 })
+  await expect(result.getByRole('cell', { name: '2024-01-01 12:34:56.123456', exact: true })).toBeVisible()
+  await expect(result.getByRole('cell', { name: '[0:1]={9007199254740993,NULL}', exact: true })).toBeVisible()
+  for (const wrong of [
+    'SELECT d+1,t,a FROM demo',
+    "SELECT d,t + interval '1 microsecond',a FROM demo",
+    'SELECT d,t,ARRAY[a[array_lower(a,1)],NULL] FROM demo',
+    'SELECT d::text,t,a FROM demo',
+  ]) {
+    await query.fill(wrong)
+    await check.click()
+    await expect(page.getByText('Revisa la consulta: algún caso produce otro resultado.', { exact: true })).toBeVisible({ timeout: 25_000 })
+  }
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+  const attempts = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+    .filter(event => event.kind === 'attempt' && event.gradingVersion === SQL_GRADING_VERSION)
+    .sort((a, b) => a.ordinal - b.ordinal)
+  expect(attempts.map(attempt => attempt.outcome)).toEqual(['correct', 'incorrect', 'incorrect', 'incorrect', 'incorrect'])
 })

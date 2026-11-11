@@ -1,3 +1,4 @@
+import { supportsSqlGrading } from './sql-output'
 import type { Activity, ActivityRef, Attempt, LabEvent, LabPackage, LearningContext } from './model'
 import { canonical, mergeEvents } from './history'
 import { validateLearningHistory } from './learning-context'
@@ -198,12 +199,13 @@ export function deriveLearning(input: LearningInput): LearningSnapshot {
       retention: false, retentionObjectiveIds: [], transfer: false, day: c?.clock.day ?? null,
       timeStatus: c ? timeIssues.get(c.id)?.length ? 'uncertain' : 'declared-device' : 'historical', reasons: [] }
     rows.set(a.id, row)
-    const grading = activity?.kind === 'choice' ? 'choice-v1' : activity?.kind === 'sql' ? 'sql-datasets-v1'
+    const grading = activity?.kind === 'choice' ? 'choice-v1'
       : activity?.kind === 'code' ? 'stdout-datasets-v1' : activity?.kind === 'html-css' ? 'html-dom-css-v1' : activity?.mode.version
     if (!activity || !pack || activity.state !== 'validated' || activity.provenance.status !== 'eligible'
       || a.objectiveIds.some(id => !pack.objectives.some(o => o.id === id && o.state === 'validated'))
       || canonical([...activity.objectiveIds].sort()) !== canonical([...a.objectiveIds].sort())
-      || activity.familyId !== a.familyId || activity.phase !== a.phase || grading !== a.gradingVersion) {
+      || activity.familyId !== a.familyId || activity.phase !== a.phase
+      || (activity.kind === 'sql' ? !supportsSqlGrading(a.gradingVersion) : grading !== a.gradingVersion)) {
       row.eligibility = 'excluded'; row.reasons.push(reason('content-ineligible', 'Falta la edición validada/elegible o no concuerda con el intento.', a.id)); continue
     }
     const declaredDiagnostics = a.diagnosticIds ?? []

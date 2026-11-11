@@ -389,3 +389,15 @@ it('a late legacy aid in the same group cannot be silently ordered after a newly
   expect(f.result().attempts[0]).toMatchObject({ eligibility: 'uncertain', unaided: false, understanding: false })
   expect(objective(f).qualifyingCorrectIds).toEqual([])
 })
+
+it('derives learning from the supported SQL graders while keeping unknown grading versions excluded', () => {
+  const f = fixture()
+  const a = f.pack.activities[0]
+  f.pack.activities[0] = { ...a, kind: 'sql', starter: 'SELECT 1', referenceQuery: 'SELECT 1', comparison: 'bag',
+    datasets: [{ id: 'one', setup: 'SELECT 1' }, { id: 'two', setup: 'SELECT 2' }] }
+  f.add(a.id, '2026-11-04T09:00:00Z', { gradingVersion: 'sql-datasets-v1' })
+  f.add(a.id, '2026-11-04T10:00:00Z', { gradingVersion: 'sql-datasets-v2' })
+  f.add(a.id, '2026-11-04T11:00:00Z', { gradingVersion: 'sql-datasets-v3' })
+  f.add(a.id, '2026-11-04T12:00:00Z', { gradingVersion: 'unrecognized' })
+  expect(f.result().attempts.map(attempt => attempt.eligibility)).toEqual(['eligible', 'eligible', 'eligible', 'excluded'])
+})

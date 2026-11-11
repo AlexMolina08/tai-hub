@@ -124,6 +124,12 @@ Cada consulta empieza con una base temporal nueva. Se permite una sentencia, con
 
 La corrección ejecuta varios conjuntos de datos y compara valores por posición. `bag` conserva multiplicidad, `set` permite eliminar duplicados y `ordered` exige orden. Los nombres de columna no se puntúan salvo que el requisito se amplíe expresamente. La versión `sql-datasets-v2` compara enteros y `numeric` por valor exacto cuando ambas columnas tienen un tipo numérico exacto. Conserva la precisión de `bigint` e ignora la escala decimal equivalente. Las columnas de texto mantienen su comparación literal. Los intentos anteriores conservan su versión y resultado. Los ejemplos sintéticos prueban NULL, duplicados, conjuntos vacíos, cancelación, salida excesiva, reinicio y accesos prohibidos. PostgreSQL no representa automáticamente otros dialectos.
 
+El corrector `sql-datasets-v3` conserva la representación de PostgreSQL de DATE, TIMESTAMP, TIMESTAMPTZ y sus arrays. Usa el formato ISO y UTC por defecto. Los arrays de enteros pequeños, enteros y BIGINT conservan dimensiones, cotas, valores grandes y posiciones NULL. Se comparan entre esos tres tipos de array por valor exacto. Un texto con la misma apariencia que una fecha o un array de enteros conserva su tipo distinto. Los eventos de las tres versiones siguen disponibles para el panel de aprendizaje.
+
+## Práctica interactiva de comunicaciones
+
+El modelo local de señales pide resolver dos configuraciones del mismo experimento. Incluye clasificación de representación, transferencia, sincronización, sentido y extremos. La calculadora guía el trabajo con unidades y contrasta tasa útil, potencia y ruido, retardo y cotas de canal bajo hipótesis explícitas. Se guardan ambas respuestas antes de mostrar el cálculo y se conserva cada intento al reintentar o restablecer. El cálculo se ejecuta en la aplicación sin acceso a la red. Las configuraciones se preparan en el paquete y el modelo rechaza entradas no admitidas.
+
 ## Disponibilidad sin conexión
 
 El usuario prepara explícitamente aplicación y motores. El manifiesto se genera desde archivos públicos emitidos por Vite; cada descarga verifica SHA-256. Cache Storage solo contiene esos archivos públicos. Paquetes y respuestas permanecen en IndexedDB por cuenta. El estado vuelve a comprobar la presencia de archivos y deja de mostrar disponibilidad si se elimina una dependencia.

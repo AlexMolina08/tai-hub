@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite'
+import { sqlResultParsers } from './sql-output'
 
 let running = false
 addEventListener('message', async event => {
@@ -14,10 +15,10 @@ addEventListener('message', async event => {
     }
     db = await PGlite.create({ dataDir: 'memory://', pgliteWasmModule: await WebAssembly.compile(wasm),
       initdbWasmModule: await WebAssembly.compile(initdb), fsBundle: new Blob([bundle]),
-      startParams: [...PGlite.defaultStartParams, '-c', 'statement_timeout=3000'] })
+      startParams: [...PGlite.defaultStartParams, '-c', 'statement_timeout=3000', '-c', 'DateStyle=ISO,YMD', '-c', 'TimeZone=UTC'] })
     await db.exec(setup)
     stage = 'query'
-    const result = await db.query<unknown[]>(query, [], { rowMode: 'array' })
+    const result = await db.query<unknown[]>(query, [], { rowMode: 'array', parsers: sqlResultParsers })
     const rows = result.rows.map(row => row.map(value => typeof value === 'bigint' ? value.toString() : value))
     const columns = result.fields.map(field => field.name)
     const columnTypes = result.fields.map(field => field.dataTypeID)

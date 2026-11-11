@@ -1,6 +1,7 @@
 import { canonical } from './history'
 import type { SqlActivity } from './model'
 import type { SqlResult } from './sql-runner'
+import { sqlPreservedType } from './sql-output'
 
 // PostgreSQL OIDs for int8, int2, int4 and numeric. The wire values may be strings.
 const exactNumberTypes = new Set([20, 21, 23, 1700])
@@ -18,8 +19,13 @@ export function compareSqlResults(actual: SqlResult, expected: SqlResult, mode: 
   if (actual.columns.length !== expected.columns.length) return false
   const exactColumns = actual.columnTypes.map((oid, index) =>
     exactNumberTypes.has(oid) && exactNumberTypes.has(expected.columnTypes[index]))
-  const normalize = (result: SqlResult) => result.rows.map(row =>
-    row.map((value, index) => exactColumns[index] ? normalizeExactNumber(value) : value))
+  const preservedColumns = actual.columnTypes.map((oid, index) =>
+    sqlPreservedType(oid) !== undefined || sqlPreservedType(expected.columnTypes[index]) !== undefined)
+  const normalize = (result: SqlResult) => result.rows.map(row => row.map((value, index) => {
+    if (exactColumns[index]) return normalizeExactNumber(value)
+    if (preservedColumns[index] && value !== null) return { type: sqlPreservedType(result.columnTypes[index]) ?? 'other', value }
+    return value
+  }))
   return compareSqlRows(normalize(actual), normalize(expected), mode)
 }
 

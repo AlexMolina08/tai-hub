@@ -1,3 +1,4 @@
+import type { SignalCase } from './signal-model'
 import type { IPv4Input, IPv4Prediction, IPv4Comparison } from './ipv4'
 
 /** Private content is loaded at runtime. Never import a real study package into the public bundle. */
@@ -126,7 +127,12 @@ export interface IPv4ModelActivity extends ActivityBase {
   phase: 'practice'
   initialInput: IPv4Input
 }
-export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity
+export interface SignalModelActivity extends ActivityBase {
+  kind: 'signal-model'
+  phase: 'practice'
+  cases: SignalCase[]
+}
+export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity
 export interface GuidedStage {
   id: string
   kind: 'recover' | 'understand' | 'experiment' | 'transfer' | 'close'

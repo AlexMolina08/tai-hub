@@ -4,6 +4,7 @@ import type { DriveLibrary } from '../drive/library'
 import { blocks } from '../syllabus'
 import type { Activity, Attempt, Draft, LabEvent, LabPackage, Lesson, SessionPosition, SqlActivity } from './model'
 import { compareSqlResults } from './sql-comparison'
+import { SQL_GRADING_VERSION } from './sql-output'
 import type { SqlResult } from './sql-runner'
 import { LabSync, type LabSnapshot } from './sync'
 import { browserHistoryStore } from './store'
@@ -17,6 +18,7 @@ import { OfflineControls } from './OfflineControls'
 import { CodePanel } from './CodePanel'
 import { HtmlPanel } from './HtmlPanel'
 import { IPv4Panel } from './IPv4Panel'
+import { SignalPanel } from './SignalPanel'
 import { createIPv4View, parseIPv4View, serializeIPv4View } from './ipv4-workflow'
 import { StudyText } from './StudyText'
 import { activityLocationKey, studyContinuation } from './continuation'
@@ -380,7 +382,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const failed = buffered.filter(entry => entry.status === 'failed')
   const pending = buffered.some(entry => entry.status === 'pending')
   const initialValue = activity.kind === 'choice' ? '' : activity.kind === 'ipv4-model' ? serializeIPv4View(createIPv4View(activity))
-    : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
+    : activity.kind === 'signal-model' ? '[]' : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
   const [initial] = useState<Draft>(() => {
     const queued = semantic.events().find((event): event is Draft => event.kind === 'draft' && !!newAttemptGroupId
       && event.attemptGroupId === newAttemptGroupId && event.packageId === pack.id && event.packageVersion === pack.version
@@ -563,7 +565,13 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
             {!busy && <button className="text-link" onClick={() => void run(() => semantic.hasUnsaved() ? retrySemantic() : revealSolution())}>Reintentar mostrar explicaciones</button>}</p>}</details>}</div>}
     </> : activity.kind === 'ipv4-model' ? <IPv4Panel activity={activity} saved={answer} disabled={heads.length === 0 || busy || semanticBlocked}
       unsaved={pending || failed.length > 0} events={events} context={{ accountId, deviceId, packageId: pack.id, packageVersion: pack.version, attemptGroupId: groupId }}
-      takeActiveMs={activeMs} save={save} /> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy || semanticBlocked}
+      takeActiveMs={activeMs} save={save} /> : activity.kind === 'signal-model' ? <SignalPanel activity={activity} saved={answer} latest={latest}
+      disabled={heads.length === 0 || busy || semanticBlocked} save={save} onResult={async (value, correct, feedback) => {
+        await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
+          familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
+          answer: value, outcome: correct ? 'correct' : 'incorrect', ...attemptFacts(), activeMs: activeMs(),
+          phase: activity.phase, gradingVersion: activity.mode.version, feedback }])
+      }} /> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy || semanticBlocked}
       save={save} onResult={async (value, correct, feedback) => {
         await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
           familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
@@ -580,7 +588,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
           familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
           answer: value, outcome: correct ? 'correct' : 'incorrect', ...attemptFacts(),
-          activeMs: activeMs(), phase: activity.phase, gradingVersion: 'sql-datasets-v2',
+          activeMs: activeMs(), phase: activity.phase, gradingVersion: SQL_GRADING_VERSION,
           feedback: feedback ?? (correct ? 'La consulta satisface los casos comprobados.' : 'La consulta no coincide con el resultado requerido en todos los casos.') }])
       }} />}
     {latest && latest.ordinal > 1 && <p className="lab-mode">Intento {latest.ordinal}. Tu primera respuesta se conserva.</p>}

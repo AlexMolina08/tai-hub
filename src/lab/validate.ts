@@ -1,3 +1,4 @@
+import { SIGNAL_MODEL_VERSION, validSignalCases } from './signal-model'
 import { requiredGates, type LabPackage, type EventBatch } from './model'
 import { familyConflicts } from './partitions'
 import { validateIPv4Activity, validateIPv4Event } from './ipv4-workflow'
@@ -136,6 +137,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
             && inList(k.kind, ['count', 'text', 'style', 'attribute']) && typeof k.expected === 'string' && k.expected.length <= 2000
             && (!['style', 'attribute'].includes(String(k.kind)) || (string(k.property) && /^[a-zA-Z-]{1,64}$/.test(k.property)))))
         || new Set(a.cases.map(c => (c as RecordValue).id)).size !== a.cases.length) issues.push(`${a.id}: casos HTML/CSS inválidos`)
+    } else if (a.kind === 'signal-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== SIGNAL_MODEL_VERSION
+        || !validSignalCases(a.cases)) issues.push(`${a.id}: casos del modelo de señales inválidos`)
     } else if (a.kind === 'ipv4-model') {
       try { validateIPv4Activity(a) } catch (error) { issues.push(`${a.id}: ${String(error)}`) }
     } else issues.push(`${a.id}: modalidad no soportada`)
