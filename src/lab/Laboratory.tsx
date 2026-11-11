@@ -596,7 +596,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
           familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
           answer: value, outcome: correct ? 'correct' : 'incorrect', ...attemptFacts(), activeMs: activeMs(),
           phase: activity.phase, gradingVersion: 'stdout-datasets-v1', feedback }])
-      }} /> : <SqlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy || semanticBlocked}
+      }} /> : <SqlPanel activity={activity} saved={answer} latest={latest} disabled={heads.length === 0 || busy || semanticBlocked}
       save={save} onResult={async (value, correct, feedback) => {
         await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
           familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
@@ -626,14 +626,16 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   </div>
 }
 
-function SqlPanel({ activity, saved, disabled, save, onResult }: {
-  activity: SqlActivity; saved: string; disabled: boolean; save: (value: string) => Promise<void>;
+function SqlPanel({ activity, saved, latest, disabled, save, onResult }: {
+  activity: SqlActivity; saved: string; latest?: Attempt; disabled: boolean; save: (value: string) => Promise<void>;
   onResult: (value: string, correct: boolean, feedback?: string) => Promise<void>
 }) {
   const [query, setQuery] = useState(saved)
   useEffect(() => { setQuery(saved) }, [saved])
   const [result, setResult] = useState<SqlResult>()
-  const [status, setStatus] = useState('')
+  const [executionStatus, setExecutionStatus] = useState<{ query: string; text: string }>()
+  const setStatus = (text: string) => setExecutionStatus({ query, text })
+  const status = executionStatus?.query === query ? executionStatus.text : latest?.answer === query ? latest.feedback : ''
   const [running, setRunning] = useState(false)
   const controller = useRef<AbortController>(undefined)
   useEffect(() => () => controller.current?.abort(), [])
