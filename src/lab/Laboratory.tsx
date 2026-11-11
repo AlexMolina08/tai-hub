@@ -17,6 +17,7 @@ import { CodePanel } from './CodePanel'
 import { HtmlPanel } from './HtmlPanel'
 import { StudyText } from './StudyText'
 import { activityLocationKey, studyContinuation } from './continuation'
+import { LessonCatalog } from './LessonCatalog'
 import './laboratory.css'
 
 const empty: LabSnapshot = { events: [], pendingIds: [], status: 'local' }
@@ -152,13 +153,8 @@ function Workspace({ library, accountId, connected, openMaterial }: {
           setSelected({ pack: packageKey(continuation.pack), lesson: continuation.lesson.id, activity: continuation.activity.id })
         }}>Reanudar actividad <ArrowRight size={17} /></button>
       </section>}
-      <div className="lab-package-list">{packages.map(pack => <section key={packageKey(pack)}>
-        <h2>{pack.title}</h2><p>Versión {pack.version} · Contenido guardado en este dispositivo.</p>
-        <div className="lab-lesson-list">{pack.lessons.map(lesson => <button className="lab-lesson" key={lesson.id}
-          onClick={() => setSelected({ pack: packageKey(pack), lesson: lesson.id })}>
-          <BookOpen size={20} /><span>{lesson.title}<small>{lesson.minutes} minutos · {lesson.objectiveIds.length} {lesson.objectiveIds.length === 1 ? 'objetivo' : 'objetivos'}</small></span>
-        </button>)}</div>
-      </section>)}</div>
+      {packages.length > 0 && <LessonCatalog packages={packages} events={history.events} accountId={accountId}
+        openLesson={(pack, lesson) => setSelected({ pack: packageKey(pack), lesson: lesson.id })} />}
       {!packages.length && <div className="lab-empty"><h2>Las lecciones se están preparando</h2>
         <p>Se incorporarán al completar sus comprobaciones de contenido y funcionamiento.</p></div>}
       <details className="lab-map"><summary>Mapa de los 19 temas</summary>

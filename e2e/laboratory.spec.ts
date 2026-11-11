@@ -20,6 +20,53 @@ async function showPractice(page: import('@playwright/test').Page) {
 async function openStudyOptions(page: import('@playwright/test').Page) {
   if (await page.locator('.lab-tools').getAttribute('open') === null) await page.getByText('Opciones de estudio', { exact: true }).click()
 }
+test('catalogue filters topics and searches concepts without changing saved answers', async ({ page, context, browserName }) => {
+  const programming = samplePackage(), networks = samplePackage()
+  programming.objectives[0].topicId = 'III.4'
+  programming.lessons[0].title = 'Referencias e igualdad'
+  programming.objectives[0].statement = 'Distinguir identidad de objetos.'
+  networks.id = 'synthetic-networks'
+  networks.objectives[0].topicId = 'IV.7'
+  networks.lessons[0].title = 'Comunicación entre redes'
+  networks.objectives[0].statement = 'Interpretar una máscara de red.'
+  const drive = new DriveFixture()
+  drive.addLabPackage('lab-catalogue-programming', programming)
+  drive.addLabPackage('lab-catalogue-networks', networks)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  const catalogue = page.getByRole('region', { name: 'Explorar lecciones' })
+  await expect(catalogue.getByRole('status')).toHaveText('2 lecciones disponibles')
+  await catalogue.getByRole('button', { name: 'Bloque III', exact: true }).click()
+  await expect(catalogue.getByRole('status')).toHaveText('1 lección disponible')
+  await expect(catalogue.getByRole('button', { name: /Referencias e igualdad/ })).toBeVisible()
+  await expect(catalogue.getByRole('button', { name: /Comunicación entre redes/ })).toHaveCount(0)
+  await catalogue.getByRole('button', { name: 'Bloque IV', exact: true }).click()
+  expect((await catalogue.getByRole('combobox', { name: 'Tema', exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await catalogue.getByRole('combobox', { name: 'Tema', exact: true }).selectOption('IV.7')
+  await catalogue.getByRole('searchbox', { name: 'Buscar lecciones', exact: true }).fill('MASCARA')
+  await expect(catalogue.getByRole('button', { name: /Comunicación entre redes/ })).toBeVisible()
+  await catalogue.getByRole('searchbox', { name: 'Buscar lecciones', exact: true }).fill('inexistente')
+  await expect(catalogue.getByText('No hay lecciones disponibles con estos filtros.', { exact: true })).toBeVisible()
+  await catalogue.getByRole('button', { name: 'Mostrar todas las lecciones', exact: true }).click()
+  await expect(catalogue.getByRole('searchbox', { name: 'Buscar lecciones', exact: true })).toBeFocused()
+  await expect(catalogue.getByRole('status')).toHaveText('2 lecciones disponibles')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect((await new AxeBuilder({ page }).include('.lab-catalog').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+  await page.screenshot({ path: `test-results/laboratory-catalogue-${browserName}.png`, fullPage: true })
+  await catalogue.getByRole('button', { name: /Comunicación entre redes/ }).click()
+  await showPractice(page)
+  await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+  await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+  await expect(page.getByText('Respuesta correcta', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Volver a las lecciones' }).click()
+  await expect(catalogue.getByRole('button', { name: /Comunicación entre redes/ })).toContainText('1 de 5 actividades respondidas')
+  await expect(catalogue.getByRole('button', { name: /Referencias e igualdad/ })).toContainText('0 de 5 actividades respondidas')
+})
+
 test('private lesson persists answers, assistance and retries across navigation', async ({ page, context, browserName }) => {
   const drive = new DriveFixture(); drive.addLabPackage('lab-fixture', samplePackage())
   await drive.install(context, browserName === 'webkit')

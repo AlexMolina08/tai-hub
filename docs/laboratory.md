@@ -28,6 +28,8 @@ Los borradores forman un grafo de versiones. Dos ramas concurrentes requieren el
 
 La entrada permite reanudar la última actividad disponible a partir del historial de la cuenta, incluido el que llega de otro dispositivo. El destino exige coincidencia de paquete, versión y actividad. Solo admite actividades de práctica y cierre de lección validadas; excluye reservas, contenido retirado y versiones ausentes. La fecha del evento ordena esta sugerencia de navegación, con desempate estable por ID: no resuelve conflictos ni calcula dominio. Un reloj de dispositivo desajustado puede afectar la sugerencia, pero no modifica ni elimina respuestas. La navegación posterior y el panel de lectura/práctica se conservan localmente; la sincronización transmite respuestas y ayudas, no una posición de lectura inventada.
 
+El catálogo agrupa las lecciones por tema oficial y permite filtrar III/IV, tema y palabras del título o de sus objetivos. La búsqueda ignora tildes y mayúsculas. Una lección multitema aparece una vez en el resultado. Las ediciones coexistentes siguen siendo destinos distintos; se muestra la edición cuando se repite el título. Los recuentos de actividades respondidas exigen la cuenta y versiones exactas, excluyen omisiones y no representan dominio. Al restablecer filtros, el foco vuelve al buscador. El selector de tema usa un área táctil de al menos44px también en WebKit, cuyo control nativo ignoraba la altura mínima.
+
 Una copia exportada identifica cuenta y esquema. Restaurarla combina eventos y rechaza otra cuenta o un esquema desconocido. No se realiza compactación destructiva. Las cuentas tienen claves separadas en IndexedDB. Desconectar revoca la selección local de cuenta y no conserva credenciales para el modo offline.
 
 ## Ejecución SQL
