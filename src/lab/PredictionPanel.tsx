@@ -9,6 +9,7 @@ import { describeStack, stackControls } from './stack-model'
 import { describeSwitching, switchingControls } from './switching-model'
 import { describeRadio, radioControls } from './radio-model'
 import { describeDhcp, dhcpControls } from './dhcp-model'
+import { describeTransaction, transactionControls } from './transaction-model'
 import { matchesPredictionAnswer, parsePredictionDraft, predictionInputLimit, validPredictionAnswer } from './prediction'
 
 export function predictionFor(activity: PredictionActivity) {
@@ -29,6 +30,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: radioControls(activity.profile), describe: (values: string[]) => describeRadio(activity.profile, values) }
     case 'dhcp-model':
       return { controls: dhcpControls(activity.profile), describe: (values: string[]) => describeDhcp(activity.profile, values) }
+    case 'transaction-model':
+      return { controls: transactionControls(activity.profile), describe: (values: string[]) => describeTransaction(activity.profile, values) }
     case 'frame-model':
       return { controls: frameControls(activity.profile), describe: (values: string[]) => describeFrame(activity.profile, values) }
   }
