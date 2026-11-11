@@ -1,3 +1,4 @@
+import type { AccessProfile } from './access-model'
 import type { FrameProfile } from './frame-model'
 import type { SignalCase } from './signal-model'
 import type { IPv4Input, IPv4Prediction, IPv4Comparison } from './ipv4'
@@ -138,7 +139,12 @@ export interface FrameModelActivity extends ActivityBase {
   phase: 'practice'
   profile: FrameProfile
 }
-export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | FrameModelActivity
+export interface AccessModelActivity extends ActivityBase {
+  kind: 'access-model'
+  phase: 'practice'
+  profile: AccessProfile
+}
+export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | FrameModelActivity | AccessModelActivity
 export interface GuidedStage {
   id: string
   kind: 'recover' | 'understand' | 'experiment' | 'transfer' | 'close'

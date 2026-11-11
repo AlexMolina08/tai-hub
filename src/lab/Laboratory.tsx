@@ -19,8 +19,8 @@ import { CodePanel } from './CodePanel'
 import { HtmlPanel } from './HtmlPanel'
 import { IPv4Panel } from './IPv4Panel'
 import { SignalPanel } from './SignalPanel'
-import { FramePanel } from './FramePanel'
-import { frameControls, parseFrameDraft } from './frame-model'
+import { PredictionPanel, predictionFor } from './PredictionPanel'
+import { parsePredictionDraft } from './prediction'
 import { createIPv4View, parseIPv4View, serializeIPv4View } from './ipv4-workflow'
 import { StudyText } from './StudyText'
 import { activityLocationKey, studyContinuation } from './continuation'
@@ -384,7 +384,8 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const failed = buffered.filter(entry => entry.status === 'failed')
   const pending = buffered.some(entry => entry.status === 'pending')
   const initialValue = activity.kind === 'choice' ? '' : activity.kind === 'ipv4-model' ? serializeIPv4View(createIPv4View(activity))
-    : activity.kind === 'signal-model' ? '[]' : activity.kind === 'frame-model' ? '{}' : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
+    : activity.kind === 'signal-model' ? '[]' : activity.kind === 'frame-model' || activity.kind === 'access-model' ? '{}'
+      : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
   const [initial] = useState<Draft>(() => {
     const queued = semantic.events().find((event): event is Draft => event.kind === 'draft' && !!newAttemptGroupId
       && event.attemptGroupId === newAttemptGroupId && event.packageId === pack.id && event.packageVersion === pack.version
@@ -509,9 +510,10 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       phase: activity.phase, gradingVersion: activity.mode.version, feedback }])
   }
   function draftLabel(value: string, index: number) {
-    if (activity.kind === 'frame-model') {
-      const draft = parseFrameDraft(value, activity.profile)
-      const controls = frameControls(activity.profile).map((control, i) =>
+    if (activity.kind === 'frame-model' || activity.kind === 'access-model') {
+      const schema = predictionFor(activity)
+      const draft = parsePredictionDraft(value, schema.controls, schema.describe)
+      const controls = schema.controls.map((control, i) =>
         `${control.label}: ${control.toggle ? draft.controls[i] === '1' ? 'sí' : 'no' : draft.controls[i]}`)
       return `Versión ${index + 1}. ${controls.join(' · ')}. Predicción: ${draft.answers.map(item => item || 'sin responder').join(' · ')}.`
     }
@@ -581,7 +583,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       unsaved={pending || failed.length > 0} events={events} context={{ accountId, deviceId, packageId: pack.id, packageVersion: pack.version, attemptGroupId: groupId }}
       takeActiveMs={activeMs} save={save} /> : activity.kind === 'signal-model' ? <SignalPanel activity={activity} saved={answer} latest={latest}
       disabled={heads.length === 0 || busy || semanticBlocked} save={save} onResult={submitModel} />
-      : activity.kind === 'frame-model' ? <FramePanel activity={activity} saved={answer} latest={latest}
+      : activity.kind === 'frame-model' || activity.kind === 'access-model' ? <PredictionPanel activity={activity} saved={answer} latest={latest}
         disabled={heads.length === 0 || busy || semanticBlocked} save={save} onResult={submitModel} /> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy || semanticBlocked}
       save={save} onResult={async (value, correct, feedback) => {
         await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),

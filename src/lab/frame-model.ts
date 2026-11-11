@@ -1,3 +1,5 @@
+import type { PredictionAnswer, PredictionControl, PredictionExercise } from './prediction'
+
 export const FRAME_MODEL_VERSION = 'frame-model-v1'
 
 type Vector = { title: string; bytes: number[] }
@@ -37,17 +39,15 @@ export function validFrameProfile(v: unknown): v is FrameProfile {
   }
 }
 
-type Control = { label: string; options: string[]; initial: string; toggle?: true }
-type Answer = { label: string; expected: string; options?: string[]; format?: 'sequence' | 'hex' | 'hex-or-dash' | 'integer' | 'fraction' }
 const yesNo = ['Sí', 'No']
 const yes = (b: boolean) => b ? yesNo[0] : yesNo[1]
-const options = (label: string, values: string[], initial = values[0]): Control => ({ label, options: values, initial })
-const toggle = (label: string): Control => ({ label, options: ['0', '1'], initial: '0', toggle: true })
+const options = (label: string, values: string[], initial = values[0]): PredictionControl => ({ label, options: values, initial })
+const toggle = (label: string): PredictionControl => ({ label, options: ['0', '1'], initial: '0', toggle: true })
 const levels = ['-3', '-1', '1', '3']
 const hex = (value: number, length: number) => value.toString(16).toUpperCase().padStart(length, '0')
 const bytesText = (bytes: number[]) => bytes.map(n => hex(n, 2)).join(' ')
 
-export function frameControls(profile: FrameProfile): Control[] {
+export function frameControls(profile: FrameProfile): PredictionControl[] {
   switch (profile.kind) {
     case 'constellation': return [options('I del punto A', levels, '1'), options('Q del punto A', levels, '3'),
       options('I del punto B', levels, '3'), options('Q del punto B', levels, '1')]
@@ -64,9 +64,9 @@ export function frameControls(profile: FrameProfile): Control[] {
   }
 }
 
-type FrameDescription = { facts: string[]; answers: Answer[]; steps: string[]; points?: [number, number][] }
-function closed(label: string, expected: string, options: string[] = yesNo): Answer { return { label, expected, options } }
-function exact(label: string, value: string | number, format: NonNullable<Answer['format']>): Answer {
+type FrameDescription = { facts: string[]; answers: PredictionAnswer[]; steps: string[]; points?: [number, number][] }
+function closed(label: string, expected: string, options: string[] = yesNo): PredictionAnswer { return { label, expected, options } }
+function exact(label: string, value: string | number, format: NonNullable<PredictionAnswer['format']>): PredictionAnswer {
   return { label, expected: String(value), format }
 }
 function fcs(bytes: number[]): number {
@@ -77,7 +77,7 @@ function fcs(bytes: number[]): number {
   }
   return remainder
 }
-export function describeFrame(profile: FrameProfile, values: string[]): FrameDescription {
+export function describeFrame(profile: FrameProfile, values: string[]): PredictionExercise {
   switch (profile.kind) {
     case 'constellation': {
       const [i1, q1, i2, q2] = values.map(Number)
@@ -192,46 +192,4 @@ export function describeFrame(profile: FrameProfile, values: string[]): FrameDes
       }
     }
   }
-}
-
-function normalize(answer: Answer, raw: string): string | undefined {
-  if (answer.options) return answer.options.includes(raw) ? raw : undefined
-  const text = raw.trim().toUpperCase()
-  switch (answer.format) {
-    case 'sequence': return /^[A-Z0-9]+$|^-$/.test(text.replace(/[\s,]+/g, '')) ? text.replace(/[\s,]+/g, '') : undefined
-    case 'hex':
-    case 'hex-or-dash': {
-      const hexText = text.replace(/^0X/, '')
-      if (text === '-' && answer.format === 'hex-or-dash') return '-'
-      return /^[0-9A-F]{1,4}$/.test(hexText) ? String(parseInt(hexText, 16)) : undefined
-    }
-    case 'integer': return /^\d{1,9}$/.test(text) ? String(Number(text)) : undefined
-    case 'fraction': return /^\d{1,6}\s*\/\s*[1-9]\d{0,5}$/.test(text) ? text.replace(/\s/g, '') : undefined
-  }
-}
-export function validFrameAnswer(answer: Answer, raw: string): boolean {
-  return normalize(answer, raw) !== undefined
-}
-export function matchesFrameAnswer(answer: Answer, raw: string): boolean {
-  const value = normalize(answer, raw)
-  if (value === undefined) return false
-  if (answer.format === 'fraction') {
-    const [n, d] = value.split('/').map(Number)
-    const [a, b] = answer.expected.split('/').map(Number)
-    return n * b === a * d
-  }
-  return value === normalize(answer, answer.expected)
-}
-export function parseFrameDraft(raw: string, profile: FrameProfile): { controls: string[]; answers: string[] } {
-  let value: unknown
-  try { value = JSON.parse(raw) } catch { value = undefined }
-  const stored = isRecord(value) ? value : {}
-  const choices = Array.isArray(stored.controls) ? stored.controls : []
-  const predictions = Array.isArray(stored.answers) ? stored.answers : []
-  const schema = frameControls(profile)
-  const valid = choices.length === schema.length && schema.every((control, i) => control.options.includes(choices[i]))
-  const controls = valid ? choices as string[] : schema.map(control => control.initial)
-  const answers = describeFrame(profile, controls).answers.map((_, i) =>
-    valid && typeof predictions[i] === 'string' && predictions[i].length <= 40 ? predictions[i] : '')
-  return { controls, answers }
 }

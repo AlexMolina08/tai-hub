@@ -132,6 +132,8 @@ El modelo local de señales pide resolver dos configuraciones del mismo experime
 
 El modelo de símbolos y tramas añade controles editables para constelación I/Q, ranuras TDM, códigos, paridad, checksum, FCS, recuperación XOR y parada y espera. Los casos usan datos sintéticos y cálculos locales. Cambiar parámetros limpia la predicción activa y conserva los intentos anteriores. La corrección muestra texto con coordenadas, posiciones, sumas, residuos o secuencias según el ejercicio. Los tamaños y los formatos se validan al importar. Las evaluaciones reservadas usan sus actividades de evaluación separadas.
 
+El modelo de acceso permite cambiar terminaciones de xDSL y FTTH, interrumpir un medio y conmutar entre puente y router. El perfil Ethernet contrasta la difusión y el segmento de colisión al variar equipos y enlaces. La traza explica dónde se interrumpe el recorrido. Todos los perfiles son sintéticos y se corrigen localmente con las funciones y el dúplex declarados.
+
 ## Disponibilidad sin conexión
 
 El usuario prepara explícitamente aplicación y motores. El manifiesto se genera desde archivos públicos emitidos por Vite; cada descarga verifica SHA-256. Cache Storage solo contiene esos archivos públicos. Paquetes y respuestas permanecen en IndexedDB por cuenta. El estado vuelve a comprobar la presencia de archivos y deja de mostrar disponibilidad si se elimina una dependencia.

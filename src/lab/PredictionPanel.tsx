@@ -1,23 +1,35 @@
-import { useEffect, useState } from 'react'
-import type { Attempt, FrameModelActivity } from './model'
-import { describeFrame, frameControls, matchesFrameAnswer, parseFrameDraft, validFrameAnswer } from './frame-model'
+import { useEffect, useMemo, useState } from 'react'
+import type { AccessModelActivity, Attempt, FrameModelActivity } from './model'
+import { describeFrame, frameControls } from './frame-model'
+import { accessControls, describeAccess } from './access-model'
+import { matchesPredictionAnswer, parsePredictionDraft, validPredictionAnswer } from './prediction'
 
-export function FramePanel({ activity, saved, latest, disabled, save, onResult }: {
-  activity: FrameModelActivity; saved: string; latest?: Attempt; disabled: boolean
+type Activity = FrameModelActivity | AccessModelActivity
+
+export function predictionFor(activity: Activity) {
+  if (activity.kind === 'access-model') {
+    const { profile } = activity
+    return { controls: accessControls(profile), describe: (values: string[]) => describeAccess(profile, values) }
+  }
+  const { profile } = activity
+  return { controls: frameControls(profile), describe: (values: string[]) => describeFrame(profile, values) }
+}
+
+export function PredictionPanel({ activity, saved, latest, disabled, save, onResult }: {
+  activity: Activity; saved: string; latest?: Attempt; disabled: boolean
   save: (value: string) => Promise<void>
   onResult: (value: string, correct: boolean, feedback: string) => Promise<void>
 }) {
-  const profile = activity.profile
-  const [draft, setDraft] = useState(() => parseFrameDraft(saved, profile))
+  const { controls, describe } = useMemo(() => predictionFor(activity), [activity])
+  const [draft, setDraft] = useState(() => parsePredictionDraft(saved, controls, describe))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  useEffect(() => { setDraft(parseFrameDraft(saved, profile)) }, [saved, profile])
-  const controls = frameControls(profile)
-  const exercise = describeFrame(profile, draft.controls)
+  useEffect(() => { setDraft(parsePredictionDraft(saved, controls, describe)) }, [saved, controls, describe])
+  const exercise = describe(draft.controls)
   const serialized = JSON.stringify(draft)
   const graded = latest?.answer === serialized && latest.outcome !== 'omitted'
   const locked = disabled || busy
-  const complete = exercise.answers.every((answer, i) => validFrameAnswer(answer, draft.answers[i]))
+  const complete = exercise.answers.every((answer, i) => validPredictionAnswer(answer, draft.answers[i]))
 
   function edit(next: typeof draft) {
     setDraft(next); setError('')
@@ -25,19 +37,19 @@ export function FramePanel({ activity, saved, latest, disabled, save, onResult }
   }
   function changeControl(index: number, value: string) {
     const next = draft.controls.map((entry, i) => i === index ? value : entry)
-    edit({ controls: next, answers: describeFrame(profile, next).answers.map(() => '') })
+    edit({ controls: next, answers: describe(next).answers.map(() => '') })
   }
   async function submit() {
     setBusy(true); setError('')
     try {
       await save(serialized)
-      const correct = exercise.answers.every((answer, i) => matchesFrameAnswer(answer, draft.answers[i]))
+      const correct = exercise.answers.every((answer, i) => matchesPredictionAnswer(answer, draft.answers[i]))
       await onResult(serialized, correct, correct ? 'Predicción correcta.' : 'Revisa tu predicción con el cálculo.')
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'No se pudo guardar la comprobación.')
     } finally { setBusy(false) }
   }
-  return <div className="lab-frame">
+  return <div className={activity.kind === 'frame-model' ? 'lab-frame' : 'lab-access'}>
     <fieldset disabled={locked} className="lab-frame-section">
       <legend>Parámetros</legend>
       <div className="lab-model-fields">
@@ -72,12 +84,12 @@ export function FramePanel({ activity, saved, latest, disabled, save, onResult }
     </fieldset>
     <div className="lab-actions">
       <button className="button primary" disabled={locked || !complete} onClick={() => void submit()}>Comprobar predicción</button>
-      <button className="button" disabled={locked} onClick={() => edit(parseFrameDraft('', profile))}>Restablecer práctica</button>
+      <button className="button" disabled={locked} onClick={() => edit(parsePredictionDraft('', controls, describe))}>Restablecer práctica</button>
     </div>
     <p role="status">{busy ? 'Guardando la comprobación…' : graded ? latest.feedback : ''}</p>
     {graded && <section aria-label="Cálculo de la configuración" className="lab-feedback">
       <ul>{exercise.answers.map((answer, i) => <li key={answer.label}>
-        <strong>{answer.label}</strong> · {matchesFrameAnswer(answer, draft.answers[i]) ? 'Correcta' : 'Revisar'}. Resultado: {answer.expected}.
+        <strong>{answer.label}</strong> · {matchesPredictionAnswer(answer, draft.answers[i]) ? 'Correcta' : 'Revisar'}. Resultado: {answer.expected}.
       </li>)}</ul>
       {exercise.steps.map(step => <p key={step}>{step}</p>)}
       {exercise.points && <div className="lab-constellation" aria-hidden="true">

@@ -1,9 +1,11 @@
 import { expect, it } from 'vitest'
-import { describeFrame, FRAME_MODEL_VERSION, matchesFrameAnswer, parseFrameDraft, validFrameAnswer, validFrameProfile } from './frame-model'
+import { describeFrame, FRAME_MODEL_VERSION, frameControls, validFrameProfile } from './frame-model'
+import { matchesPredictionAnswer, parsePredictionDraft, validPredictionAnswer } from './prediction'
 import type { FrameProfile } from './frame-model'
 import { samplePackage } from './fixtures.test-support'
 import { parsePackage } from './validate'
 
+const parseFrameDraft = (raw: string, profile: FrameProfile) => parsePredictionDraft(raw, frameControls(profile), values => describeFrame(profile, values))
 const expected = (profile: FrameProfile, values: string[]) => describeFrame(profile, values).answers.map(a => a.expected)
 
 it('separates equal magnitudes from coincident points and shows signed coordinates', () => {
@@ -18,8 +20,8 @@ it('keeps the received order with changed slot owners, including a flow with no 
   const profile: FrameProfile = { kind: 'slots', symbols: ['Q', '7', 'X', '2'], owners: ['A', 'B', 'A', 'B'] }
   const out = describeFrame(profile, ['A', 'B', 'B', 'A']).answers
   expect(out.map(a => a.expected)).toEqual(['Q2', '7X'])
-  expect(matchesFrameAnswer(out[0], 'q, 2')).toBe(true)
-  expect(matchesFrameAnswer(out[0], '2Q')).toBe(false)
+  expect(matchesPredictionAnswer(out[0], 'q, 2')).toBe(true)
+  expect(matchesPredictionAnswer(out[0], '2Q')).toBe(false)
   expect(expected(profile, ['A', 'A', 'A', 'A'])).toEqual(['Q7X2', '-'])
 })
 
@@ -66,9 +68,9 @@ it('uses a single XOR equation for one known erasure and accepts a wrong dash as
   const profile: FrameProfile = { kind: 'xor', symbols: [0x17, 0x20, 0x4b] }
   const answer = describeFrame(profile, ['Símbolo B']).answers[1]
   expect(answer.expected).toBe('20')
-  expect(validFrameAnswer(answer, '-')).toBe(true)
-  expect(matchesFrameAnswer(answer, '-')).toBe(false)
-  expect(matchesFrameAnswer(answer, '0x20')).toBe(true)
+  expect(validPredictionAnswer(answer, '-')).toBe(true)
+  expect(matchesPredictionAnswer(answer, '-')).toBe(false)
+  expect(matchesPredictionAnswer(answer, '0x20')).toBe(true)
   expect(expected(profile, ['Símbolos A y B'])).toEqual(['No', '-'])
 })
 
@@ -79,9 +81,9 @@ it('keeps distinct forward, reverse and useful bits for lost frame versus lost A
   expect(expected(profile, ['160 bits', 'Trama perdida'])).toEqual(['A, A, B', '480', '48', '240', '120/160'])
   const out = describeFrame(profile, ['160 bits', 'Trama recibida y ACK perdido']).answers
   expect(out.map(a => a.expected)).toEqual(['A, A, B', '480', '72', '240', '120/160'])
-  expect(matchesFrameAnswer(out.at(-1)!, '3 / 4')).toBe(true)
-  expect(matchesFrameAnswer(out.at(-1)!, '3/5')).toBe(false)
-  expect(validFrameAnswer(out.at(-1)!, '1/0')).toBe(false)
+  expect(matchesPredictionAnswer(out.at(-1)!, '3 / 4')).toBe(true)
+  expect(matchesPredictionAnswer(out.at(-1)!, '3/5')).toBe(false)
+  expect(validPredictionAnswer(out.at(-1)!, '1/0')).toBe(false)
 })
 
 it('validates profiles and restricts the interactive activity to practice', () => {
