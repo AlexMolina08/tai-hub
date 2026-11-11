@@ -7,7 +7,7 @@ export function isPredictionActivity(activity: Activity): activity is Prediction
     || activity.kind === 'dhcp-model' || activity.kind === 'transaction-model' || activity.kind === 'vlsm-model' || activity.kind === 'route-model'
     || activity.kind === 'contention-model' || activity.kind === 'interleaving-model'
     || activity.kind === 'ethernet-switch-model' || activity.kind === 'lan-vlan-model' || activity.kind === 'lan-redundancy-model'
-    || activity.kind === 'nat-model' || activity.kind === 'tcp-model' || activity.kind === 'service-capacity-model'
+    || activity.kind === 'nat-model' || activity.kind === 'tcp-model' || activity.kind === 'dns-model' || activity.kind === 'service-capacity-model'
 }
 
 export type PredictionControl = { label: string; options: string[]; initial: string; toggle?: true }

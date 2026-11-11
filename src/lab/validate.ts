@@ -5,6 +5,7 @@ import { ETHERNET_SWITCH_MODEL_VERSION, validEthernetSwitchProfile } from './eth
 import { FRAME_MODEL_VERSION, validFrameProfile } from './frame-model'
 import { NAT_MODEL_VERSION, validNatProfile } from './nat-model'
 import { TCP_MODEL_VERSION, validTcpProfile } from './tcp-model'
+import { DNS_MODEL_VERSION, validDnsProfile } from './dns-model'
 import { LAN_REDUNDANCY_MODEL_VERSION, validLanRedundancyProfile } from './lan-redundancy-model'
 import { SERVICE_CAPACITY_MODEL_VERSION, validServiceCapacityProfile } from './service-capacity-model'
 import { LAN_VLAN_MODEL_VERSION, validLanVlanProfile } from './lan-vlan-model'
@@ -174,6 +175,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     } else if (a.kind === 'tcp-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== TCP_MODEL_VERSION
         || !validTcpProfile(a.profile)) issues.push(`${a.id}: perfil TCP inválido`)
+    } else if (a.kind === 'dns-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== DNS_MODEL_VERSION
+        || !validDnsProfile(a.profile)) issues.push(`${a.id}: perfil DNS inválido`)
     } else if (a.kind === 'service-capacity-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== SERVICE_CAPACITY_MODEL_VERSION
         || !validServiceCapacityProfile(a.profile)) issues.push(`${a.id}: perfil de capacidad de servicio inválido`)

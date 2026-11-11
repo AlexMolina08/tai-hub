@@ -3,6 +3,7 @@ import type { Attempt, PredictionActivity } from './model'
 import { describeEthernetSwitch, ethernetSwitchControls } from './ethernet-switch-model'
 import { describeNat, natControls } from './nat-model'
 import { describeTcp, tcpControls } from './tcp-model'
+import { describeDns, dnsControls } from './dns-model'
 import { describeLanRedundancy, lanRedundancyControls } from './lan-redundancy-model'
 import { describeServiceCapacity, serviceCapacityControls } from './service-capacity-model'
 import { describeLanVlan, lanVlanControls } from './lan-vlan-model'
@@ -54,6 +55,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: natControls(activity.profile), describe: (values: string[]) => describeNat(activity.profile, values) }
     case 'tcp-model':
       return { controls: tcpControls(activity.profile), describe: (values: string[]) => describeTcp(activity.profile, values) }
+    case 'dns-model':
+      return { controls: dnsControls(activity.profile), describe: (values: string[]) => describeDns(activity.profile, values) }
     case 'service-capacity-model':
       return { controls: serviceCapacityControls(activity.profile), describe: (values: string[]) => describeServiceCapacity(activity.profile, values) }
     case 'lan-vlan-model':

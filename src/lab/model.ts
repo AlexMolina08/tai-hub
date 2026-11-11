@@ -5,6 +5,7 @@ import type { EthernetSwitchProfile } from './ethernet-switch-model'
 import type { FrameProfile } from './frame-model'
 import type { NatProfile } from './nat-model'
 import type { TcpProfile } from './tcp-model'
+import type { DnsProfile } from './dns-model'
 import type { LanRedundancyProfile } from './lan-redundancy-model'
 import type { ServiceCapacityProfile } from './service-capacity-model'
 import type { LanVlanProfile } from './lan-vlan-model'
@@ -245,6 +246,11 @@ export interface TcpModelActivity extends ActivityBase {
   phase: 'practice'
   profile: TcpProfile
 }
+export interface DnsModelActivity extends ActivityBase {
+  kind: 'dns-model'
+  phase: 'practice'
+  profile: DnsProfile
+}
 export interface ServiceCapacityModelActivity extends ActivityBase {
   kind: 'service-capacity-model'
   phase: 'practice'
@@ -253,7 +259,7 @@ export interface ServiceCapacityModelActivity extends ActivityBase {
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
   | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
   | TransactionModelActivity | VlsmModelActivity | RouteModelActivity | ContentionModelActivity | InterleavingModelActivity
-  | EthernetSwitchModelActivity | LanVlanModelActivity | LanRedundancyModelActivity | NatModelActivity | TcpModelActivity | ServiceCapacityModelActivity
+  | EthernetSwitchModelActivity | LanVlanModelActivity | LanRedundancyModelActivity | NatModelActivity | TcpModelActivity | DnsModelActivity | ServiceCapacityModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
