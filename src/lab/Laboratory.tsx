@@ -16,6 +16,7 @@ import { OfflineControls } from './OfflineControls'
 import { CodePanel } from './CodePanel'
 import { HtmlPanel } from './HtmlPanel'
 import { StudyText } from './StudyText'
+import { activityLocationKey, studyContinuation } from './continuation'
 import './laboratory.css'
 
 const empty: LabSnapshot = { events: [], pendingIds: [], status: 'local' }
@@ -69,16 +70,19 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [deviceId] = useState(deviceIdentity)
   const [packages, setPackages] = useState<LabPackage[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [selected, setSelected] = useState<{ pack: string; lesson: string } | undefined>(() => {
+  const [selected, setSelected] = useState<{ pack: string; lesson: string; activity?: string } | undefined>(() => {
     try {
       const value = JSON.parse(sessionStorage.getItem('tai-lab-location:' + accountId) ?? 'null')
-      if (typeof value?.pack === 'string' && typeof value?.lesson === 'string') return value
+      if (typeof value?.pack === 'string' && typeof value?.lesson === 'string') return {
+        pack: value.pack, lesson: value.lesson, activity: typeof value.activity === 'string' ? value.activity : undefined,
+      }
     } catch { /* A missing location does not affect the durable event history. */ }
   })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const currentPackage = packages.find(p => packageKey(p) === selected?.pack)
   const currentLesson = currentPackage?.lessons.find(l => l.id === selected?.lesson)
+  const continuation = useMemo(() => studyContinuation(packages, history.events, accountId), [packages, history.events, accountId])
   useEffect(() => {
     try {
       if (selected) sessionStorage.setItem('tai-lab-location:' + accountId, JSON.stringify(selected))
@@ -135,8 +139,19 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && currentLesson ? <>
       <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> Volver a las lecciones</button>
       <LessonView key={`${packageKey(currentPackage)}:${currentLesson.id}`} pack={currentPackage} lesson={currentLesson}
-        accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial} />
+        accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial}
+        initialActivityId={selected?.activity} onActivityChange={activity => setSelected({ pack: packageKey(currentPackage), lesson: currentLesson.id, activity })} />
     </> : <>
+      {continuation && <section className="lab-continuation" aria-label="Retomar el laboratorio">
+        <div><p className="context-label">Tu última actividad guardada</p><h2>{continuation.lesson.title}</h2>
+          <p>Actividad {continuation.activityIndex + 1}: {continuation.activity.title}</p>
+          <small>Recupera tu respuesta y las pistas consultadas. Puedes explorar otra lección.</small></div>
+        <button className="button primary" onClick={() => {
+          try { sessionStorage.setItem(activityLocationKey(accountId, continuation.pack, continuation.lesson) + ':pane', 'practice') }
+          catch { /* The explicit activity still opens if session storage is unavailable. */ }
+          setSelected({ pack: packageKey(continuation.pack), lesson: continuation.lesson.id, activity: continuation.activity.id })
+        }}>Reanudar actividad <ArrowRight size={17} /></button>
+      </section>}
       <div className="lab-package-list">{packages.map(pack => <section key={packageKey(pack)}>
         <h2>{pack.title}</h2><p>Versión {pack.version} · Contenido guardado en este dispositivo.</p>
         <div className="lab-lesson-list">{pack.lessons.map(lesson => <button className="lab-lesson" key={lesson.id}
@@ -172,18 +187,25 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   </>
 }
 
-export function LessonView({ pack, lesson, accountId, deviceId, events, record, openMaterial }: {
+export function LessonView({ pack, lesson, accountId, deviceId, events, record, openMaterial, initialActivityId, onActivityChange }: {
   pack: LabPackage; lesson: Lesson; accountId: string; deviceId: string; events: LabEvent[];
   record: (events: LabEvent[]) => Promise<void>; openMaterial: (resourceId: string, sectionId: string) => void
+  initialActivityId?: string; onActivityChange?: (activityId: string) => void
 }) {
   const activities = lesson.activityIds.map(id => pack.activities.find(a => a.id === id)!)
-  const positionKey = JSON.stringify(['tai-lab-activity', accountId, pack.id, pack.version, lesson.id])
+  const positionKey = activityLocationKey(accountId, pack, lesson)
   const mobile = useSyncExternalStore(subscribeWidth, () => matchMedia(narrowQuery).matches)
   const [pane, setPane] = useState<'read' | 'practice'>(() => {
-    try { return sessionStorage.getItem(positionKey + ':pane') === 'practice' ? 'practice' : 'read' } catch { return 'read' }
+    try {
+      const remembered = sessionStorage.getItem(positionKey + ':pane')
+      if (remembered === 'practice' || remembered === 'read') return remembered
+    } catch { /* Use the explicit destination when session storage is unavailable. */ }
+    return initialActivityId ? 'practice' : 'read'
   })
   const practice = useRef<HTMLElement>(null)
   const [index, setIndex] = useState(() => {
+    const explicit = activities.findIndex(activity => activity.id === initialActivityId)
+    if (explicit >= 0) return explicit
     try { const value = Number(sessionStorage.getItem(positionKey)); return Number.isSafeInteger(value) && value >= 0 && value < activities.length ? value : 0 }
     catch { return 0 }
   })
@@ -194,6 +216,7 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
   }
   function chooseActivity(next: number) {
     setIndex(next)
+    onActivityChange?.(activities[next].id)
     if (mobile) requestAnimationFrame(() => practice.current?.scrollIntoView({ block: 'start', behavior: 'instant' }))
   }
   const answered = new Set(events.filter((event): event is Attempt => event.kind === 'attempt' && event.packageId === pack.id

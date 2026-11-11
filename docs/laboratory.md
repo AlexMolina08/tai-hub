@@ -26,6 +26,8 @@ Cada intento, borrador, exposición y consulta de ayuda tiene identidad inmutabl
 
 Los borradores forman un grafo de versiones. Dos ramas concurrentes requieren elección explícita y conservan sus antecesores. El historial debe terminar de cargar antes de montar una actividad: crear un borrador vacío antes de esa carga produciría un conflicto falso. Los intentos conservan versiones de contenido y corrección; una actualización no recalcula retrospectivamente sus respuestas.
 
+La entrada permite reanudar la última actividad disponible a partir del historial de la cuenta, incluido el que llega de otro dispositivo. El destino exige coincidencia de paquete, versión y actividad. Solo admite actividades de práctica y cierre de lección validadas; excluye reservas, contenido retirado y versiones ausentes. La fecha del evento ordena esta sugerencia de navegación, con desempate estable por ID: no resuelve conflictos ni calcula dominio. Un reloj de dispositivo desajustado puede afectar la sugerencia, pero no modifica ni elimina respuestas. La navegación posterior y el panel de lectura/práctica se conservan localmente; la sincronización transmite respuestas y ayudas, no una posición de lectura inventada.
+
 Una copia exportada identifica cuenta y esquema. Restaurarla combina eventos y rechaza otra cuenta o un esquema desconocido. No se realiza compactación destructiva. Las cuentas tienen claves separadas en IndexedDB. Desconectar revoca la selección local de cuenta y no conserva credenciales para el modo offline.
 
 ## Ejecución SQL
