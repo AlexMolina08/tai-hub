@@ -7,6 +7,7 @@ const topics = blocks.filter(block => block.id === 'b3' || block.id === 'b4').fl
   block.topics.map(topic => ({ id: `${block.roman}.${topic.number}`, block: block.roman, title: topic.title })))
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
 const key = (pack: LabPackage, lesson: Lesson) => JSON.stringify([pack.id, pack.version, lesson.id])
+const editionOrder = new Intl.Collator('en', { numeric: true })
 
 export function LessonCatalog({ packages, events, accountId, openLesson }: {
   packages: LabPackage[]; events: LabEvent[]; accountId: string; openLesson: (pack: LabPackage, lesson: Lesson) => void
@@ -15,7 +16,19 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
   const search = useRef<HTMLInputElement>(null)
   const [block, setBlock] = useState('all')
   const [topicId, setTopicId] = useState('all')
-  const catalogue = useMemo(() => packages.flatMap(pack => {
+  const [includePrevious, setIncludePrevious] = useState(false)
+  const latest = useMemo(() => {
+    const versions = new Map<string, LabPackage>()
+    for (const pack of packages) {
+      const previous = versions.get(pack.id)
+      if (!previous || (editionOrder.compare(pack.version, previous.version) || pack.version.localeCompare(previous.version)) > 0) {
+        versions.set(pack.id, pack)
+      }
+    }
+    return versions
+  }, [packages])
+  const previousAvailable = packages.some(pack => latest.get(pack.id) !== pack && pack.lessons.length > 0)
+  const catalogue = useMemo(() => packages.filter(pack => includePrevious || latest.get(pack.id) === pack).flatMap(pack => {
     const objectives = new Map(pack.objectives.map(objective => [objective.id, objective]))
     const answered = new Set(events.filter((event): event is Attempt => event.kind === 'attempt' && event.accountId === accountId
       && event.packageId === pack.id && event.packageVersion === pack.version && event.outcome !== 'omitted'
@@ -28,7 +41,7 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
         search: normalize([lesson.title, ...own.map(objective => objective.statement),
           ...topics.filter(topic => lessonTopics.includes(topic.id)).map(topic => topic.title)].join(' ')) }
     })
-  }), [packages, events, accountId])
+  }), [packages, events, accountId, includePrevious, latest])
   const availableTopics = topics.filter(topic => catalogue.some(item => item.topicIds.includes(topic.id))
     && (block === 'all' || topic.block === block))
   const words = normalize(query).trim().split(/\s+/).filter(Boolean)
@@ -58,6 +71,10 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
         {availableTopics.map(topic => <option key={topic.id} value={topic.id}>{topic.id} · {topic.title}</option>)}
       </select></label>
     </div>
+    {previousAvailable && <label className="lab-editions-filter">
+      <input type="checkbox" checked={includePrevious} onChange={event => { setIncludePrevious(event.target.checked); setTopicId('all') }} />
+      Mostrar ediciones anteriores
+    </label>}
     <p className="lab-catalog-count" role="status">{visible.length} {visible.length === 1 ? 'lección disponible' : 'lecciones disponibles'}</p>
     {orderedGroups.map(([id, items]) => {
       const topic = topics.find(topic => topic.id === id)
