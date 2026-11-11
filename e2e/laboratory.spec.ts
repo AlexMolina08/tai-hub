@@ -94,6 +94,37 @@ test('guided session resumes its stage and activity across devices and preserves
   } finally { await other.close() }
 })
 
+test('explicit omission preserves the draft and first attempt without revealing a solution', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture(); drive.addLabPackage('lab-omission', samplePackage())
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click()
+  await showPractice(page)
+  await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
+  await page.getByRole('button', { name: 'Dejar sin responder', exact: true }).click()
+  await expect(page.getByText('Sin respuesta guardada. Puedes volver a intentarlo cuando quieras.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Por qué cada opción', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('La opción A es la válida.', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Ver solución', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Volver a las lecciones', exact: true }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
+  await expect(page.getByRole('radio', { name: 'Inválida', exact: true })).toBeChecked()
+  await expect(page.getByText('Sin respuesta guardada. Puedes volver a intentarlo cuando quieras.', { exact: true })).toBeVisible()
+  await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+  await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+  await expect(page.getByText('Intento 2. Tu primera respuesta se conserva.', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect.poll(() => drive.labEvents().filter((event: any) => event.kind === 'attempt').length).toBe(2)
+  const attempts = drive.labEvents().filter((event: any) => event.kind === 'attempt').sort((a: any, b: any) => a.ordinal - b.ordinal) as any[]
+  expect(attempts.map(attempt => [attempt.ordinal, attempt.answer, attempt.outcome, attempt.solutionViewed])).toEqual([[1, null, 'omitted', false], [2, 'a', 'correct', false]])
+  expect(attempts[0].attemptGroupId).toBe(attempts[1].attemptGroupId)
+  expect(drive.labEvents().some((event: any) => event.kind === 'assistance' || event.reason === 'solution')).toBe(false)
+})
+
 test('catalogue filters topics and searches concepts without changing saved answers', async ({ page, context, browserName }) => {
   const programming = samplePackage(), networks = samplePackage()
   programming.objectives[0].topicId = 'III.4'

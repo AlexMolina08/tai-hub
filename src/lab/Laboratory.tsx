@@ -338,6 +338,13 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
     { id: crypto.randomUUID(), kind: 'exposure', accountId, deviceId, createdAt: new Date().toISOString(),
       familyId: activity.familyId, reason: 'solution' }])
   }
+  async function submitChoice(value: string | null) {
+    if (activity.kind !== 'choice') return
+    const result = gradeChoice(activity, value)
+    await record([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
+      familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
+      answer: value, ...result, ...attemptFacts(), activeMs: activeMs(), phase: activity.phase, gradingVersion: 'choice-v1' }])
+  }
   return <div className="lab-activity">
     <h3>{activity.title}</h3><p className="lab-mode">{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</p>
     <StudyText text={activity.prompt} />
@@ -352,18 +359,14 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         {activity.options.map(option => <label key={option.id} className="lab-option"><input type="radio" name={activity.id}
           value={option.id} checked={answer === option.id} onChange={() => { setAnswer(option.id); void run(() => save(option.id)) }} /><span>{option.text}</span></label>)}
       </fieldset>
-      <div className="lab-actions"><button className="button primary" disabled={busy || !answer} onClick={() => void run(async () => {
-        const result = gradeChoice(activity, answer)
-        await record([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
-          familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
-          answer, ...result, ...attemptFacts(),
-          activeMs: activeMs(), phase: activity.phase, gradingVersion: 'choice-v1' }])
-      })}>Comprobar respuesta</button>
+      <div className="lab-actions"><button className="button primary" disabled={busy || !answer} onClick={() => void run(() => submitChoice(answer))}>Comprobar respuesta</button>
+        <button className="button" disabled={busy || heads.length !== 1 || latest?.outcome === 'omitted'}
+          onClick={() => void run(() => submitChoice(null))}>Dejar sin responder</button>
       </div>
-      {latest?.kind === 'attempt' && <div className="lab-feedback" role="status"><strong>{latest.outcome === 'correct' ? 'Respuesta correcta' : 'Revisa la respuesta'}{latest.hintCount > 0 || latest.solutionViewed ? ' · Con ayuda' : ''}</strong>
-        <p>{latest.feedback}</p><details onToggle={event => {
+      {latest?.kind === 'attempt' && <div className="lab-feedback" role="status"><strong>{latest.outcome === 'omitted' ? 'Sin respuesta' : latest.outcome === 'correct' ? 'Respuesta correcta' : 'Revisa la respuesta'}{latest.hintCount > 0 || latest.solutionViewed ? ' · Con ayuda' : ''}</strong>
+        <p>{latest.feedback}</p>{latest.outcome !== 'omitted' && <details onToggle={event => {
           if (event.currentTarget.open && !assistance.solutionViewed) void run(revealSolution)
-        }}><summary>Por qué cada opción</summary>{activity.options.map(o => <p key={o.id}><strong>{o.text}:</strong> {o.explanation}</p>)}</details></div>}
+        }}><summary>Por qué cada opción</summary>{activity.options.map(o => <p key={o.id}><strong>{o.text}:</strong> {o.explanation}</p>)}</details>}</div>}
     </> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy}
       save={save} onResult={async (value, correct, feedback) => {
         await record([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),

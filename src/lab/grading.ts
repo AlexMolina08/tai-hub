@@ -1,7 +1,7 @@
 import type { ChoiceActivity, LabEvent } from './model'
 
 export function gradeChoice(activity: ChoiceActivity, answer: string | null) {
-  if (answer === null) return { outcome: 'omitted' as const, feedback: 'Sin respuesta. ' + activity.solution }
+  if (answer === null) return { outcome: 'omitted' as const, feedback: 'Sin respuesta guardada. Puedes volver a intentarlo cuando quieras.' }
   const selected = activity.options.find(o => o.id === answer)
   if (!selected) throw new Error('La opción no pertenece a esta versión de la actividad.')
   return { outcome: selected.correct ? 'correct' as const : 'incorrect' as const, feedback: selected.explanation }
