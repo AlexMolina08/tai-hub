@@ -147,6 +147,13 @@ test('personal notes preserve concurrent edits, closing reflections and export r
     await sync(a)
     await a.reload(); await expect(a.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(a)
     await expect(reflection).toHaveValue('Revisar el caso límite y volver mañana.')
+    for (const width of [320, 390]) {
+      await a.setViewportSize({ width, height: 844 })
+      await expect.poll(() => a.locator('.lab-guided-stages').evaluate(nav => {
+        const button = nav.querySelector('[aria-current="step"]')!.getBoundingClientRect(), bounds = nav.getBoundingClientRect()
+        return button.left >= bounds.left && button.right <= bounds.right
+      })).toBe(true)
+    }
     expect(await a.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect((await new AxeBuilder({ page: a }).include('.lab-note').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
     await a.screenshot({ path: test.info().outputPath('notes-mobile.png'), fullPage: true })

@@ -20,6 +20,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   const [completed, setCompleted] = useState(initialPosition?.completed ?? false)
   const [error, setError] = useState('')
   const content = useRef<HTMLElement>(null)
+  const stages = useRef<HTMLElement>(null)
   const navigation = useRef<Promise<void>>(Promise.resolve())
   const mounted = useRef(false)
   const event = (stageId: string, activityId: string | null, completed = false): SessionPosition => ({
@@ -37,6 +38,22 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
       .catch(failure => { if (active) setError(String(failure)) })
     return () => { active = false; mounted.current = false }
   }, [])
+  useEffect(() => {
+    const nav = stages.current
+    if (!nav) return
+    const keepCurrentVisible = () => {
+      const current = nav.querySelector<HTMLElement>('[aria-current="step"]')
+      if (!current) return
+      const viewport = nav.getBoundingClientRect(), button = current.getBoundingClientRect()
+      // Adjust only this horizontal strip; restoring a session must not scroll its reading position.
+      if (button.left < viewport.left + 4) nav.scrollLeft += button.left - viewport.left - 4
+      else if (button.right > viewport.right - 4) nav.scrollLeft += button.right - viewport.right + 4
+    }
+    keepCurrentVisible()
+    const observer = new ResizeObserver(keepCurrentVisible)
+    observer.observe(nav)
+    return () => observer.disconnect()
+  }, [stageIndex])
   function navigate(nextStage: number, nextActivity: string | null, finish = false) {
     navigation.current = navigation.current.then(async () => {
       if (!mounted.current) return
@@ -62,7 +79,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   return <article className="lab-guided" aria-label="Sesión guiada">
     <header className="lab-lesson-heading"><p className="context-label">Sesión guiada · {sessionMinutes(session)} min orientativos</p>
       <h2>{session.title}</h2><p>Avanza a tu ritmo. Puedes parar y continuar desde otro dispositivo cuando se sincronice.</p></header>
-    <nav className="lab-guided-stages" aria-label="Etapas de la sesión">{session.stages.map((step, index) => <button key={step.id}
+    <nav className="lab-guided-stages" ref={stages} aria-label="Etapas de la sesión">{session.stages.map((step, index) => <button key={step.id}
       aria-current={stageIndex === index ? 'step' : undefined} onClick={() => void navigate(index, step.activityIds[0] ?? null)}>
       <span>{index + 1}. {step.title}</span><small>{step.minutes} min</small>
     </button>)}</nav>
