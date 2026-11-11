@@ -244,8 +244,9 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     onActivityChange?.(activities[next].id)
     if (mobile) requestAnimationFrame(() => practice.current?.scrollIntoView({ block: 'start', behavior: 'instant' }))
   }
-  const answered = new Set(events.filter((event): event is Attempt => event.kind === 'attempt' && event.packageId === pack.id
-    && event.packageVersion === pack.version).map(event => event.activityId))
+  const answered = new Set(events.filter((event): event is Attempt => event.kind === 'attempt' && event.accountId === accountId
+    && event.packageId === pack.id && event.packageVersion === pack.version && event.outcome !== 'omitted'
+    && activities.some(activity => activity.id === event.activityId && activity.version === event.activityVersion)).map(event => event.activityId))
   return <article className="lab-session">
     <header className="lab-lesson-heading"><h2>{lesson.title}</h2><p>{lesson.minutes} minutos de contenido nuevo</p>
       <span>{activities.filter(a => answered.has(a.id)).length} de {activities.length} actividades respondidas</span></header>

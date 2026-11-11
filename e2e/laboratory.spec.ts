@@ -106,6 +106,7 @@ test('explicit omission preserves the draft and first attempt without revealing 
   await showPractice(page)
   await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
   await page.getByRole('button', { name: 'Dejar sin responder', exact: true }).click()
+  await expect(page.getByText('0 de 5 actividades respondidas', { exact: true })).toBeVisible()
   await expect(page.getByText('Sin respuesta guardada. Puedes volver a intentarlo cuando quieras.', { exact: true })).toBeVisible()
   await expect(page.getByText('Por qué cada opción', { exact: true })).toHaveCount(0)
   await expect(page.getByText('La opción A es la válida.', { exact: true })).toHaveCount(0)
@@ -117,6 +118,7 @@ test('explicit omission preserves the draft and first attempt without revealing 
   await page.getByRole('radio', { name: 'Válida', exact: true }).check()
   await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
   await expect(page.getByText('Intento 2. Tu primera respuesta se conserva.', { exact: true })).toBeVisible()
+  await expect(page.getByText('1 de 5 actividades respondidas', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
   await expect.poll(() => drive.labEvents().filter((event: any) => event.kind === 'attempt').length).toBe(2)
   const attempts = drive.labEvents().filter((event: any) => event.kind === 'attempt').sort((a: any, b: any) => a.ordinal - b.ordinal) as any[]
