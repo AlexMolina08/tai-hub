@@ -10,7 +10,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   pack: LabPackage; session: GuidedSession; accountId: string; deviceId: string; events: LabEvent[]
   record: (events: LabEvent[]) => Promise<void>
   openMaterial: (resourceId: string, sectionId: string) => void
-  renderActivity: (activity: Activity) => ReactNode
+  renderActivity: (activity: Activity, referenceVisible: boolean) => ReactNode
   initialPosition?: SessionPosition
   onPosition?: (position: SessionPosition) => void
 }) {
@@ -70,6 +70,8 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
     return navigation.current
   }
   const activity = pack.activities.find(activity => activity.id === activityId)
+  const referenceVisible = !!activity && stage.readings.some(reading =>
+    pack.lessons.find(lesson => lesson.id === reading.lessonId)?.objectiveIds.some(id => activity.objectiveIds.includes(id)))
   const allIds = session.stages.flatMap(stage => stage.activityIds)
   const attempts = events.filter((event): event is Attempt => event.kind === 'attempt' && event.accountId === accountId
     && event.packageId === pack.id && event.packageVersion === pack.version && allIds.includes(event.activityId)
@@ -94,11 +96,12 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
         const lesson = pack.lessons.find(lesson => lesson.id === reading.lessonId)!
         return <div key={reading.lessonId} className="lab-guided-reading">
           <LearningReading key={`${stage.id}:${lesson.id}`} pack={pack} lesson={lesson} accountId={accountId}
-            deviceId={deviceId} events={events} record={record} />
+            deviceId={deviceId} events={events} record={record}>
           {reading.explanationIndexes.map(index => <section key={'explanation-' + index}><h4>{lesson.explanation[index].title}</h4><StudyText text={lesson.explanation[index].body} /></section>)}
           {reading.workedExampleIndexes.length > 0 && <div className="lab-example">{reading.workedExampleIndexes.map(index => <section key={'example-' + index}>
             <h4>{lesson.workedExample[index].title}</h4><StudyText text={lesson.workedExample[index].body} /></section>)}</div>}
           <button className="text-link" onClick={() => openMaterial(lesson.material.resourceId, lesson.material.sectionId)}>Consultar material completo: {lesson.title}</button>
+          </LearningReading>
         </div>
       })}
       {stage.activityIds.length > 1 && <nav className="lab-steps" aria-label="Actividades de esta etapa">{stage.activityIds.map((id, index) => <button
@@ -106,7 +109,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
         aria-current={activityId === id ? 'step' : undefined} onClick={() => void navigate(stageIndex, id)}>
         {index + 1}{answered.has(id) && <Check size={11} aria-hidden="true" />}
       </button>)}</nav>}
-      {activity && <div className="lab-guided-practice">{renderActivity(activity)}</div>}
+      {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible)}</div>}
       {stage.kind === 'close' && <section className="lab-guided-summary" aria-label="Respuestas guardadas">
         <h4>{answered.size} de {allIds.length} actividades con respuesta guardada</h4>
         <p>Completar este recorrido no demuestra por sí solo comprensión, retención o transferencia.</p>

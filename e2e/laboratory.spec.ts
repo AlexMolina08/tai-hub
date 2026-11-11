@@ -5,6 +5,7 @@ import { sampleGuidedPackage, sampleIPv4Package, samplePackage } from '../src/la
 import { readFile, writeFile } from 'node:fs/promises'
 import type { LabEvent } from '../src/lab/model'
 import { mergeEvents } from '../src/lab/history'
+import { DEFAULT_LEARNING_POLICY, deriveLearning } from '../src/lab/learning'
 
 async function openLab(page: import('@playwright/test').Page) {
   const menu = page.getByRole('button', { name: 'Abrir navegación', exact: true })
@@ -32,7 +33,7 @@ test('learning context survives reload and preserves the first response before l
   await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
   await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
   await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
-  await expect(page.locator('.lab-activity > .lab-mode')).toContainText('Caso documental')
+  await expect(page.locator('.lab-activity > .lab-mode').first()).toContainText('Caso documental')
   await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
   const sync = async () => {
     await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
@@ -87,6 +88,8 @@ test('learning dashboard explains evidence and opens the next unanswered activit
     expect((await new AxeBuilder({ page }).include('.lab-learning').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
     await panel.screenshot({ path: testInfo.outputPath(`learning-panel-${width}.png`) })
   }
+  // Reading before a new presentation is preparation; the mobile answer has no reference alongside it.
+  await page.setViewportSize({ width: 390, height: 844 })
   await panel.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Ejemplo sintético p1', exact: true })).toBeVisible()
   await page.getByRole('radio', { name: 'Válida', exact: true }).check()
@@ -97,6 +100,57 @@ test('learning dashboard explains evidence and opens the next unanswered activit
   await panel.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Ejemplo sintético p2', exact: true })).toBeVisible()
 })
+for (const route of ['desktop-reference', 'mobile-reading-return', 'resize-reference', 'guided-reading-return'] as const) {
+  test(`learning records textual support through ${route}`, async ({ page, context, browserName }) => {
+    const pack = sampleGuidedPackage(), drive = new DriveFixture()
+    drive.addLabPackage('reading-support', pack)
+    await drive.install(context, browserName === 'webkit')
+    await page.setViewportSize({ width: route === 'desktop-reference' ? 1440 : 390, height: 900 })
+    await page.goto('/tai-hub/')
+    await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+    if (route === 'guided-reading-return') {
+      await page.getByRole('button', { name: /Sesión sintética/ }).click()
+      const stages = page.getByRole('navigation', { name: 'Etapas de la sesión', exact: true })
+      await stages.getByRole('button', { name: /4. Transferir/ }).click()
+      await expect(page.getByRole('radio', { name: 'Válida', exact: true })).toBeEnabled()
+      await stages.getByRole('button', { name: /2. Comprender/ }).click()
+      await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+      await stages.getByRole('button', { name: /4. Transferir/ }).click()
+    } else {
+      await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
+      await page.getByRole('button', { name: '3', exact: true }).click()
+      await expect(page.getByRole('radio', { name: 'Válida', exact: true })).toBeEnabled()
+      if (route === 'mobile-reading-return') {
+        await page.getByRole('button', { name: 'Leer explicación', exact: true }).click()
+        await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+        await showPractice(page)
+      } else if (route === 'resize-reference') {
+        await page.setViewportSize({ width: 1440, height: 900 })
+        await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
+        await expect(page.getByText('La explicación está disponible junto a esta actividad. La respuesta contará con apoyo de lectura.', { exact: true })).toBeVisible()
+        await page.setViewportSize({ width: 390, height: 900 })
+        await showPractice(page)
+      }
+    }
+    await expect(page.getByRole('heading', { name: 'Ejemplo sintético i1', exact: true })).toBeVisible()
+    await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+    await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+    await expect(page.getByText('Respuesta con apoyo de lectura. No acredita recuperación sin apoyo.', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+    await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    const events = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
+    const attempt = events.find(event => event.kind === 'attempt' && event.activityId === 'i1')!
+    expect(attempt).toMatchObject({ outcome: 'correct', ordinal: 1, hintCount: 0, solutionViewed: false })
+    expect(events.filter(event => event.kind === 'learning-context' && event.action === 'present'
+      && event.target.kind === 'activity' && event.target.activityId === 'i1')).toHaveLength(1)
+    const evidence = deriveLearning({ accountId: 'sample-account', packages: [pack], events,
+      now: new Date().toISOString(), policy: DEFAULT_LEARNING_POLICY }).attempts.find(row => row.attemptId === attempt.id)
+    expect(evidence).toMatchObject({ referenceSupport: 'recorded', unaided: false, understanding: false, retention: false, transfer: false })
+    expect(events.filter(event => event.kind === 'assistance')).toHaveLength(0)
+  })
+}
 test('an opened reserve resumes its original presentation across devices before and after selecting an answer', async ({ browser, browserName, baseURL }) => {
   const drive = new DriveFixture(); drive.addLabPackage('reserve-continuity', samplePackage())
   const contexts = await Promise.all([browser.newContext({ viewport: { width: 390, height: 844 } }), browser.newContext()])

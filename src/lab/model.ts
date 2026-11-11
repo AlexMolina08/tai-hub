@@ -279,9 +279,11 @@ export type LearningTarget = (ActivityRef & { kind: 'activity'; attemptGroupId: 
 /** Prospective, declared device time and causal context. Never backfill older facts. */
 export interface LearningContext extends EventBase {
   kind: 'learning-context'
-  contractVersion: 1
+  contractVersion: 1 | 2
   studySessionId: string
-  action: 'present' | 'answer' | 'help' | 'reading' | 'reset'
+  action: 'present' | 'answer' | 'help' | 'reading' | 'reset' | 'reference'
+  /** Required only on v2 presentations. Text support is not an exact solution or a family exposure. */
+  referenceVisible?: boolean
   target: LearningTarget
   factIds: string[]
   parentIds: string[]

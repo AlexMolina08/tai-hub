@@ -39,6 +39,88 @@ function fixture() {
   return { pack, add, help, result, clock, get events() { return events }, set events(e) { events = e } }
 }
 const objective = (f: ReturnType<typeof fixture>) => f.result().objectives[0]
+
+function referenceFixture() {
+  const pack = samplePackage(), activity = pack.activities.find(a => a.id === 'i1')!
+  let events: LabEvent[] = []
+  const target: LearningTarget = { kind: 'activity', packageId: pack.id, packageVersion: pack.version,
+    activityId: activity.id, activityVersion: activity.version, attemptGroupId: 'reference-group' }
+  const base = (id: string, second: number, deviceId = 'device-a') => ({ id, accountId: 'account-a', deviceId,
+    createdAt: new Date(Date.parse('2026-11-02T10:00:00Z') + second * 1000).toISOString() })
+  const clock = (second: number, device = 'device-a') => captureLearningClock(base('clock', second).createdAt, 'clock-' + device, second * 1000, 'UTC')
+  const append = (plan: ReturnType<typeof planLearningContext>) => { events = mergeEvents('account-a', events, plan.events); return plan }
+  const present = (visible = false) => append(planLearningContext({ id: 'p', action: 'present', target, presentationId: null,
+    studySessionId: 'study', clock: clock(1), history: events, referenceVisible: visible,
+    facts: [{ ...base('exposure', 1), kind: 'exposure', familyId: activity.familyId, reason: 'presented' }] }))
+  const read = (second = 2, from = events, lessonId = 'l1', packageVersion = '1', device = 'device-a') => append(planLearningContext({
+    id: 'reading', action: 'reading', target: { kind: 'lesson', packageId: pack.id, packageVersion, lessonId, lessonVersion: '1' },
+    presentationId: null, studySessionId: 'study-' + device, clock: clock(second, device), history: from, facts: [], base: base('read', second, device) }))
+  const reference = (second = 2, from = events) => append(planLearningContext({ id: 'reference', action: 'reference', target, presentationId: 'p',
+    studySessionId: 'study', clock: clock(second), history: from, facts: [], base: base('ref', second) }))
+  const answer = (id = 'answer', second = 3) => append(planLearningContext({ id: id + '-context', action: 'answer', target, presentationId: 'p',
+    studySessionId: 'study', clock: clock(second), history: events,
+    facts: [{ ...sampleAttempt(id), ...base(id, second), activityId: activity.id, familyId: activity.familyId, phase: activity.phase,
+      attemptGroupId: 'reference-group', ordinal: id === 'answer' ? 1 : 2 }] }))
+  const result = () => deriveLearning({ accountId: 'account-a', packages: [pack], events, now: '2026-11-03T12:00:00Z', policy: DEFAULT_LEARNING_POLICY })
+  return { pack, present, read, reference, answer, result, get events() { return events }, set events(value) { events = value } }
+}
+
+it('counts explicit visible reference as support without changing solution, hints or family exposure', () => {
+  const f = referenceFixture(); f.present(true); f.answer()
+  expect(f.result().attempts[0]).toMatchObject({ referenceSupport: 'recorded', unaided: false, understanding: false, eligibility: 'eligible' })
+  expect(f.events.filter(e => e.kind === 'exposure')).toHaveLength(1)
+  expect(f.events.some(e => e.kind === 'assistance')).toBe(false)
+  expect(f.events.find(e => e.kind === 'attempt')).toMatchObject({ hintCount: 0, solutionViewed: false, outcome: 'correct' })
+})
+
+it.each(['reading', 'reference', 'other-device'] as const)('recognizes causal %s support between presentation and answer', kind => {
+  const f = referenceFixture(); f.present()
+  if (kind === 'reference') f.reference()
+  else f.read(2, f.events, 'l1', '1', kind === 'other-device' ? 'device-b' : 'device-a')
+  f.answer()
+  expect(f.result().attempts[0]).toMatchObject({ referenceSupport: 'recorded', first: true, unaided: false, understanding: false })
+})
+
+it('keeps earlier study as preparation and does not taint an answer by later reading or reference', () => {
+  const prior = referenceFixture(); prior.read(0); prior.present(); prior.answer()
+  expect(prior.result().attempts[0]).toMatchObject({ referenceSupport: 'none', unaided: true, understanding: true })
+  const later = referenceFixture(); later.present(); later.answer(); later.read(4); later.reference(5)
+  expect(later.result().attempts[0]).toMatchObject({ referenceSupport: 'none', unaided: true, understanding: true })
+  later.answer('retry', 6)
+  expect(later.result().attempts.find(a => a.attemptId === 'retry')).toMatchObject({ first: false, referenceSupport: 'recorded', unaided: false })
+})
+
+it.each(['presentation', 'answer', 'reference'] as const)('does not invent an order for support concurrent with %s', branch => {
+  const f = referenceFixture(); f.present(); const before = f.events
+  if (branch === 'presentation') { f.read(0, []); f.answer() }
+  else { f.answer(); if (branch === 'reference') f.reference(2, before); else f.read(2, before) }
+  expect(f.result().attempts[0]).toMatchObject({ eligibility: 'uncertain', referenceSupport: 'uncertain', unaided: false, understanding: false })
+})
+
+it('scopes reading to exact package edition and related objectives', () => {
+  const unrelated = referenceFixture()
+  unrelated.pack.lessons.push({ ...unrelated.pack.lessons[0], id: 'other', objectiveIds: ['unrelated-objective'] })
+  unrelated.present(); unrelated.read(2, unrelated.events, 'other'); unrelated.answer()
+  expect(unrelated.result().attempts[0]).toMatchObject({ referenceSupport: 'none', unaided: true })
+  const edition = referenceFixture(); edition.present(); edition.read(2, edition.events, 'l1', 'other-edition'); edition.answer()
+  expect(edition.result().attempts[0]).toMatchObject({ referenceSupport: 'none', unaided: true })
+})
+
+it('withholds absence-of-support claims for missing references and v1 captures without backfill', () => {
+  const missing = referenceFixture(); missing.present(); missing.read(); missing.answer()
+  missing.events = missing.events.filter(e => e.id !== 'reading')
+  expect(missing.result().attempts[0]).toMatchObject({ eligibility: 'uncertain', unaided: false, understanding: false })
+  const old = referenceFixture(); old.present(); old.answer()
+  old.events = old.events.map(e => {
+    if (e.kind !== 'learning-context') return e
+    const { referenceVisible: _referenceVisible, ...rest } = e
+    return { ...rest, contractVersion: 1 as const }
+  })
+  const original = JSON.stringify(old.events)
+  expect(old.result().attempts[0]).toMatchObject({ eligibility: 'uncertain', referenceSupport: 'uncertain', unaided: false, first: true })
+  expect(old.result().attempts[0].reasons.some(r => r.code === 'legacy-reference-unknown')).toBe(true)
+  expect(JSON.stringify(old.events)).toBe(original)
+})
 function consolidated() {
   const f = fixture()
   f.add('p1', '2026-11-02T10:00:00Z'); f.add('p2', '2026-11-02T10:10:00Z'); f.add('d1', '2026-11-04T10:20:00Z')

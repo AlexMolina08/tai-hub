@@ -1,6 +1,6 @@
 import type { EventBase, LabEvent, LearningClock, LearningContext, LearningTarget } from './model'
 
-export const LEARNING_CONTEXT_VERSION = 1 as const
+export const LEARNING_CONTEXT_VERSION = 2 as const
 export const MAX_LEARNING_PARENTS = 256
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 const text = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0 && v.length <= 1000
@@ -37,10 +37,13 @@ export function validateLearningEvent(value: unknown): void {
     'Diagnósticos de intento inválidos.')
   if (Array.isArray(e.diagnosticIds) && e.diagnosticIds.length) requireValue(e.outcome === 'incorrect', 'Un diagnóstico de error exige un resultado incorrecto.')
   if (e.kind !== 'learning-context') return
+  const v2 = e.contractVersion === 2
   requireValue(exact(e, ['id', 'accountId', 'deviceId', 'createdAt', 'kind', 'contractVersion', 'studySessionId', 'action', 'target',
-    'factIds', 'parentIds', 'presentationId', 'clock']) && ['id', 'accountId', 'deviceId', 'createdAt', 'studySessionId'].every(k => text(e[k]))
-    && Number.isFinite(Date.parse(String(e.createdAt))) && e.contractVersion === 1
-    && ['present', 'answer', 'help', 'reading', 'reset'].includes(String(e.action)), 'Contexto de aprendizaje incompatible.')
+    'factIds', 'parentIds', 'presentationId', 'clock', ...(v2 && e.action === 'present' ? ['referenceVisible'] : [])])
+    && ['id', 'accountId', 'deviceId', 'createdAt', 'studySessionId'].every(k => text(e[k]))
+    && Number.isFinite(Date.parse(String(e.createdAt))) && (e.contractVersion === 1 || v2)
+    && ['present', 'answer', 'help', 'reading', 'reset', ...(v2 ? ['reference'] : [])].includes(String(e.action))
+    && (!v2 || e.action !== 'present' || typeof e.referenceVisible === 'boolean'), 'Contexto de aprendizaje incompatible.')
   requireValue(ids(e.factIds) && e.factIds.length <= 8 && ids(e.parentIds) && e.parentIds.length <= MAX_LEARNING_PARENTS
     && !e.factIds.includes(String(e.id)) && !e.parentIds.includes(String(e.id))
     && (e.presentationId === null || text(e.presentationId)), 'Enlaces de aprendizaje inválidos.')
@@ -49,7 +52,8 @@ export function validateLearningEvent(value: unknown): void {
     || target.kind === 'lesson' && exact(target, ['kind', 'packageId', 'packageVersion', 'lessonId', 'lessonVersion'])
       && ['packageId', 'packageVersion', 'lessonId', 'lessonVersion'].every(k => text(target[k]))), 'Destino de aprendizaje inválido.')
   requireValue(e.action === 'reading' ? target.kind === 'lesson' && e.factIds.length === 0 && e.presentationId === null
-    : target.kind === 'activity' && e.factIds.length > 0 && (e.action === 'present' ? e.presentationId === null
+    : target.kind === 'activity' && (e.action === 'reference' ? e.factIds.length === 0 : e.factIds.length > 0)
+      && (e.action === 'present' ? e.presentationId === null
       : text(e.presentationId) && e.parentIds.includes(e.presentationId)), 'Presentación o hechos de aprendizaje incompletos.')
   const clock = e.clock
   requireValue(object(clock) && exact(clock, ['day', 'zone', 'offsetMinutes', 'clockSessionId', 'monotonicMs'])
@@ -98,8 +102,8 @@ export function validateLearningHistory(events: readonly LabEvent[]) {
       const principal = c.action === 'answer' ? facts.find(f => f.kind === 'attempt' && !f.ipv4 || f.kind === 'ipv4-prediction')
         : c.action === 'present' ? facts.find(f => f.kind === 'exposure' && f.reason === 'presented')
           : c.action === 'help' ? facts.find(f => f.kind === 'assistance') : facts.find(f => f.kind === 'ipv4-reset')
-      requireValue(c.action === 'reading' || !!principal && principal.createdAt === c.createdAt, 'El contexto no conserva el instante del hecho original.')
-      requireValue(c.action === 'reading' || c.action === 'present' && facts.length === 1 && facts[0].kind === 'exposure' && facts[0].reason === 'presented'
+      requireValue(c.action === 'reading' || c.action === 'reference' || !!principal && principal.createdAt === c.createdAt, 'El contexto no conserva el instante del hecho original.')
+      requireValue(c.action === 'reading' || c.action === 'reference' || c.action === 'present' && facts.length === 1 && facts[0].kind === 'exposure' && facts[0].reason === 'presented'
         || c.action === 'answer' && facts.length === 1 && (facts[0].kind === 'attempt' && !facts[0].ipv4 || facts[0].kind === 'ipv4-prediction')
         || c.action === 'help' && facts.some(f => f.kind === 'assistance') && facts.every(f => f.kind === 'assistance' || f.kind === 'exposure' && f.reason === 'solution')
         || c.action === 'reset' && facts.length === 1 && facts[0].kind === 'ipv4-reset', 'Hechos incompatibles con la acción de aprendizaje.')
@@ -150,7 +154,9 @@ export interface LearningContextPlanInput {
   clock: LearningClock
   facts: LabEvent[]
   history: readonly LabEvent[]
-  /** Required only for reading, which has no existing event as its origin. */
+  /** Explicit availability on a new presentation; absent callers are isolated activity views. */
+  referenceVisible?: boolean
+  /** Required for reading/reference, which have no existing fact as their origin. */
   base?: Omit<EventBase, 'id'>
 }
 export type LearningContextPlan = { status: 'captured'; context: LearningContext; events: LabEvent[] }
@@ -175,10 +181,11 @@ export function planLearningContext(input: LearningContextPlanInput): LearningCo
       return degrade('Hecho histórico conservado sin añadirle metadatos retrospectivos.')
     }
   }
-  const context: LearningContext = { kind: 'learning-context', contractVersion: 1, id: input.id, accountId: base.accountId,
+  const context: LearningContext = { kind: 'learning-context', contractVersion: LEARNING_CONTEXT_VERSION, id: input.id, accountId: base.accountId,
     deviceId: base.deviceId, createdAt: base.createdAt, studySessionId: input.studySessionId, action: input.action,
     target: structuredClone(input.target), factIds: facts.map(f => f.id), parentIds: parents,
-    presentationId: input.presentationId, clock: structuredClone(input.clock) }
+    presentationId: input.presentationId, clock: structuredClone(input.clock),
+    ...(input.action === 'present' ? { referenceVisible: input.referenceVisible ?? false } : {}) }
   const factIds = new Set(context.factIds)
   const copied = structuredClone(input.facts).map(f => factIds.has(f.id) && reciprocal(f) ? { ...f, learningContextId: context.id } : f)
   const events: LabEvent[] = [...copied, context]

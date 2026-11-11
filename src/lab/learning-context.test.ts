@@ -38,6 +38,35 @@ it('keeps reciprocal immutable facts and one atomic batch without mutating calle
   expect(restoreHistory('account-a', exportHistory('account-a', merged), [])).toEqual(merged)
 })
 
+it('captures v2 reference availability without rewriting the supported v1 format', () => {
+  const { events } = answered()
+  expect(context(events, 'present')).toMatchObject({ contractVersion: 2, referenceVisible: false })
+  const legacy = events.map(e => {
+    if (e.kind !== 'learning-context') return e
+    const { referenceVisible: _referenceVisible, ...rest } = e
+    return { ...rest, contractVersion: 1 as const }
+  })
+  const original = JSON.stringify(legacy)
+  expect(restoreHistory('account-a', exportHistory('account-a', legacy), [])).toEqual(mergeEvents('account-a', legacy))
+  expect(JSON.stringify(legacy)).toBe(original)
+  const spoof = legacy.map(e => e.kind === 'learning-context' && e.action === 'present' ? { ...e, referenceVisible: false } : e)
+  expect(() => mergeEvents('account-a', spoof)).toThrow(/incompatible/)
+})
+
+it('records reference access for an exact presentation without a solution, hint or family exposure', () => {
+  const p = present()
+  const r = planLearningContext({ id: 'reference', action: 'reference', target, presentationId: 'present', studySessionId: 'session',
+    clock: clock(), facts: [], history: p.events, base })
+  expect(r.events).toHaveLength(1)
+  expect(r.context).toMatchObject({ contractVersion: 2, action: 'reference', factIds: [], parentIds: ['present'], presentationId: 'present' })
+  expect(mergeEvents('account-a', p.events, r.events)).toHaveLength(3)
+  expect(() => mergeEvents('account-a', p.events, r.events.map(e => ({ ...e, contractVersion: 1 })) as LabEvent[])).toThrow(/incompatible/)
+  expect(() => mergeEvents('account-a', p.events, r.events.map(e => e.kind === 'learning-context'
+    ? { ...e, target: { ...target, attemptGroupId: 'another' } } : e) as LabEvent[])).toThrow(/Presentación/)
+  expect(() => mergeEvents('account-a', p.events, r.events.map(e => e.kind === 'learning-context'
+    ? { ...e, factIds: ['present-exposure'] } : e))).toThrow(/incompletos/)
+})
+
 it('never wraps a historical response with new metadata', () => {
   const old = sampleAttempt('old'), p = present()
   const plan = planLearningContext({ id: 'new-context', action: 'answer', target, presentationId: 'present', studySessionId: 'session',
@@ -90,7 +119,7 @@ it('rejects a late parent with wrong kind and a cycle completed by a later impor
 })
 
 it('traverses long causal chains iteratively', () => {
-  const seed = context(present().events, 'present')
+  const { referenceVisible: _referenceVisible, ...seed } = context(present().events, 'present')
   const contexts: LearningContext[] = Array.from({ length: 15000 }, (_, i) => ({ ...seed, id: `c${i}`, action: 'reading',
     target: { kind: 'lesson', packageId: 'synthetic', packageVersion: '1', lessonId: 'l1', lessonVersion: '1' }, factIds: [],
     parentIds: i ? [`c${i - 1}`] : [] }))
@@ -102,7 +131,7 @@ it.each([
   { clock: { ...clock(), day: '2026-11-12' } },
   { clock: { ...clock(), offsetMinutes: 0 } },
   { clock: { ...clock(), monotonicMs: -1 } },
-  { contractVersion: 2 }, { parentIds: ['present'] }, { unknown: true },
+  { contractVersion: 3 }, { referenceVisible: undefined }, { parentIds: ['present'] }, { unknown: true },
 ])('rejects malformed new context %j while retaining the original batch', change => {
   const p = present(); const before = JSON.stringify(p.events)
   const mutated = p.events.map(e => e.kind === 'learning-context' ? { ...e, ...change } : e)

@@ -11,7 +11,7 @@ export interface LearningPolicy {
   requiredFamilies: number
   requiredDays: number
 }
-export const DEFAULT_LEARNING_POLICY: LearningPolicy = Object.freeze({ version: 'learning-v1',
+export const DEFAULT_LEARNING_POLICY: LearningPolicy = Object.freeze({ version: 'learning-v2-reference',
   intervalDays: Object.freeze([1, 3, 7, 14, 30]), clockToleranceMs: 5 * 60_000,
   requiredCorrect: 3, requiredFamilies: 2, requiredDays: 2 })
 export interface LearningReason { code: string; message: string; evidenceIds: string[] }
@@ -33,6 +33,7 @@ export interface LearningAttemptEvidence {
   eligibility: 'eligible' | 'historical' | 'excluded' | 'uncertain'
   first: boolean
   unaided: boolean
+  referenceSupport: 'none' | 'recorded' | 'uncertain'
   freshness: 'fresh' | 'exposed' | 'uncertain' | 'not-applicable'
   understanding: boolean
   understandingObjectiveIds: string[]
@@ -193,7 +194,7 @@ export function deriveLearning(input: LearningInput): LearningSnapshot {
   for (const a of attempts) {
     const c = origin(a), activity = activityFor(a), pack = packs.get(packKey(a))
     const row: LearningAttemptEvidence = { attemptId: a.id, ref: refOf(a), objectiveIds: [...a.objectiveIds], familyId: a.familyId,
-      contextId: c?.id ?? null, eligibility: 'eligible', first: false, unaided: false, freshness: 'not-applicable', understanding: false, understandingObjectiveIds: [],
+      contextId: c?.id ?? null, eligibility: 'eligible', first: false, unaided: false, referenceSupport: 'uncertain', freshness: 'not-applicable', understanding: false, understandingObjectiveIds: [],
       retention: false, retentionObjectiveIds: [], transfer: false, day: c?.clock.day ?? null,
       timeStatus: c ? timeIssues.get(c.id)?.length ? 'uncertain' : 'declared-device' : 'historical', reasons: [] }
     rows.set(a.id, row)
@@ -229,11 +230,41 @@ export function deriveLearning(input: LearningInput): LearningSnapshot {
     const unplacedAid = events.some(e => (e.kind === 'assistance' || e.kind === 'attempt') && e.id !== a.id
       && e.attemptGroupId === a.attemptGroupId && refKey(e) === refKey(a) && (e.hintCount > 0 || e.solutionViewed)
       && (!e.learningContextId || !graph.byId.has(e.learningContextId)))
+    const presentation = c.presentationId ? graph.byId.get(c.presentationId) : undefined
+    let reference = presentation?.contractVersion === 2 && presentation.referenceVisible === true
+    let referenceUncertain = c.contractVersion !== 2 || presentation?.contractVersion !== 2
+    const referenceIds: string[] = reference && presentation ? [presentation.id] : []
+    for (const contact of contexts) {
+      if (contact.action === 'reference' && contact.presentationId === c.presentationId) {
+        if (graph.before(c.id, contact.id)) continue
+        referenceIds.push(contact.id)
+        if (!incomplete.has(contact.id) && graph.before(contact.id, c.id)) reference = true
+        else referenceUncertain = true
+      } else if (contact.action === 'reading' && contact.target.kind === 'lesson'
+        && contact.target.packageId === a.packageId && contact.target.packageVersion === a.packageVersion) {
+        const target = contact.target
+        const lesson = pack.lessons.find(l => l.id === target.lessonId && l.version === target.lessonVersion)
+        if (lesson && !lesson.objectiveIds.some(id => a.objectiveIds.includes(id))) continue
+        // Prior study and later feedback are not support for this answer. Clocks never order concurrent branches.
+        if (graph.before(c.id, contact.id) || presentation && graph.before(contact.id, presentation.id)) continue
+        referenceIds.push(contact.id)
+        if (lesson && !incomplete.has(contact.id) && presentation && graph.before(presentation.id, contact.id)
+          && graph.before(contact.id, c.id)) reference = true
+        else referenceUncertain = true
+      }
+    }
+    row.referenceSupport = reference ? 'recorded' : referenceUncertain ? 'uncertain' : 'none'
+    if (reference) row.reasons.push(reason('reference-support', 'Hubo texto de apoyo disponible o consultado antes de responder; no implica ver la solución.', ...referenceIds))
+    else if (referenceUncertain) {
+      row.eligibility = 'uncertain'
+      row.reasons.push(reason(c.contractVersion !== 2 || presentation?.contractVersion !== 2 ? 'legacy-reference-unknown' : 'reference-order-unknown',
+        'La captura o el orden causal no permite afirmar ausencia de apoyo textual.', c.id, ...referenceIds))
+    }
     if (a.hintCount || a.solutionViewed || helps.some(v => graph.before(v.id, c.id))) row.reasons.push(reason('helped', 'La respuesta tuvo pistas o solución previa.', a.id))
     else if (unplacedAid || helps.some(v => !graph.before(c.id, v.id))) {
       row.eligibility = 'uncertain'; row.reasons.push(reason('help-order-unknown', 'No se puede ordenar una ayuda concurrente o histórica del mismo grupo.', c.id))
     }
-    else row.unaided = true
+    else row.unaided = row.referenceSupport === 'none'
     const needsFresh = activity.phase === 'reserved' || activity.phase === 'delayed' && activity.evaluationIntent !== 'retention'
     if (needsFresh) {
       let exposed = false, uncertain = false

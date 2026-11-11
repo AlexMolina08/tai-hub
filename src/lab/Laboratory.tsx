@@ -181,7 +181,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
       {!currentLesson && !currentSession && !standalone && <button className="button" disabled={!connected || busy} onClick={() => void loadDrive()}><RefreshCw size={16} /> Cargar lecciones de Drive</button>}
       <button className="button icon-button" aria-label="Sincronizar progreso" title="Sincronizar progreso" disabled={!sync || !connected} onClick={() => void sync?.refresh().catch(e => setError(message(e)))}><RefreshCw size={18} /></button>
       <details className="lab-tools"><summary>Opciones de estudio</summary><div>
-        <button className="button" disabled={!sync} onClick={() => download('laboratorio-progreso.json', exportHistory(accountId, history.events))}><Download size={16} /> Exportar progreso</button>
+        <button className="button" disabled={!sync || !loaded} onClick={() => download('laboratorio-progreso.json', exportHistory(accountId, history.events))}><Download size={16} /> Exportar progreso</button>
         <OfflineControls needsSql={packages.some(p => p.activities.some(a => a.kind === 'sql'))}
           needsPython={packages.some(p => p.activities.some(a => a.kind === 'code' && a.language === 'python'))} />
       </div></details>
@@ -199,8 +199,8 @@ function Workspace({ library, accountId, connected, openMaterial }: {
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial} initialPosition={sessionPosition}
         onPosition={position => setSelected(current => current?.pack === packageKey(currentPackage) && current.session === currentSession.id
           ? { ...current, positionId: position.id } : current)}
-        renderActivity={activity => <ActivityView key={activity.id} pack={currentPackage} activity={activity} accountId={accountId}
-          deviceId={deviceId} events={history.events} record={record} />} />
+        renderActivity={(activity, referenceVisible) => <ActivityView key={activity.id} pack={currentPackage} activity={activity} accountId={accountId}
+          deviceId={deviceId} events={history.events} record={record} referenceVisible={referenceVisible} />} />
       : currentLesson && <LessonView key={`${packageKey(currentPackage)}:${currentLesson.id}`} pack={currentPackage} lesson={currentLesson}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial}
         initialActivityId={selected?.activity} onActivityChange={activity => setSelected({ pack: packageKey(currentPackage), lesson: currentLesson.id, activity })} />}
@@ -305,19 +305,20 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     </div>}
     <div className="lab-session-columns">
       {(!mobile || pane === 'read') && <section aria-label="Explicación y ejemplo" className="lab-explanation">
-        <LearningReading pack={pack} lesson={lesson} accountId={accountId} deviceId={deviceId} events={events} record={record} />
+        <LearningReading pack={pack} lesson={lesson} accountId={accountId} deviceId={deviceId} events={events} record={record}>
         {lesson.explanation.map((s, i) => <section key={i}><h3>{s.title}</h3><StudyText text={s.body} /></section>)}
         <div className="lab-example"><h3>Ejemplo resuelto</h3>{lesson.workedExample.map((s, i) => <section key={i}><h4>{s.title}</h4><StudyText text={s.body} /></section>)}</div>
         <button className="text-link" onClick={() => { choosePane('practice'); openMaterial(lesson.material.resourceId, lesson.material.sectionId) }}>Consultar material completo</button>
         {mobile && <button className="button primary lab-start-practice" onClick={() => choosePane('practice')}>Empezar a practicar <ArrowRight size={17} /></button>}
+        </LearningReading>
       </section>}
       {(!mobile || pane === 'practice') && <section ref={practice} className="lab-practice" aria-label="Práctica">
         <div className="lab-steps" aria-label="Actividades de la lección">{activities.map((a, i) => <button className="button" key={a.id}
           title={a.title + (answered.has(a.id) ? ' · Respondida' : '')} aria-current={index === i ? 'step' : undefined}
           onClick={() => chooseActivity(i)}>{i + 1}{answered.has(a.id) && <Check size={11} aria-hidden="true" />}</button>)}</div>
-        <div className="lab-activity-position"><span>Actividad {index + 1} de {activities.length}</span><span>{activities[index]?.phase === 'practice' ? 'Práctica con apoyo' : 'Comprobación sin pistas'}</span></div>
+        <div className="lab-activity-position"><span>Actividad {index + 1} de {activities.length}</span><span>{activities[index]?.phase === 'practice' ? 'Práctica con apoyo' : !mobile ? 'Comprobación con explicación disponible' : 'Comprobación sin pistas'}</span></div>
         {activities[index] && <ActivityView key={activities[index].id} activity={activities[index]} pack={pack} accountId={accountId}
-          deviceId={deviceId} events={events} record={record} />}
+          deviceId={deviceId} events={events} record={record} referenceVisible={!mobile} />}
         <nav className="lab-activity-navigation" aria-label="Cambiar actividad">
           <button className="button" disabled={index === 0} onClick={() => chooseActivity(index - 1)}><ArrowLeft size={17} /> Anterior</button>
           {index < activities.length - 1 ? <button className="button" onClick={() => chooseActivity(index + 1)}>Siguiente <ArrowRight size={17} /></button>
@@ -328,9 +329,9 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
   </article>
 }
 
-export function ActivityView({ activity, pack, accountId, deviceId, events, record, newAttemptGroupId }: {
+export function ActivityView({ activity, pack, accountId, deviceId, events, record, newAttemptGroupId, referenceVisible = false }: {
   activity: Activity; pack: LabPackage; accountId: string; deviceId: string; events: LabEvent[];
-  record: (events: LabEvent[]) => Promise<void>; newAttemptGroupId?: string
+  record: (events: LabEvent[]) => Promise<void>; newAttemptGroupId?: string; referenceVisible?: boolean
 }) {
   const ref = { activityId: activity.id, activityVersion: activity.version, packageId: pack.id, packageVersion: pack.version }
   const buffer = draftWriteBuffer(accountId, ref)
@@ -381,6 +382,12 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   }
   const latest = attempts.reduce<typeof attempts[number] | undefined>((current, a) => a.kind === 'attempt'
     && (!current || (current.kind === 'attempt' && a.ordinal > current.ordinal)) ? a : current, undefined)
+  const latestEvidence = useMemo(() => {
+    if (!latest) return undefined
+    try { return deriveLearning({ accountId, packages: [pack], events, now: new Date().toISOString(), policy: DEFAULT_LEARNING_POLICY })
+      .attempts.find(attempt => attempt.attemptId === latest.id) }
+    catch { return undefined }
+  }, [accountId, pack, events, latest])
   const [clock] = useState(() => new ActiveTime(performance.now(), document.visibilityState === 'visible'))
   useEffect(() => {
     const update = () => clock.visibility(performance.now(), document.visibilityState === 'visible')
@@ -390,7 +397,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const activeMs = () => clock.take(performance.now(), document.visibilityState === 'visible')
   const learningTarget = () => ({ ...ref, kind: 'activity' as const, attemptGroupId: groupId })
   const [presentation] = useState(() => capture.present(learningTarget(), activity,
-    activity.kind === 'ipv4-model' ? parseIPv4View(answer).predictionId : null))
+    activity.kind === 'ipv4-model' ? parseIPv4View(answer).predictionId : null, { referenceVisible }))
   useEffect(() => {
     if (semantic.hasUnsaved()) return
     const batch = [...(heads.length ? [] : [initial]), ...presentation.events]
@@ -398,6 +405,13 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
     void semantic.save(batch[0], incoming => capture.write(incoming, record), batch.slice(1))
       .then(saved => { if (saved) setInitialized(true) })
   }, []) // The immutable initial batch is reused if React replays this effect.
+  useEffect(() => {
+    if (!referenceVisible || semantic.hasUnsaved()) return
+    const known = new Set([...eventSnapshot.current, ...semantic.events()].map(event => event.id))
+    const batch = capture.reference(learningTarget(), activity,
+      activity.kind === 'ipv4-model' ? parseIPv4View(answer).predictionId : null).filter(event => !known.has(event.id))
+    if (batch.length) void semantic.save(batch[0], incoming => capture.write(incoming, record), batch.slice(1))
+  }, [referenceVisible, groupId, answer, semanticEntries])
   const requestedGroupSaved = () => !!newAttemptGroupId && [...eventSnapshot.current,
     ...semantic.snapshot().filter(entry => entry.status === 'saved').flatMap(entry => [entry.note, ...(entry.companions ?? [])])]
     .some(event => event.kind === 'draft' && event.attemptGroupId === newAttemptGroupId && event.packageId === pack.id
@@ -422,7 +436,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   }
   async function recordStudy(facts: LabEvent[]) {
     if (!await semantic.flush()) throw new Error('Guarda primero la respuesta o consulta pendiente.')
-    const batch = capture.prepare(learningTarget(), activity, facts)
+    const batch = capture.prepare(learningTarget(), activity, facts, null, { referenceVisible })
     if (!await semantic.save(batch[0], incoming => capture.write(incoming, record), batch.slice(1))) {
       throw new Error('La respuesta o consulta sigue pendiente. Reintenta su guardado antes de continuar.')
     }
@@ -436,7 +450,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       // Begin every local transaction immediately; navigation may close this controller afterward.
       const previousPrediction = companions.find(event => event.kind === 'ipv4-reveal' || event.kind === 'ipv4-reset')
       const decorated = companions.length ? capture.prepare(learningTarget(), activity, companions,
-        previousPrediction && 'predictionId' in previousPrediction ? previousPrediction.predictionId : null) : []
+        previousPrediction && 'predictionId' in previousPrediction ? previousPrediction.predictionId : null, { referenceVisible }) : []
       if (!await buffer.save(draft, batch => capture.write(batch, record), decorated)) throw new Error('El borrador sigue pendiente de guardar. Puedes reintentarlo o descargar una copia.')
     }
     if (!await buffer.flush()) throw new Error('Hay revisiones pendientes de guardar. Reintenta el guardado antes de continuar.')
@@ -485,6 +499,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
     </section>}
 
     <StudyText text={activity.prompt} />
+    {referenceVisible && <p className="lab-mode">La explicación está disponible junto a esta actividad. La respuesta contará con apoyo de lectura.</p>}
     {activity.kind !== 'ipv4-model' && <details className="lab-prediction"><summary>Anotar una predicción (opcional)</summary>
       <StudyNoteEditor target={{ ...ref, kind: 'activity', purpose: 'prediction' }} accountId={accountId} deviceId={deviceId}
         events={events} record={record} label="Tu predicción" />
@@ -545,6 +560,8 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
           feedback: feedback ?? (correct ? 'La consulta satisface los casos comprobados.' : 'La consulta no coincide con el resultado requerido en todos los casos.') }])
       }} />}
     {latest && latest.ordinal > 1 && <p className="lab-mode">Intento {latest.ordinal}. Tu primera respuesta se conserva.</p>}
+    {latestEvidence?.referenceSupport === 'recorded' && <p className="lab-mode">Respuesta con apoyo de lectura. No acredita recuperación sin apoyo.</p>}
+    {latestEvidence?.referenceSupport === 'uncertain' && <p className="lab-mode">No se puede verificar si esta respuesta tuvo apoyo de lectura. Se conserva sin acreditar recuperación sin apoyo.</p>}
     {heads.length === 1 && activity.phase === 'practice' && <>
       <div className="lab-actions">
         {activity.phase === 'practice' && assistance.hintCount < activity.hints.length && <button className="button" disabled={busy || semanticBlocked}
