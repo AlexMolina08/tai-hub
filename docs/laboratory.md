@@ -56,6 +56,8 @@ Safari nativo en macOS también se comprobó con una copia de prueba sintética:
 
 La plataforma sigue en desarrollo: el cierre editorial, el dominio del estudiante y la autorización de publicación son estados distintos. Ningún test sintético habilita por sí solo la publicación de una lección real.
 
+Reintentar conserva la respuesta inicial y aumenta el ordinal, sin abrir la solución ni inventar una consulta de ayuda. Pedir la solución o desplegar las explicaciones de todas las opciones registra esa consulta y la exposición de la familia. Un ordinal posterior al primero no constituye una nueva medición independiente, aunque no haya pistas. Los eventos antiguos permanecen inmutables; sus marcas de ayuda se conservan de forma prudente.
+
 ## Python y JavaScript
 
 La modalidad `code` usa entradas JSON en la variable `input` y compara la salida con varios casos preparados durante la autoría. El estado de cada ejecución se descarta. JavaScript se ejecuta como módulo en un worker; Python utiliza Pyodide314.0.7/CPython3.14.2. No hay instalación de paquetes, entrada interactiva, acceso a la red ni ficheros persistentes. Un resultado correcto acredita los casos probados, no una demostración universal del programa.

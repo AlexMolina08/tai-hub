@@ -89,8 +89,16 @@ test('private lesson persists answers, assistance and retries across navigation'
   await page.getByRole('radio', { name: 'Válida', exact: true }).check()
   await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
   await expect(page.getByText('Respuesta correcta · Con ayuda', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Ver solución', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
   await expect.poll(() => drive.labEvents().filter(e => typeof e === 'object' && e !== null && 'kind' in e && e.kind === 'attempt').length).toBeGreaterThanOrEqual(2)
+  const attempts = drive.labEvents().filter((event: any) => event.kind === 'attempt') as any[]
+  expect(attempts.map(attempt => attempt.ordinal)).toEqual([1, 2])
+  expect(attempts.every(attempt => !attempt.solutionViewed)).toBe(true)
+  await page.getByText('Por qué cada opción', { exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Ver solución', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+  await expect.poll(() => drive.labEvents().some((event: any) => event.kind === 'assistance' && event.solutionViewed)).toBe(true)
   await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll')
 })
 test('rejects a planned package and retains the 19 topic map', async ({ page, context, browserName }) => {
@@ -446,7 +454,9 @@ for (const language of ['python', 'javascript'] as const) {
     await expect.poll(() => drive.labEvents().filter((e: any) => e.kind === 'attempt').length).toBe(2)
     const attempts = drive.labEvents().filter((e: any) => e.kind === 'attempt') as any[]
     expect(attempts.map(a => a.outcome)).toEqual(['correct', 'incorrect'])
-    expect(attempts[1].solutionViewed).toBe(true)
+    expect(attempts[1].ordinal).toBe(2)
+    expect(attempts[1].solutionViewed).toBe(false)
+    await expect(page.getByRole('button', { name: 'Ver solución', exact: true })).toBeVisible()
     await editor.fill('')
     await page.getByRole('button', { name: 'Volver a las lecciones', exact: true }).click()
     await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)

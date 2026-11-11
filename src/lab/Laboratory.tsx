@@ -269,7 +269,7 @@ function ActivityView({ activity, pack, accountId, deviceId, events, record }: {
   currentWork.current = { assistance, attempts }
   const attemptFacts = () => {
     const facts = currentWork.current
-    return { ...facts.assistance, solutionViewed: facts.assistance.solutionViewed || facts.attempts.length > 0,
+    return { ...facts.assistance,
       ordinal: Math.max(0, ...facts.attempts.map(a => a.ordinal)) + 1 }
   }
   const latest = attempts.reduce<typeof attempts[number] | undefined>((current, a) => a.kind === 'attempt'
@@ -303,6 +303,12 @@ function ActivityView({ activity, pack, accountId, deviceId, events, record }: {
     try { await action() } catch (failure) { setError(message(failure)) }
     finally { setBusy(false) }
   }
+  async function revealSolution() {
+    await record([{ ...ref, id: crypto.randomUUID(), kind: 'assistance', accountId, deviceId,
+      createdAt: new Date().toISOString(), attemptGroupId: groupId, hintCount: assistance.hintCount, solutionViewed: true },
+    { id: crypto.randomUUID(), kind: 'exposure', accountId, deviceId, createdAt: new Date().toISOString(),
+      familyId: activity.familyId, reason: 'solution' }])
+  }
   return <div className="lab-activity">
     <h3>{activity.title}</h3><p className="lab-mode">{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</p>
     <StudyText text={activity.prompt} />
@@ -326,7 +332,9 @@ function ActivityView({ activity, pack, accountId, deviceId, events, record }: {
       })}>Comprobar respuesta</button>
       </div>
       {latest?.kind === 'attempt' && <div className="lab-feedback" role="status"><strong>{latest.outcome === 'correct' ? 'Respuesta correcta' : 'Revisa la respuesta'}{latest.hintCount > 0 || latest.solutionViewed ? ' · Con ayuda' : ''}</strong>
-        <p>{latest.feedback}</p><details><summary>Por qué cada opción</summary>{activity.options.map(o => <p key={o.id}><strong>{o.text}:</strong> {o.explanation}</p>)}</details></div>}
+        <p>{latest.feedback}</p><details onToggle={event => {
+          if (event.currentTarget.open && !assistance.solutionViewed) void run(revealSolution)
+        }}><summary>Por qué cada opción</summary>{activity.options.map(o => <p key={o.id}><strong>{o.text}:</strong> {o.explanation}</p>)}</details></div>}
     </> : activity.kind === 'html-css' ? <HtmlPanel activity={activity} saved={answer} disabled={heads.length === 0 || busy}
       save={save} onResult={async (value, correct, feedback) => {
         await record([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
@@ -347,14 +355,14 @@ function ActivityView({ activity, pack, accountId, deviceId, events, record }: {
           activeMs: activeMs(), phase: activity.phase, gradingVersion: 'sql-datasets-v1',
           feedback: feedback ?? (correct ? 'La consulta satisface los casos comprobados.' : 'La consulta no coincide con el resultado requerido en todos los casos.') }])
       }} />}
+    {latest && latest.ordinal > 1 && <p className="lab-mode">Intento {latest.ordinal}. Tu primera respuesta se conserva.</p>}
     {heads.length === 1 && activity.phase === 'practice' && <>
       <div className="lab-actions">
         {activity.phase === 'practice' && assistance.hintCount < activity.hints.length && <button className="button" disabled={busy}
           onClick={() => void run(() => record([{ ...ref, accountId, deviceId, id: crypto.randomUUID(), kind: 'assistance',
             attemptGroupId: groupId, createdAt: new Date().toISOString(), hintCount: assistance.hintCount + 1, solutionViewed: assistance.solutionViewed }]))}>Pista {assistance.hintCount + 1}</button>}
         {activity.phase === 'practice' && !assistance.solutionViewed && <button className="button" disabled={busy}
-          onClick={() => void run(() => record([{ ...ref, id: crypto.randomUUID(), kind: 'assistance', accountId, deviceId,
-            createdAt: new Date().toISOString(), attemptGroupId: groupId, hintCount: assistance.hintCount, solutionViewed: true }]))}>Ver solución</button>}
+          onClick={() => void run(revealSolution)}>Ver solución</button>}
       </div>
       {activity.hints.slice(0, assistance.hintCount).map((hint, i) => <p className="lab-feedback" key={i}>Pista {i + 1}: {hint}</p>)}
       {assistance.solutionViewed && <p className="lab-feedback">{activity.solution}</p>}
