@@ -56,6 +56,11 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     const ids = rows.map(r => r.id)
     if (!ids.every(string) || new Set(ids).size !== ids.length) issues.push(`${name}: IDs vacíos o duplicados`)
   }
+  if (input.examObjectiveIds !== undefined
+    && (!lists(input, ['examObjectiveIds']) || !(input.exams as unknown[] | undefined)?.length
+      || ['objectives', 'lessons', 'activities', 'sessions'].some(name => (input[name] as unknown[] | undefined)?.length))) {
+    issues.push('Las referencias externas de objetivos requieren un paquete exclusivo de examen.')
+  }
   for (const s of input.sources as RecordValue[]) {
     if (!fields(s, ['title', 'url']) || !inList(s.verification, ['candidate', 'verified'])
       || (s.verification === 'verified' && !fields(s, ['edition', 'locator', 'consultedOn']))
@@ -248,6 +253,8 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     if (!diagnostic || !diagnostic.objectiveIds.every(id => a.objectiveIds.includes(id))) issues.push(`${a.id}: comprobación de diagnóstico inexistente o de otro objetivo`)
   }
   const sources = new Map(pack.sources.map(s => [s.id, s]))
+  const examObjectives = pack.examObjectiveIds ? new Set(pack.examObjectiveIds) : objectives
+  const usedExamObjectives = new Set<string>()
   const reference = (id: string, ids: string[], known: Map<string, unknown>) => {
     for (const ref of ids) if (!known.has(ref)) issues.push(`${id}: referencia inexistente ${ref}`)
   }
@@ -306,9 +313,15 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
       issues.push(`${form.id}: identidad de examen compartida con otro contenido`)
     }
     for (const { questions, reserves } of form.sections) for (const question of [...questions, ...reserves]) {
-      reference(question.id, question.objectiveIds, objectives)
+      for (const id of question.objectiveIds) {
+        if (!examObjectives.has(id)) issues.push(`${question.id}: referencia inexistente ${id}`)
+        usedExamObjectives.add(id)
+      }
       reference(question.id, question.claims.map(c => c.sourceId), sources)
     }
+  }
+  for (const id of pack.examObjectiveIds ?? []) {
+    if (!usedExamObjectives.has(id)) issues.push(`Objetivo de examen sin preguntas: ${id}`)
   }
   for (const subject of [...pack.lessons, ...pack.activities, ...(pack.sessions ?? []), ...(pack.exams ?? [])]) {
     if ('claims' in subject) for (const c of subject.claims) reference(subject.id, [c.sourceId], sources)

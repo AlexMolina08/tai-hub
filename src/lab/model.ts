@@ -259,6 +259,7 @@ export interface LabPackage {
   evidence: Evidence[]
   sessions?: GuidedSession[]
   exams?: ExamForm[]
+  examObjectiveIds?: string[]
 }
 
 export type Answer = string | null

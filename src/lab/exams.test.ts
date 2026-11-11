@@ -24,6 +24,18 @@ describe('exam forms', () => {
     pack.exams![0].sections[0].reserves.pop()
     expect(() => parsePackage(pack, 'authoring')).toThrow(/parte de examen incompleta/)
   })
+  it('loads an exam without duplicating its lessons and checks its external objective references', () => {
+    const base = sampleExamPackage()
+    const form = base.exams![0]
+    const examObjectiveIds = [...new Set(form.sections.flatMap(section =>
+      [...section.questions, ...section.reserves].flatMap(question => question.objectiveIds)))]
+    const pack = { ...base, objectives: [], lessons: [], activities: [], examObjectiveIds,
+      evidence: base.evidence.filter(item => item.subjectId === form.id) }
+    expect(parsePackage(pack).examObjectiveIds).toEqual(examObjectiveIds)
+    expect(() => parsePackage({ ...pack, examObjectiveIds: undefined })).toThrow(/referencia inexistente/)
+    expect(() => parsePackage({ ...pack, examObjectiveIds: [...examObjectiveIds, 'unused'] })).toThrow(/sin preguntas/)
+    expect(() => parsePackage({ ...base, examObjectiveIds })).toThrow(/paquete exclusivo de examen/)
+  })
   it('blocks family, scenario and original overlap with training', () => {
     for (const key of ['familyId', 'scenarioId', 'originalId'] as const) {
       const pack = sampleExamPackage()
