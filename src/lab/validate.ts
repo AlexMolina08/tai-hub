@@ -3,6 +3,7 @@ import { ALGORITHM_MODEL_VERSION, validAlgorithmProfile } from './algorithm-mode
 import { CLOSURE_MODEL_VERSION, validClosureProfile } from './closure-model'
 import { ETHERNET_SWITCH_MODEL_VERSION, validEthernetSwitchProfile } from './ethernet-switch-model'
 import { FRAME_MODEL_VERSION, validFrameProfile } from './frame-model'
+import { LAN_REDUNDANCY_MODEL_VERSION, validLanRedundancyProfile } from './lan-redundancy-model'
 import { LAN_VLAN_MODEL_VERSION, validLanVlanProfile } from './lan-vlan-model'
 import { RADIO_MODEL_VERSION, validRadioProfile } from './radio-model'
 import { DHCP_MODEL_VERSION, validDhcpProfile } from './dhcp-model'
@@ -161,6 +162,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     } else if (a.kind === 'ethernet-switch-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== ETHERNET_SWITCH_MODEL_VERSION
         || !validEthernetSwitchProfile(a.profile)) issues.push(`${a.id}: perfil de conmutación Ethernet inválido`)
+    } else if (a.kind === 'lan-redundancy-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== LAN_REDUNDANCY_MODEL_VERSION
+        || !validLanRedundancyProfile(a.profile)) issues.push(`${a.id}: perfil de redundancia LAN inválido`)
     } else if (a.kind === 'lan-vlan-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== LAN_VLAN_MODEL_VERSION
         || !validLanVlanProfile(a.profile)) issues.push(`${a.id}: perfil VLAN inválido`)
