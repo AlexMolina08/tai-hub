@@ -3,6 +3,7 @@ import { ALGORITHM_MODEL_VERSION, validAlgorithmProfile } from './algorithm-mode
 import { CLOSURE_MODEL_VERSION, validClosureProfile } from './closure-model'
 import { ETHERNET_SWITCH_MODEL_VERSION, validEthernetSwitchProfile } from './ethernet-switch-model'
 import { FRAME_MODEL_VERSION, validFrameProfile } from './frame-model'
+import { NAT_MODEL_VERSION, validNatProfile } from './nat-model'
 import { LAN_REDUNDANCY_MODEL_VERSION, validLanRedundancyProfile } from './lan-redundancy-model'
 import { SERVICE_CAPACITY_MODEL_VERSION, validServiceCapacityProfile } from './service-capacity-model'
 import { LAN_VLAN_MODEL_VERSION, validLanVlanProfile } from './lan-vlan-model'
@@ -166,6 +167,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
     } else if (a.kind === 'lan-redundancy-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== LAN_REDUNDANCY_MODEL_VERSION
         || !validLanRedundancyProfile(a.profile)) issues.push(`${a.id}: perfil de redundancia LAN inválido`)
+    } else if (a.kind === 'nat-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== NAT_MODEL_VERSION
+        || !validNatProfile(a.profile)) issues.push(`${a.id}: perfil NAT inválido`)
     } else if (a.kind === 'service-capacity-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== SERVICE_CAPACITY_MODEL_VERSION
         || !validServiceCapacityProfile(a.profile)) issues.push(`${a.id}: perfil de capacidad de servicio inválido`)

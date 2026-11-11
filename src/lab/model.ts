@@ -3,6 +3,7 @@ import type { AlgorithmProfile } from './algorithm-model'
 import type { ClosureProfile } from './closure-model'
 import type { EthernetSwitchProfile } from './ethernet-switch-model'
 import type { FrameProfile } from './frame-model'
+import type { NatProfile } from './nat-model'
 import type { LanRedundancyProfile } from './lan-redundancy-model'
 import type { ServiceCapacityProfile } from './service-capacity-model'
 import type { LanVlanProfile } from './lan-vlan-model'
@@ -233,6 +234,11 @@ export interface LanRedundancyModelActivity extends ActivityBase {
   phase: 'practice'
   profile: LanRedundancyProfile
 }
+export interface NatModelActivity extends ActivityBase {
+  kind: 'nat-model'
+  phase: 'practice'
+  profile: NatProfile
+}
 export interface ServiceCapacityModelActivity extends ActivityBase {
   kind: 'service-capacity-model'
   phase: 'practice'
@@ -241,7 +247,7 @@ export interface ServiceCapacityModelActivity extends ActivityBase {
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
   | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
   | TransactionModelActivity | VlsmModelActivity | RouteModelActivity | ContentionModelActivity | InterleavingModelActivity
-  | EthernetSwitchModelActivity | LanVlanModelActivity | LanRedundancyModelActivity | ServiceCapacityModelActivity
+  | EthernetSwitchModelActivity | LanVlanModelActivity | LanRedundancyModelActivity | NatModelActivity | ServiceCapacityModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string
