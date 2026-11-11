@@ -31,8 +31,8 @@ export async function cachedPackages(accountId: string): Promise<LabPackage[]> {
     })
   } finally { db.close() }
 }
-export async function cachePackage(accountId: string, input: unknown): Promise<LabPackage> {
-  const content = parsePackage(input)
+export async function cachePackages(accountId: string, inputs: unknown[]): Promise<void> {
+  const incoming = inputs.map(input => parsePackage(input))
   const db = await open()
   try {
     await new Promise<void>((resolve, reject) => {
@@ -42,20 +42,34 @@ export async function cachePackage(accountId: string, input: unknown): Promise<L
       let failure: unknown
       req.onsuccess = () => {
         try {
-          const previous = req.result.find(row => row.id === content.id && row.version === content.version)
-          if (previous && canonical(previous.content) !== canonical(content)) {
-            failure = new Error('Esa versión ya existe con otro contenido. Conserva ambos paquetes y asigna una versión nueva.')
-            tx.abort(); return
+          const packageKey = ({ id, version }: LabPackage) => JSON.stringify([id, version])
+          const library = new Map<string, LabPackage>()
+          for (const row of req.result) {
+            const pack = parsePackage(row.content)
+            library.set(packageKey(pack), pack)
           }
-          const library = [...req.result.map(row => parsePackage(row.content)), content]
-          const conflicts = familyConflicts(library.flatMap(pack => pack.activities), library)
-          if (conflicts.length) { failure = new Error(conflicts.join('\n')); tx.abort(); return }
-          store.put({ accountId, id: content.id, version: content.version, content })
+          const additions: LabPackage[] = []
+          for (const pack of incoming) {
+            const key = packageKey(pack)
+            const previous = library.get(key)
+            if (previous) {
+              if (canonical(previous) !== canonical(pack)) {
+                throw new Error('Esa versión ya existe con otro contenido. Conserva ambos paquetes y asigna una versión nueva.')
+              }
+              continue
+            }
+            library.set(key, pack)
+            additions.push(pack)
+          }
+          if (!additions.length) return
+          const packages = [...library.values()]
+          const conflicts = familyConflicts(packages.flatMap(pack => pack.activities), packages)
+          if (conflicts.length) throw new Error(conflicts.join('\n'))
+          for (const content of additions) store.add({ accountId, id: content.id, version: content.version, content })
         } catch (error) { failure = error; tx.abort() }
       }
       tx.oncomplete = () => resolve()
       tx.onerror = tx.onabort = () => reject(failure ?? tx.error)
     })
-    return content
   } finally { db.close() }
 }

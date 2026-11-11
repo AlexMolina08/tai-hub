@@ -24,6 +24,35 @@ async function showPractice(page: import('@playwright/test').Page) {
 async function openStudyOptions(page: import('@playwright/test').Page) {
   if (await page.locator('.lab-tools').getAttribute('open') === null) await page.getByText('Opciones de estudio', { exact: true }).click()
 }
+test('catalogue retains committed batches and rejects changes to an imported version', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture()
+  const pack = samplePackage()
+  for (let i = 0; i < 9; i++) {
+    drive.addLabPackage(`file-${i}`, { ...pack, id: `fixture-${i}`,
+      lessons: [{ ...pack.lessons[0], title: `Lección sintética ${i}` }] })
+  }
+  drive.addLabPackage('conflict', { ...pack, id: 'fixture-0', title: 'Versión alterada' })
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  const load = page.getByRole('button', { name: 'Cargar lecciones de Drive' })
+  await load.click()
+  await expect(page.getByRole('alert')).toContainText('Esa versión ya existe con otro contenido')
+  await expect(page.getByText('8 lecciones disponibles', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Lección sintética 8/ })).toHaveCount(0)
+
+  drive.addLabPackage('conflict', { ...pack, id: 'fixture-0',
+    lessons: [{ ...pack.lessons[0], title: 'Lección sintética 0' }] })
+  await load.click()
+  await expect(page.getByText('9 lecciones disponibles', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Lección sintética 0/ })).toHaveCount(1)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await page.reload()
+  await openLab(page)
+  await expect(page.getByText('9 lecciones disponibles', { exact: true })).toBeVisible()
+})
 test('exam resumes in two contexts, keeps corrections hidden, and scores only eligible reserves', async ({ browser, browserName, baseURL }) => {
   test.setTimeout(90_000)
   const drive = new DriveFixture()

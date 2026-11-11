@@ -9,7 +9,7 @@ import type { SqlResult } from './sql-runner'
 import { LabSync, type LabSnapshot } from './sync'
 import { browserHistoryStore } from './store'
 import { labTransport } from './drive'
-import { cachePackage, cachedPackages } from './content-store'
+import { cachePackages, cachedPackages } from './content-store'
 import { assistanceFor, gradeChoice } from './grading'
 import { draftHeads, exportHistory, mergeEvents, restoreHistory } from './history'
 import { draftWriteBuffer } from './draft-buffer'
@@ -170,11 +170,16 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   async function loadDrive() {
     setBusy(true); setError('')
     try {
-      for (const file of await library.listLabFiles(accountId, 'labPackage')) {
-        await cachePackage(accountId, await library.readLabFile(accountId, file.id, 'labPackage'))
+      const files = await library.listLabFiles(accountId, 'labPackage')
+      const batchSize = 8
+      for (let start = 0; start < files.length; start += batchSize) {
+        const batch = files.slice(start, start + batchSize)
+        const inputs = await Promise.all(batch.map(file => library.readLabFile(accountId, file.id, 'labPackage')))
+        await cachePackages(accountId, inputs)
       }
-      setPackages(await cachedPackages(accountId))
     } catch (failure) { setError(message(failure)) }
+    try { setPackages(await cachedPackages(accountId)) }
+    catch (failure) { setError(message(failure)) }
     finally { setBusy(false) }
   }
   async function record(events: LabEvent[]) {
@@ -257,7 +262,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
           const file = event.currentTarget.files?.[0]; if (!file) return
           try {
             if (file.size > 32 * 1024 ** 2) throw new Error('El paquete supera 32 MB.')
-            await cachePackage(accountId, JSON.parse(await readText(file))); setPackages(await cachedPackages(accountId)); setError('')
+            await cachePackages(accountId, [JSON.parse(await readText(file))]); setPackages(await cachedPackages(accountId)); setError('')
           } catch (failure) { setError(message(failure)) }
         }} /></label>
         <label>Restaurar progreso de esta cuenta<input type="file" accept="application/json,.json" onChange={async event => {
