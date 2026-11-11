@@ -3,6 +3,7 @@ import type { AlgorithmProfile } from './algorithm-model'
 import type { ClosureProfile } from './closure-model'
 import type { FrameProfile } from './frame-model'
 import type { RadioProfile } from './radio-model'
+import type { DhcpProfile } from './dhcp-model'
 import type { RelationProfile } from './relation-model'
 import type { SignalCase } from './signal-model'
 import type { SwitchingProfile } from './switching-model'
@@ -178,8 +179,13 @@ export interface RadioModelActivity extends ActivityBase {
   phase: 'practice'
   profile: RadioProfile
 }
+export interface DhcpModelActivity extends ActivityBase {
+  kind: 'dhcp-model'
+  phase: 'practice'
+  profile: DhcpProfile
+}
 export type PredictionActivity = FrameModelActivity | AccessModelActivity | StackModelActivity | RelationModelActivity
-  | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity
+  | ClosureModelActivity | AlgorithmModelActivity | SwitchingModelActivity | RadioModelActivity | DhcpModelActivity
 export type Activity = ChoiceActivity | SqlActivity | CodeActivity | HtmlActivity | IPv4ModelActivity | SignalModelActivity | PredictionActivity
 export interface GuidedStage {
   id: string

@@ -3,6 +3,7 @@ import { ALGORITHM_MODEL_VERSION, validAlgorithmProfile } from './algorithm-mode
 import { CLOSURE_MODEL_VERSION, validClosureProfile } from './closure-model'
 import { FRAME_MODEL_VERSION, validFrameProfile } from './frame-model'
 import { RADIO_MODEL_VERSION, validRadioProfile } from './radio-model'
+import { DHCP_MODEL_VERSION, validDhcpProfile } from './dhcp-model'
 import { RELATION_MODEL_VERSION, validRelationProfile } from './relation-model'
 import { SIGNAL_MODEL_VERSION, validSignalCases } from './signal-model'
 import { STACK_MODEL_VERSION } from './stack-model'
@@ -145,6 +146,9 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
             && inList(k.kind, ['count', 'text', 'style', 'attribute']) && typeof k.expected === 'string' && k.expected.length <= 2000
             && (!['style', 'attribute'].includes(String(k.kind)) || (string(k.property) && /^[a-zA-Z-]{1,64}$/.test(k.property)))))
         || new Set(a.cases.map(c => (c as RecordValue).id)).size !== a.cases.length) issues.push(`${a.id}: casos HTML/CSS inválidos`)
+    } else if (a.kind === 'dhcp-model') {
+      if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== DHCP_MODEL_VERSION
+        || !validDhcpProfile(a.profile)) issues.push(`${a.id}: perfil DHCP inválido`)
     } else if (a.kind === 'radio-model') {
       if (a.phase !== 'practice' || a.mode.kind !== 'simulation' || a.mode.version !== RADIO_MODEL_VERSION
         || !validRadioProfile(a.profile)) issues.push(`${a.id}: perfil de radio inválido`)
