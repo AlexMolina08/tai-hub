@@ -37,6 +37,10 @@ describe('LAN VLAN prediction', () => {
   it('classifies voice, native and priority-tagged ingress independently from the wire tag', () => {
     expect(predict(tag)).toEqual(['20', '20', '20', 'Sí'])
     expect(predict({ ...tag, wireVid: 0 })).toEqual(['0', 'Sin salida', '0', 'No'])
+    const combined = { ...tag, ingress: { ...tag.ingress, priorityTagged: true } }
+    expect(validLanVlanProfile({ cases: [combined] })).toBe(true)
+    expect(predict(combined)).toEqual(['20', '20', '20', 'Sí'])
+    expect(predict({ ...combined, wireVid: 0, destination: 10 })).toEqual(['10', '10', '10', 'Sí'])
     const priority = { ...tag, wireVid: 0, destination: 10, ingress: { ...tag.ingress, voice: null, priorityTagged: true } }
     expect(predict(priority)).toEqual(['10', '10', '10', 'Sí'])
     const tx = { ...tag.tx, native: 10 }
@@ -84,7 +88,7 @@ describe('LAN VLAN prediction', () => {
     const profile = { cases: [tag, tci, qos, route, relay] }
     expect(validLanVlanProfile(profile)).toBe(true)
     for (const invalid of [
-      { ...tag, ingress: { ...tag.ingress, priorityTagged: true } },
+      { ...tag, ingress: { ...tag.ingress, voice: tag.ingress.pvid } },
       { ...tag, tx: { ...tag.tx, allowed: [10,10] } },
       { ...tag, wireVid: 4096 },
       { ...tci, word: 65536 },

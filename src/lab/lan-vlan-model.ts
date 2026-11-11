@@ -64,7 +64,7 @@ const includes = (block: Block, address: number) => block.start <= address && ad
 function validAccess(value: unknown): value is Access {
   return record(value) && value.kind === 'access' && vid(value.pvid)
     && (value.voice === null || vid(value.voice) && value.voice !== value.pvid)
-    && flag(value.priorityTagged) && !(value.voice !== null && value.priorityTagged)
+    && flag(value.priorityTagged)
 }
 
 function validTrunk(value: unknown): value is Trunk {
