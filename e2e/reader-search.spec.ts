@@ -9,7 +9,7 @@ test('finds early PDF matches before the last page and lets the next query super
     const post = Worker.prototype.postMessage
     let resumed = false
     document.addEventListener('resume-test-search', () => { resumed = true }, { once: true })
-    Worker.prototype.postMessage = function (...args: Parameters<typeof post>) {
+    Worker.prototype.postMessage = function (...args: [message: any, transferOrOptions?: Transferable[] | StructuredSerializeOptions]) {
       const [message] = args
       // Leave one page pending until the first result has been used.
       if (!resumed && message.action === 'GetTextContent' && message.data?.pageIndex === 10

@@ -729,8 +729,6 @@ function SearchResults({ query, pageResults, error, resources, limits, loadMore,
   const hits = pageResults.query === query ? pageResults.hits.filter(hit => byId.has(hit.id)) : []
   const morePages = hits.length > limits.pages
   return <div className="search-results">
-    {indexing && <p className="form-hint" role="status">Índice en actualización. Irán apareciendo más páginas.</p>}
-    {error && <p className="form-error" role="alert">La búsqueda de páginas no se pudo completar.</p>}
     {found.length > 0 && <section><h2>Recursos <small>{found.length}</small></h2><div className="resource-list">
       {found.slice(0, limits.resources).map(item => { const Icon = kinds[item.kind].icon; return <button className="search-item" key={item.id} onClick={() => open(item)}>
         <span className={`file-icon kind-${item.kind}`}><Icon size={19} /></span><span><strong>{item.title}</strong><small>{locationName(item.topicId)} · {item.source}</small></span><ChevronRight size={18} />
@@ -743,6 +741,8 @@ function SearchResults({ query, pageResults, error, resources, limits, loadMore,
       </button> })}
     </div>{morePages && <div className="actions"><button className="button" onClick={() => loadMore('pages')}>Mostrar más páginas</button></div>}</section>}
     {!found.length && !hits.length && !indexing && pageResults.query === query && <div className="empty"><FileSearch size={25} /><p>No hay coincidencias para «{query}».</p></div>}
+    {indexing && <p className="form-hint" role="status">Índice en actualización. Irán apareciendo más páginas.</p>}
+    {error && <p className="form-error" role="alert">La búsqueda de páginas no se pudo completar.</p>}
   </div>
 }
 

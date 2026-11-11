@@ -16,6 +16,45 @@ body{padding:18px}h2{margin-top:80vh}.table-wrap{overflow:auto}table{min-width:7
 <iframe src="https://private-leak.invalid/frame"></iframe><form action="https://private-leak.invalid/form"><button>Enviar</button></form>
 <a href="javascript:alert(1)">Enlace inseguro</a></body></html>`
 
+test('keeps a resource under the pointer when background indexing starts', async ({ page, context }) => {
+  const drive = new DriveFixture()
+  drive.addHtml('stable-result', 'Recurso estable', '<!doctype html><h1>Lectura estable</h1>')
+  await drive.install(context)
+  let releaseIndex!: () => void
+  let indexHeld = false
+  const indexGate = new Promise<void>(resolve => { releaseIndex = resolve })
+  await context.route(/\/assets\/index-[^/]+\.js$/, async route => {
+    const response = await route.fetch()
+    const body = await response.text()
+    if (/export\s*\{[^}]*\bas PdfIndex\b/.test(body)) {
+      indexHeld = true
+      await indexGate
+    }
+    await route.fulfill({ response, body })
+  })
+  try {
+    await page.goto('/tai-hub/')
+    await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
+    await expect.poll(() => indexHeld).toBe(true)
+    await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('Recurso estable')
+    const result = page.getByRole('button', { name: /Recurso estable III.1/ })
+    await expect(result).toBeVisible()
+    const before = (await result.boundingBox())!
+    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
+    await page.mouse.down()
+    releaseIndex()
+    await expect(page.getByRole('status').filter({ hasText: 'Índice en actualización' })).toBeVisible()
+    const after = (await result.boundingBox())!
+    expect(after.y).toBeCloseTo(before.y, 1)
+    await page.mouse.up()
+    await expect(page.frameLocator('iframe[title="Recurso estable"]').getByRole('heading', { name: 'Lectura estable' })).toBeVisible()
+  } finally {
+    releaseIndex()
+    await page.mouse.up().catch(() => {})
+  }
+})
+
 test('reads private HTML with navigation, selectable text and contained tables; blocks active content', async ({ page, context }) => {
   const drive = new DriveFixture()
   const content = process.env.TAI_PRIVATE_HTML ? await readFile(process.env.TAI_PRIVATE_HTML, 'utf8') : sample
