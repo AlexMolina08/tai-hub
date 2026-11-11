@@ -358,6 +358,46 @@ test('resumes the exact saved activity on a second browser context and retains s
   } finally { await other.close() }
 })
 
+test('an open SQL editor adopts a remote draft and continues its exact revision', async ({ page, context, browser, browserName, baseURL }) => {
+  const pack = samplePackage()
+  pack.activities[0] = { ...pack.activities[0], kind: 'sql', starter: 'SELECT 0', referenceQuery: 'SELECT 0', comparison: 'bag',
+    datasets: [{ id: 'a', setup: 'CREATE TABLE a(n integer);' }, { id: 'b', setup: 'CREATE TABLE a(n integer); INSERT INTO a VALUES (1);' }] }
+  const drive = new DriveFixture(); drive.addLabPackage('lab-remote-editor', pack)
+  await drive.install(context, browserName === 'webkit')
+  const other = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  try {
+    await drive.install(other, browserName === 'webkit')
+    const remote = await other.newPage()
+    const sync = async (target: import('@playwright/test').Page) => {
+      await target.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+      await expect(target.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    }
+    for (const target of [page, remote]) {
+      await target.goto(baseURL + '/tai-hub/')
+      await target.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+      await expect(target.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+      await openLab(target)
+      await target.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+      await sync(target)
+      await target.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(target)
+      await sync(target)
+    }
+    await page.getByRole('textbox', { name: 'Consulta SQL', exact: true }).fill('SELECT 11')
+    await sync(page); await sync(remote)
+    await expect(remote.getByRole('textbox', { name: 'Consulta SQL', exact: true })).toHaveValue('SELECT 11')
+    const parent = drive.labEvents().find((event: any) => event.kind === 'draft' && event.value === 'SELECT 11') as any
+    await remote.getByRole('textbox', { name: 'Consulta SQL', exact: true }).fill('SELECT 22')
+    await remote.getByRole('button', { name: 'Volver a las lecciones', exact: true }).click()
+    await sync(remote); await sync(page)
+    await expect(page.getByRole('textbox', { name: 'Consulta SQL', exact: true })).toHaveValue('SELECT 22')
+    const child = drive.labEvents().find((event: any) => event.kind === 'draft' && event.value === 'SELECT 22') as any
+    expect(child.parentIds).toEqual([parent.id])
+    expect(child.attemptGroupId).toBe(parent.attemptGroupId)
+    expect(drive.labEvents().some((event: any) => event.kind === 'attempt')).toBe(false)
+    await expect(page.getByRole('heading', { name: 'Hay dos borradores de esta actividad', exact: true })).toHaveCount(0)
+  } finally { await other.close() }
+})
+
 test('SQL runs in a disposable isolated executor with real NULL and duplicate semantics', async ({ page, context, browserName }) => {
   test.setTimeout(90_000)
   const pack = samplePackage()

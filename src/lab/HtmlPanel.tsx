@@ -10,6 +10,12 @@ export function HtmlPanel({ activity, saved, disabled, save, onResult }: {
     try { const value = JSON.parse(saved); if (typeof value.html === 'string' && typeof value.css === 'string') return value } catch { /* No saved editor value yet. */ }
     return activity.starter
   })
+  useEffect(() => {
+    try {
+      const value = JSON.parse(saved)
+      if (typeof value.html === 'string' && typeof value.css === 'string') setSource(value)
+    } catch { /* Keep the current editor value when the stored representation cannot be read. */ }
+  }, [saved])
   const [width, setWidth] = useState(activity.cases[0].width)
   const [status, setStatus] = useState('')
   const [running, setRunning] = useState(false)
@@ -17,7 +23,8 @@ export function HtmlPanel({ activity, saved, disabled, save, onResult }: {
   const controller = useRef<AbortController>(undefined)
   useEffect(() => () => controller.current?.abort(), [])
   const error = (failure: unknown) => setStatus(failure instanceof Error ? failure.message : 'No se pudo mostrar la vista.')
-  const update = (value: typeof source) => { setSource(value); void save(JSON.stringify(value)).catch(error) }
+  // The parent buffer displays autosave failures and owns their retry/copy controls across navigation.
+  const update = (value: typeof source) => { setSource(value); void save(JSON.stringify(value)).catch(() => {}) }
   async function execute(check: boolean) {
     setRunning(true); setStatus(check ? 'Comprobando los tamaños del ejercicio…' : 'Actualizando la vista…')
     controller.current = new AbortController()

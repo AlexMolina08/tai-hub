@@ -8,7 +8,11 @@ interface BufferedNote<T> { note: T; status: 'pending' | 'failed' | 'saved'; err
 export class RevisionWriteBuffer<T extends NoteRevision | Draft> {
   #entries: BufferedNote<T>[] = []
   #listeners = new Set<() => void>()
-  constructor(private changed: () => void = () => {}) {}
+  #writes = new Set<Promise<boolean>>()
+  constructor(private changed: () => void = () => {}, private messages = {
+    collision: 'Colisión de identidad: la copia guardada contiene otro texto. Conserva una copia de la nota pendiente para revisión.',
+    failure: 'No se pudo guardar la nota.',
+  }) {}
   snapshot = () => this.#entries
   subscribe = (listener: () => void) => { this.#listeners.add(listener); return () => { this.#listeners.delete(listener) } }
   hasUnsaved = () => this.#entries.some(entry => entry.status !== 'saved')
@@ -28,14 +32,14 @@ export class RevisionWriteBuffer<T extends NoteRevision | Draft> {
       if (entry.collision) return [entry]
       changed = true
       return [{ ...entry, status: 'failed' as const, collision: true,
-        error: 'Colisión de identidad: la copia guardada contiene otro texto. Conserva una copia de la nota pendiente para revisión.' }]
+        error: this.messages.collision }]
     })
     if (changed) this.#publish(remaining)
   }
   save(note: T, record: Writer) {
     this.#publish([...this.#entries, { note, status: 'pending' }])
     // Start now, before navigation can close the current sync controller.
-    void this.#write([note], record)
+    return this.#start([note], record)
   }
   retry(record: Writer) {
     if (this.#entries.some(entry => entry.status === 'pending')) return
@@ -43,16 +47,26 @@ export class RevisionWriteBuffer<T extends NoteRevision | Draft> {
     if (!failed.length) return
     this.#publish(this.#entries.map(entry => entry.status === 'failed' && !entry.collision ? { note: entry.note, status: 'pending' } : entry))
     // Retry every failed ancestor together, even if a descendant was already saved.
-    void this.#write(failed, record)
+    void this.#start(failed, record)
+  }
+  /** Execution or submission waits for local persistence, never just the visible editor text. */
+  async flush() { await Promise.all([...this.#writes]); return !this.hasUnsaved() }
+  #start(notes: T[], record: Writer) {
+    const writing = this.#write(notes, record)
+    this.#writes.add(writing)
+    void writing.finally(() => this.#writes.delete(writing))
+    return writing
   }
   async #write(notes: T[], record: Writer) {
     const ids = new Set(notes.map(note => note.id))
     try {
       await record(notes)
       this.#publish(this.#entries.map(entry => ids.has(entry.note.id) && !entry.collision ? { note: entry.note, status: 'saved' } : entry))
+      return !this.#entries.some(entry => ids.has(entry.note.id) && entry.collision)
     } catch (failure) {
-      const error = failure instanceof Error ? failure.message : 'No se pudo guardar la nota.'
+      const error = failure instanceof Error ? failure.message : this.messages.failure
       this.#publish(this.#entries.map(entry => ids.has(entry.note.id) && !entry.collision ? { note: entry.note, status: 'failed', error } : entry))
+      return false
     }
   }
 }

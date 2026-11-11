@@ -58,6 +58,14 @@ Mientras exista una escritura sin guardar se registra un aviso de salida. Un nav
 
 Este evento se añade antes de publicar el laboratorio, sin reescribir datos anteriores. Los clientes antiguos rechazan lotes con tipos desconocidos; los dispositivos participantes deben actualizarse antes de activar el contenido. Ningún dato de notas entra en el bundle público ni se envía a un LLM.
 
+## Recuperación de borradores
+
+Cada edición inicia su escritura local inmediatamente. Un buffer por cuenta, actividad y versiones conserva las revisiones pendientes o fallidas al salir de la actividad. El reintento guarda también antecesores fallidos; comprobar una respuesta o ejecutar un programa espera a que todas las revisiones estén guardadas. Un fallo de almacenamiento no crea un intento ni se atribuye al alumno.
+
+La vista muestra un único aviso de guardado con reintento y descarga privada. La protección en memoria y el aviso de salida tienen los mismos límites descritos para las notas: no garantizan recuperación tras cerrar o perder el proceso si el almacenamiento falló. El guardado local tampoco confirma la sincronización con Drive.
+
+Una revisión remota única actualiza el editor abierto y determina el padre y el grupo de la siguiente edición. Las ramas concurrentes requieren una elección expresa, que conserva ambos padres y el grupo elegido. Se rechazan ciclos y padres conocidos de otra cuenta, contenido, versión o tipo antes de guardar o sincronizar. La validación iterativa admite cadenas largas. Una colisión de ID con otro contenido conserva la copia local seleccionable y descargable; no sobrescribe datos ni permite reintentar a ciegas.
+
 ## Ejecución SQL
 
 PGlite se carga bajo demanda. El ejecutor vive en un worker descartable dentro de un iframe de origen opaco (`sandbox="allow-scripts"`). El iframe solo recibe código fijo del motor, archivos WASM y datos del ejercicio. Su CSP impide red, almacenamiento del origen y acceso al padre. El receptor exige la ventana emisora y un token de ejecución; mensajes ajenos no producen resultados.

@@ -7,12 +7,14 @@ export function CodePanel({ activity, saved, disabled, save, onResult }: {
   onResult: (value: string, correct: boolean, feedback: string) => Promise<void>
 }) {
   const [source, setSource] = useState(saved)
+  useEffect(() => { setSource(saved) }, [saved])
   const [result, setResult] = useState<ProgramResult>()
   const [status, setStatus] = useState('')
   const [running, setRunning] = useState(false)
   const controller = useRef<AbortController>(undefined)
   useEffect(() => () => controller.current?.abort(), [])
   const error = (failure: unknown) => setStatus(failure instanceof Error ? failure.message : 'No se pudo completar la ejecución.')
+  // The parent buffer displays autosave failures and owns their retry/copy controls across navigation.
   async function execute(check: boolean) {
     setRunning(true); setStatus('Preparando el motor…'); setResult(undefined)
     controller.current = new AbortController()
@@ -42,11 +44,11 @@ export function CodePanel({ activity, saved, disabled, save, onResult }: {
       <pre>{JSON.stringify(activity.datasets[0].input, null, 2)}</pre></details>
     <label htmlFor={`code-${activity.id}`}>Código {activity.language === 'python' ? 'Python' : 'JavaScript'}</label>
     <textarea id={`code-${activity.id}`} value={source} rows={9} spellCheck={false} autoCapitalize="off" autoCorrect="off"
-      disabled={running || disabled} onChange={e => { setSource(e.target.value); void save(e.target.value).catch(error) }} />
+      disabled={running || disabled} onChange={e => { setSource(e.target.value); void save(e.target.value).catch(() => {}) }} />
     <div className="lab-actions">
       <button className="button" disabled={running || disabled} onClick={() => void execute(false)}>Ejecutar código</button>
       <button className="button primary" disabled={running || disabled} onClick={() => void execute(true)}>Comprobar código</button>
-      <button className="button" disabled={running || disabled} onClick={() => { setSource(activity.starter); void save(activity.starter).catch(error); setResult(undefined); setStatus('') }}>Restablecer código</button>
+      <button className="button" disabled={running || disabled} onClick={() => { setSource(activity.starter); void save(activity.starter).catch(() => {}); setResult(undefined); setStatus('') }}>Restablecer código</button>
       {running && <button className="button" onClick={() => controller.current?.abort()}>Cancelar ejecución</button>}
     </div>
     <p role="status">{status}</p>

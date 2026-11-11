@@ -21,29 +21,46 @@ export function mergeEvents(accountId: string, ...groups: LabEvent[][]): LabEven
   }
   const events = [...merged.values()]
   validateNoteHistory(events)
+  validateDraftHistory(events)
   return events.sort((a, b) => a.id.localeCompare(b.id))
 }
 export const draftKey = (d: Draft) => JSON.stringify([d.packageId, d.packageVersion, d.activityId, d.activityVersion])
 
-/** Missing parents remain recoverable; unrelated, cyclic or duplicate branches never silently win. */
-export function draftHeads(events: LabEvent[], key: string): Draft[] {
-  const drafts = events.filter((e): e is Draft => e.kind === 'draft' && draftKey(e) === key)
-  const known = new Map(drafts.map(d => [d.id, d]))
-  const all = new Map(events.map(e => [e.id, e]))
-  const visited = new Set<string>()
-  const path = new Set<string>()
-  const visit = (id: string) => {
-    if (path.has(id)) throw new LabValidationError(['Ciclo en revisiones de borrador.'])
-    if (visited.has(id)) return
-    path.add(id)
-    for (const parent of known.get(id)?.parentIds ?? []) {
-      if (all.has(parent) && !known.has(parent)) throw new LabValidationError(['El borrador referencia otra actividad o versión.'])
-      visit(parent)
+/** Validate known edges before storage; missing ancestors can arrive in a later batch. */
+export function validateDraftHistory(events: LabEvent[]) {
+  const drafts = events.filter((event): event is Draft => event.kind === 'draft')
+  const all = new Map(events.map(event => [event.id, event]))
+  const incoming = new Map<string, number>(), children = new Map<string, string[]>()
+  for (const draft of drafts) {
+    let count = 0
+    for (const parentId of new Set(draft.parentIds)) {
+      const parent = all.get(parentId)
+      if (!parent) continue
+      if (parent.kind !== 'draft' || parent.accountId !== draft.accountId || draftKey(parent) !== draftKey(draft)) {
+        throw new LabValidationError(['El borrador referencia otra cuenta, contenido o versión.'])
+      }
+      // An explicit resolution may join concurrent drafts from different attempt groups.
+      count += 1
+      const descendants = children.get(parentId) ?? []
+      descendants.push(draft.id); children.set(parentId, descendants)
     }
-    path.delete(id)
-    visited.add(id)
+    incoming.set(draft.id, count)
   }
-  drafts.forEach(d => visit(d.id))
+  const ready = drafts.filter(draft => incoming.get(draft.id) === 0).map(draft => draft.id)
+  for (let index = 0; index < ready.length; index += 1) {
+    for (const child of children.get(ready[index]) ?? []) {
+      const count = incoming.get(child)! - 1
+      incoming.set(child, count)
+      if (count === 0) ready.push(child)
+    }
+  }
+  if (ready.length !== drafts.length) throw new LabValidationError(['Ciclo en revisiones de borrador.'])
+}
+
+/** Missing parents remain recoverable; concurrent branches never silently win. */
+export function draftHeads(events: LabEvent[], key: string): Draft[] {
+  validateDraftHistory(events)
+  const drafts = events.filter((event): event is Draft => event.kind === 'draft' && draftKey(event) === key)
   const parents = new Set(drafts.flatMap(d => d.parentIds))
   return drafts.filter(d => !parents.has(d.id))
 }

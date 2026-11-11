@@ -10,7 +10,8 @@ import { browserHistoryStore } from './store'
 import { labTransport } from './drive'
 import { cachePackage, cachedPackages } from './content-store'
 import { assistanceFor, gradeChoice } from './grading'
-import { draftHeads, exportHistory, restoreHistory } from './history'
+import { draftHeads, exportHistory, mergeEvents, restoreHistory } from './history'
+import { draftWriteBuffer } from './draft-buffer'
 import { ActiveTime } from './active-time'
 import { OfflineControls } from './OfflineControls'
 import { CodePanel } from './CodePanel'
@@ -284,14 +285,25 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   record: (events: LabEvent[]) => Promise<void>
 }) {
   const ref = { activityId: activity.id, activityVersion: activity.version, packageId: pack.id, packageVersion: pack.version }
-  const heads = useMemo(() => draftHeads(events, JSON.stringify([pack.id, pack.version, activity.id, activity.version])), [events, pack, activity])
+  const buffer = draftWriteBuffer(accountId, ref)
+  const buffered = useSyncExternalStore(buffer.subscribe, buffer.snapshot)
+  useEffect(() => { buffer.acknowledge(events) }, [buffer, events])
+  const eventSnapshot = useRef(events)
+  eventSnapshot.current = events
+  const key = JSON.stringify([pack.id, pack.version, activity.id, activity.version])
+  const currentHeads = () => draftHeads(mergeEvents(accountId, eventSnapshot.current, buffer.snapshot().map(entry => entry.note)), key)
+  const revisions = useMemo(() => {
+    try { return { heads: currentHeads(), error: '' } }
+    catch (failure) { return { heads: draftHeads(buffered.map(entry => entry.note), key), error: message(failure) } }
+  }, [events, buffered, accountId, key])
+  const heads = revisions.heads
+  const failed = buffered.filter(entry => entry.status === 'failed')
+  const pending = buffered.some(entry => entry.status === 'pending')
   const initialValue = activity.kind === 'choice' ? '' : activity.kind === 'html-css' ? JSON.stringify(activity.starter) : activity.starter
   const [initial] = useState<Draft>(() => ({ ...ref, id: crypto.randomUUID(), kind: 'draft', deviceId, accountId,
     createdAt: new Date().toISOString(), attemptGroupId: heads[0]?.attemptGroupId ?? crypto.randomUUID(), parentIds: [], value: initialValue, position: 0 }))
-  const [answer, setAnswer] = useState(heads.length === 1 ? heads[0].value : initialValue)
-  const latestDraft = useRef<Draft | undefined>(heads.length === 1 ? heads[0] : undefined)
-  const saveQueue = useRef<Promise<void>>(Promise.resolve())
-  const [groupId, setGroupId] = useState(heads.length === 1 ? heads[0].attemptGroupId : initial.attemptGroupId)
+  const answer = heads.length === 1 ? heads[0].value : initialValue
+  const groupId = heads.length === 1 ? heads[0].attemptGroupId : initial.attemptGroupId
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const assistance = assistanceFor(events, groupId)
@@ -318,16 +330,15 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
     void record(heads.length ? [exposure] : [initial, exposure]).catch(e => setError(message(e)))
   }, []) // The immutable initial event is reused if React replays this effect.
   async function save(value: string) {
-    const write = async () => {
-      if (latestDraft.current?.value === value) { setAnswer(value); return }
-      const parents = latestDraft.current ? [latestDraft.current] : heads.length ? heads : [initial]
+    const parents = currentHeads()
+    if (parents.length > 1) throw new Error('Elige qué borrador continuar antes de editar.')
+    if (parents[0]?.value !== value) {
       const draft: Draft = { ...initial, id: crypto.randomUUID(), createdAt: new Date().toISOString(), value,
-        attemptGroupId: groupId, parentIds: parents.map(d => d.id) }
-      await record([draft]); latestDraft.current = draft; setAnswer(value)
+        attemptGroupId: parents[0]?.attemptGroupId ?? initial.attemptGroupId, parentIds: (parents.length ? parents : [initial]).map(d => d.id) }
+      // Begin every local transaction immediately; navigation may close this controller afterward.
+      if (!await buffer.save(draft, record)) throw new Error('El borrador sigue pendiente de guardar. Puedes reintentarlo o descargar una copia.')
     }
-    const saving = saveQueue.current.then(write)
-    saveQueue.current = saving.catch(() => {})
-    return saving
+    if (!await buffer.flush()) throw new Error('Hay revisiones pendientes de guardar. Reintenta el guardado antes de continuar.')
   }
   async function run(action: () => Promise<void>) {
     setBusy(true); setError('')
@@ -342,6 +353,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   }
   async function submitChoice(value: string | null) {
     if (activity.kind !== 'choice') return
+    if (!await buffer.flush()) throw new Error('Guarda el borrador antes de comprobar la respuesta.')
     const result = gradeChoice(activity, value)
     await record([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
       familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
@@ -354,16 +366,27 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       <StudyNoteEditor target={{ ...ref, kind: 'activity', purpose: 'prediction' }} accountId={accountId} deviceId={deviceId}
         events={events} record={record} label="Tu predicción" />
     </details>
-    {heads.length > 1 ? <div role="alert"><h4>Hay dos borradores de esta actividad</h4>
+    {(pending || failed.length > 0) && <section aria-label="Guardado del borrador">
+      <p role="status">{pending ? 'Guardando borrador…' : 'Borrador pendiente de guardar.'}</p>
+      {failed.length > 0 && <><p role="alert">{failed[0].error} El texto sigue disponible en esta pestaña. {failed.some(entry => entry.collision)
+        ? 'Guarda una copia antes de cerrarla.' : 'Reintenta el guardado antes de cerrarla.'}</p>
+        <div className="lab-actions"><button className="button" disabled={pending || failed.every(entry => entry.collision)} onClick={() => {
+          buffer.retry(record)
+          void buffer.flush().then(saved => { if (saved) setError('') })
+        }}>Reintentar guardar borrador</button>
+          <button className="button" onClick={() => download('laboratorio-borradores-pendientes.json', exportHistory(accountId, buffered.map(entry => entry.note)))}>Guardar copia del borrador pendiente</button></div></>}
+    </section>}
+    {revisions.error ? <div role="alert"><p>{revisions.error}</p><label>Borrador pendiente<textarea readOnly rows={8} value={answer} /></label></div>
+      : heads.length > 1 ? <div role="alert"><h4>Hay dos borradores de esta actividad</h4>
       <p>Elige cuál continuar. Las versiones anteriores se conservarán en el historial.</p>
-      {heads.map(head => <button className="button" key={head.id} disabled={busy} onClick={() => void run(async () => {
+      {heads.map(head => <button className="button" key={head.id} disabled={busy || pending || failed.length > 0} onClick={() => void run(async () => {
         const resolved = { ...head, id: crypto.randomUUID(), deviceId, createdAt: new Date().toISOString(), parentIds: heads.map(d => d.id) }
-        await record([resolved]); latestDraft.current = resolved; setGroupId(head.attemptGroupId); setAnswer(head.value)
+        if (!await buffer.save(resolved, record)) throw new Error('La elección del borrador sigue pendiente de guardar.')
       })}>Continuar: {head.value || 'Sin respuesta'}</button>)}
     </div> : activity.kind === 'choice' ? <>
       <fieldset disabled={busy || heads.length === 0}><legend>Elige una respuesta</legend>
         {activity.options.map(option => <label key={option.id} className="lab-option"><input type="radio" name={activity.id}
-          value={option.id} checked={answer === option.id} onChange={() => { setAnswer(option.id); void run(() => save(option.id)) }} /><span>{option.text}</span></label>)}
+          value={option.id} checked={answer === option.id} onChange={() => { void run(() => save(option.id)) }} /><span>{option.text}</span></label>)}
       </fieldset>
       <div className="lab-actions"><button className="button primary" disabled={busy || !answer} onClick={() => void run(() => submitChoice(answer))}>Comprobar respuesta</button>
         <button className="button" disabled={busy || heads.length !== 1 || latest?.outcome === 'omitted'}
@@ -417,6 +440,7 @@ function SqlPanel({ activity, saved, disabled, save, onResult }: {
   onResult: (value: string, correct: boolean, feedback?: string) => Promise<void>
 }) {
   const [query, setQuery] = useState(saved)
+  useEffect(() => { setQuery(saved) }, [saved])
   const [result, setResult] = useState<SqlResult>()
   const [status, setStatus] = useState('')
   const [running, setRunning] = useState(false)
@@ -453,10 +477,10 @@ function SqlPanel({ activity, saved, disabled, save, onResult }: {
     <details><summary>Tablas y datos iniciales</summary><pre>{activity.datasets[0].setup}</pre></details>
     <label htmlFor={`query-${activity.id}`}>Consulta SQL</label>
     <textarea id={`query-${activity.id}`} value={query} rows={8} spellCheck={false} disabled={running || disabled}
-      onChange={e => { setQuery(e.target.value); void save(e.target.value).catch(failure => setStatus(message(failure))) }} onBlur={() => { if (query !== saved) void save(query).catch(e => setStatus(message(e))) }} />
+      onChange={e => { setQuery(e.target.value); void save(e.target.value).catch(() => {}) }} onBlur={() => { if (query !== saved) void save(query).catch(() => {}) }} />
     <div className="lab-actions"><button className="button" disabled={running || disabled} onClick={() => void execute(false)}>Ejecutar SQL</button>
       <button className="button primary" disabled={running || disabled} onClick={() => void execute(true)}>Comprobar SQL</button>
-      <button className="button" disabled={running || disabled} onClick={() => { setQuery(activity.starter); void save(activity.starter).catch(e => setStatus(message(e))); setResult(undefined) }}>Restablecer consulta</button>
+      <button className="button" disabled={running || disabled} onClick={() => { setQuery(activity.starter); void save(activity.starter).catch(() => {}); setResult(undefined) }}>Restablecer consulta</button>
       {running && <button className="button" onClick={() => controller.current?.abort()}>Cancelar ejecución</button>}
     </div>
     <p role="status">{status}</p>
