@@ -11,6 +11,7 @@ import { describeRadio, radioControls } from './radio-model'
 import { describeDhcp, dhcpControls } from './dhcp-model'
 import { describeTransaction, transactionControls } from './transaction-model'
 import { describeVlsm, vlsmControls } from './vlsm-model'
+import { describeRoute, routeControls } from './route-model'
 import { matchesPredictionAnswer, parsePredictionDraft, predictionInputLimit, validPredictionAnswer } from './prediction'
 
 export function predictionFor(activity: PredictionActivity) {
@@ -33,6 +34,8 @@ export function predictionFor(activity: PredictionActivity) {
       return { controls: dhcpControls(activity.profile), describe: (values: string[]) => describeDhcp(activity.profile, values) }
     case 'transaction-model':
       return { controls: transactionControls(activity.profile), describe: (values: string[]) => describeTransaction(activity.profile, values) }
+    case 'route-model':
+      return { controls: routeControls(activity.profile), describe: (values: string[]) => describeRoute(activity.profile, values) }
     case 'vlsm-model':
       return { controls: vlsmControls(activity.profile), describe: (values: string[]) => describeVlsm(activity.profile, values) }
     case 'frame-model':
