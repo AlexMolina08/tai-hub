@@ -3,7 +3,7 @@ import type { Activity, PredictionActivity } from './model'
 export function isPredictionActivity(activity: Activity): activity is PredictionActivity {
   return activity.kind === 'frame-model' || activity.kind === 'access-model'
     || activity.kind === 'stack-model' || activity.kind === 'relation-model' || activity.kind === 'closure-model'
-    || activity.kind === 'algorithm-model' || activity.kind === 'switching-model'
+    || activity.kind === 'algorithm-model' || activity.kind === 'switching-model' || activity.kind === 'radio-model'
 }
 
 export type PredictionControl = { label: string; options: string[]; initial: string; toggle?: true }
