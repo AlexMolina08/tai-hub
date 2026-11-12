@@ -355,12 +355,19 @@ export function parsePackage(input: unknown, purpose: 'authoring' | 'study' = 's
   for (const id of pack.examObjectiveIds ?? []) {
     if (!usedExamObjectives.has(id)) issues.push(`Objetivo de examen sin preguntas: ${id}`)
   }
+  const evidenceBySubject = new Map<string, LabPackage['evidence']>()
+  for (const item of pack.evidence) {
+    const existing = evidenceBySubject.get(item.subjectId)
+    if (existing) existing.push(item)
+    else evidenceBySubject.set(item.subjectId, [item])
+  }
   for (const subject of [...pack.lessons, ...pack.activities, ...(pack.sessions ?? []), ...(pack.exams ?? [])]) {
     if ('claims' in subject) for (const c of subject.claims) reference(subject.id, [c.sourceId], sources)
     if (subject.state !== 'validated') continue
+    const currentEvidence = evidenceBySubject.get(subject.id)?.filter(e => e.subjectVersion === subject.version) ?? []
     for (const gate of requiredGates) {
-      const matches = pack.evidence.filter(e => e.subjectId === subject.id && e.subjectVersion === subject.version && e.gate === gate)
-      if (!matches.some(e => e.result === 'pass') || matches.some(e => e.result === 'fail')) issues.push(`${subject.id}: puerta ${gate} sin superar para esta versión`)
+      if (!currentEvidence.some(e => e.gate === gate && e.result === 'pass')
+        || currentEvidence.some(e => e.gate === gate && e.result === 'fail')) issues.push(`${subject.id}: puerta ${gate} sin superar para esta versión`)
     }
   }
   for (const a of pack.activities) {
