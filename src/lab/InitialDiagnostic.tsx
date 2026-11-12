@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { ArrowRight } from 'lucide-react'
 import type { LabEvent, LabPackage } from './model'
 import type { LearningDestination } from './recommendation'
 
@@ -66,15 +67,16 @@ export function InitialDiagnostic({ packages, events, open }: {
     results.set(event.attemptGroupId, { ordinal: event.ordinal,
       label: previous?.ordinal === event.ordinal ? 'Varias respuestas iniciales' : label })
   }
-  return <details className="lab-learning-details">
-    <summary>Diagnóstico inicial</summary>
-    <p>Prueba estos diez conceptos en el orden que prefieras. Puedes volver en cualquier momento y consultar la primera respuesta de cada ejercicio.</p>
-    {sections.map(section => <section key={section.title} aria-label={section.title}>
+  return <details className="lab-learning-details lab-diagnostic">
+    <summary><span>Diagnóstico inicial</span><small className="lab-summary-meta">{results.size} de {wanted.size} comprobados</small></summary>
+    <p>Prueba estos diez conceptos clave en el orden que prefieras. Puedes volver en cualquier momento y consultar la primera respuesta de cada ejercicio.</p>
+    {sections.map(section => <section key={section.title} className="lab-diagnostic-group" aria-label={section.title}>
       <h3>{section.title}</h3>
       <div className="lab-lesson-list">{section.checks.map(({ objective, label }) => {
         const target = targets.get(objective)!
         return <button key={objective} className="lab-lesson" onClick={() => open(target)}>
           <span><strong>{label}</strong><small>{results.get(target.attemptGroupId)?.label ?? 'Por comprobar'}</small></span>
+          <ArrowRight size={18} aria-hidden="true" />
         </button>
       })}</div>
     </section>)}

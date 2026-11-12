@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
+import { ArrowRight } from 'lucide-react'
 import type { ExamForm, ExamRevision, LabEvent, LabPackage } from './model'
 import { examAnswers, examHeads, examRevisions, examRunReady, scoreExamSection, type ExamMark } from './exams'
 import { exportHistory, mergeEvents } from './history'
@@ -42,12 +43,14 @@ export function ExamCatalog({ packages, events, accountId, open }: {
   if (!forms.length) return null
   return <section className="lab-guided-catalog" aria-label="Evaluaciones y exámenes">
     <h2>Evaluaciones y exámenes</h2>
+    <p>Simulacros cronometrados y supuestos prácticos con corrección justificada.</p>
     <div className="lab-lesson-list">{forms.map(({ pack, form }) => {
       const heads = examHeads(examRevisions(events, accountId, pack, form))
       return <button className="lab-lesson" key={JSON.stringify([pack.id, pack.version, form.id])} onClick={() => open(pack, form)}>
         <span><strong>{form.title}</strong>
           <small>{form.durationMinutes} min · {form.partition === 'reserved' ? 'Reservada' : 'Entrenamiento'}
             {heads.some(head => head.submitted === null) ? ' · En curso' : heads.length ? ' · Con resultados' : ''}</small></span>
+        <ArrowRight size={19} aria-hidden="true" />
       </button>
     })}</div>
   </section>

@@ -13,14 +13,24 @@ export function LearningDashboard({ snapshot, packages, events, open }: {
   const next = queue.items[0]
   const count = (field: 'understandingIds' | 'retentionIds' | 'transferIds') => new Set(snapshot.objectives.flatMap(objective => objective[field])).size
   const labels = { insufficient: 'En aprendizaje', consolidated: 'Consolidado', 'review-open': 'Repaso abierto', uncertain: 'Evidencia incompleta' }
+  const reasonLabels = {
+    resume: 'Actividad en curso',
+    prerequisite: 'Base recomendada',
+    'critical-error': 'Refuerzo de fallo',
+    due: 'Repaso del día',
+    continue: 'Siguiente lección',
+    transfer: 'Caso nuevo',
+    'balance-iv': 'Turno del Bloque IV',
+  }
   const visible = expanded ? snapshot.objectives : snapshot.objectives.filter(objective => objective.qualifyingCorrectIds.length || objective.reviews.length).slice(0, 4)
   return <section className="lab-learning" aria-labelledby="lab-learning-heading">
     {next ? <section className="lab-next-step" aria-label="Siguiente paso recomendado">
-      <div><p className="context-label">Siguiente paso</p><h2>{next.title}</h2><p>{next.message}</p></div>
+      <div><p className="context-label">Siguiente paso · {reasonLabels[next.reason]}</p><h2>{next.title}</h2><p>{next.message}</p></div>
       <div className="lab-actions"><button className="button primary" onClick={() => open(next.target)}>Empezar propuesta <ArrowRight size={17} /></button>
         <button className="text-link" onClick={() => setSkipped(current => [...current, next.id])}>Otra propuesta</button></div>
     </section> : <p>No quedan propuestas en esta selección. Puedes explorar las lecciones o <button className="text-link" onClick={() => setSkipped([])}>restablecer propuestas</button>.</p>}
-    <header><p className="context-label">Tu progreso</p><h2 id="lab-learning-heading">Comprender, recordar, aplicar</h2></header>
+    <header><p className="context-label">Tu progreso</p><h2 id="lab-learning-heading">Comprender, recordar, aplicar</h2>
+      <p className="lab-learning-lead">Objetivos acreditados en cada fase del estudio ({snapshot.objectives.length} objetivos en total):</p></header>
     <div className="lab-learning-dimensions">
       <div><Lightbulb size={20} aria-hidden="true" /><strong>{count('understandingIds')}</strong><h3>Comprensión</h3><p>Primeras respuestas correctas sin ayuda.</p></div>
       <div><CalendarDays size={20} aria-hidden="true" /><strong>{count('retentionIds')}</strong><h3>Retención</h3><p>Recuperaciones tras el intervalo previsto.</p></div>
