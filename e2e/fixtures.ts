@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { BrowserContext, Route } from '@playwright/test'
 import type { PdfAnnotation } from '../src/pdf/model'
+import type { LabEvent } from '../src/lab/model'
 
 interface MockFile {
   id: string
@@ -51,6 +52,8 @@ export class DriveFixture {
   private media = new Map<string, Buffer>()
   private nextId = 1
   private rejectToken = false
+  private labUploadLimit?: number
+  failNextLabHistoryUpload = false
   private revisions = new Map<string, { id: string; originalFilename: string; body: Buffer }>()
 
   readonly firstPdf = fixturePdf(['Página inicial', 'Observación objetivo de la segunda página'])
@@ -81,6 +84,27 @@ export class DriveFixture {
     this.files.set(id, { id, name: 'Synthetic laboratory fixture', mimeType: 'application/json',
       size: String(body.length), ownedByMe: true, headRevisionId: '1', appProperties: { taiHub: 'labPackage' } })
     this.media.set(id, body)
+  }
+
+  failLabPackageUploadAfter(successes: number) {
+    this.labUploadLimit = successes
+  }
+
+  labPackageFiles() {
+    return [...this.files.values()].filter(file => file.appProperties.taiHub === 'labPackage')
+      .map(file => ({ file, body: this.media.get(file.id)! }))
+  }
+
+  addLabHistory(id: string, events: LabEvent[]) {
+    const body = Buffer.from(JSON.stringify({ schema: 1, privacy: 'tai-lab-private', accountId, events }))
+    this.files.set(id, { id, name: 'Synthetic history', mimeType: 'application/json', size: String(body.length),
+      ownedByMe: true, headRevisionId: '1', appProperties: { taiHub: 'labEvents' } })
+    this.media.set(id, body)
+  }
+
+  labHistoryFiles(kind: 'labEvents' | 'labEventArchive') {
+    return [...this.files.values()].filter(file => file.appProperties.taiHub === kind)
+      .map(file => ({ file, body: this.media.get(file.id)! }))
   }
 
   labEvents() {
@@ -253,6 +277,17 @@ export class DriveFixture {
       const end = buffer.lastIndexOf(`\r\n--${boundary}--\r\n`)
       const metadata = JSON.parse(buffer.toString('utf8', first, second)) as MockFile
       const body = buffer.subarray(start, end)
+      if (metadata.appProperties?.taiHub === 'labPackage' && this.labUploadLimit !== undefined) {
+        if (this.labUploadLimit === 0) {
+          this.labUploadLimit = undefined
+          return json({ error: { errors: [{ reason: 'storageQuotaExceeded' }] } }, 403)
+        }
+        this.labUploadLimit -= 1
+      }
+      if (metadata.appProperties?.taiHub === 'labEvents' && this.failNextLabHistoryUpload) {
+        this.failNextLabHistoryUpload = false
+        return json({ error: { errors: [{ reason: 'storageQuotaExceeded' }] } }, 403)
+      }
       const file = {
         ...current, ...metadata, id: id ?? metadata.id, ownedByMe: true,
         size: String(body.byteLength), md5Checksum: md5(body),

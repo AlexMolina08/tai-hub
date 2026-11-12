@@ -10,6 +10,7 @@ import { LabSync, type LabSnapshot } from './sync'
 import { browserHistoryStore } from './store'
 import { labTransport } from './drive'
 import { cachePackages, cachedPackages } from './content-store'
+import { readPackageFiles } from './package-files'
 import { assistanceFor, gradeChoice } from './grading'
 import { draftHeads, exportHistory, mergeEvents, restoreHistory } from './history'
 import { draftWriteBuffer } from './draft-buffer'
@@ -105,6 +106,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [installStatus, setInstallStatus] = useState('')
   const currentPackage = packages.find(p => packageKey(p) === selected?.pack)
   const currentLesson = currentPackage?.lessons.find(l => l.id === selected?.lesson)
   const standalone = !selected?.lesson && !selected?.session && selected?.group
@@ -182,6 +184,26 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     catch (failure) { setError(message(failure)) }
     finally { setBusy(false) }
   }
+  async function installFiles(files: File[], saveToDrive: boolean) {
+    if (!files.length || busy) return
+    setBusy(true); setError(''); setInstallStatus('Validando paquetes…')
+    try {
+      const { content, uploads } = await readPackageFiles(files)
+      const saveLocal = async () => {
+        await cachePackages(accountId, content)
+        setPackages(await cachedPackages(accountId))
+      }
+      if (saveToDrive) {
+        await library.installLabPackages(accountId, uploads, saveLocal, completed => {
+          setInstallStatus(`${completed} de ${uploads.length} paquetes instalados en Drive`)
+        })
+      } else {
+        await saveLocal()
+        setInstallStatus(`${content.length} paquetes comprobados en este dispositivo`)
+      }
+    } catch (failure) { setError(message(failure)) }
+    finally { setBusy(false); setInstallStatus(status => status === 'Validando paquetes…' ? '' : status) }
+  }
   async function record(events: LabEvent[]) {
     if (!sync) throw new Error('El almacenamiento todavía no está listo.')
     await sync.record(events)
@@ -258,13 +280,17 @@ function Workspace({ library, accountId, connected, openMaterial }: {
       </details>
       <details className="lab-import"><summary>Paquetes y copia del progreso</summary>
         <p>Las respuestas se guardan localmente antes de sincronizar. Prepara el acceso sin conexión antes de desconectarte.</p>
-        <label>Importar paquete privado validado<input type="file" accept="application/json,.json" onChange={async event => {
-          const file = event.currentTarget.files?.[0]; if (!file) return
-          try {
-            if (file.size > 32 * 1024 ** 2) throw new Error('El paquete supera 32 MB.')
-            await cachePackages(accountId, [JSON.parse(await readText(file))]); setPackages(await cachedPackages(accountId)); setError('')
-          } catch (failure) { setError(message(failure)) }
+        <label>Importar paquete privado validado<input type="file" accept="application/json,.json" multiple disabled={!loaded || busy} onChange={event => {
+          const files = Array.from(event.currentTarget.files ?? [])
+          event.currentTarget.value = ''
+          void installFiles(files, false)
         }} /></label>
+        <label>Instalar paquetes privados en Drive<input type="file" accept="application/json,.json" multiple disabled={!loaded || !connected || busy} onChange={event => {
+          const files = Array.from(event.currentTarget.files ?? [])
+          event.currentTarget.value = ''
+          void installFiles(files, true)
+        }} /></label>
+        {installStatus && <p role="status">{installStatus}</p>}
         <label>Restaurar progreso de esta cuenta<input type="file" accept="application/json,.json" onChange={async event => {
           const file = event.currentTarget.files?.[0]; if (!file || !sync) return
           try {

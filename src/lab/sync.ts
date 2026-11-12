@@ -3,10 +3,12 @@ import type { HistoryStore, StoredHistory } from './store'
 import { mergeEvents } from './history'
 import { parseEventBatch } from './validate'
 
+export type RemoteLabBatch = { id: string; headRevisionId?: string }
 export interface LabTransport {
-  list(): Promise<{ id: string }[]>
+  list(): Promise<RemoteLabBatch[]>
   read(id: string): Promise<unknown>
   append(batch: EventBatch): Promise<void>
+  compact?(files: RemoteLabBatch[], batch: EventBatch): Promise<void>
 }
 export type LabSyncStatus = 'local' | 'pending' | 'syncing' | 'synced' | 'error'
 export interface LabSnapshot extends StoredHistory { status: LabSyncStatus; error?: string }
@@ -17,6 +19,7 @@ export class LabSync {
   #listeners = new Set<() => void>()
   #running?: Promise<void>
   #closed = false
+  #remote = new Map<string, { revision: string; events: LabEvent[] }>()
   constructor(private accountId: string, private store: HistoryStore, private transport: LabTransport) {}
   snapshot = () => this.#snapshot
   subscribe = (fn: () => void) => { this.#listeners.add(fn); return () => { this.#listeners.delete(fn) } }
@@ -44,12 +47,20 @@ export class LabSync {
   async #synchronize() {
     this.#publish(this.#snapshot, 'syncing')
     try {
-      let remote: LabEvent[] = []
-      for (const file of await this.transport.list()) {
+      const files = await this.transport.list()
+      const current = new Map<string, { revision: string; events: LabEvent[] }>()
+      const incoming: LabEvent[][] = []
+      for (const file of files) {
         if (this.#closed) return
-        remote = mergeEvents(this.accountId, remote, parseEventBatch(await this.transport.read(file.id), this.accountId).events)
+        const known = this.#remote.get(file.id)
+        const events = known && known.revision === file.headRevisionId
+          ? known.events : parseEventBatch(await this.transport.read(file.id), this.accountId).events
+        incoming.push(events)
+        if (file.headRevisionId) current.set(file.id, { revision: file.headRevisionId, events })
       }
       if (this.#closed) return
+      const remote = mergeEvents(this.accountId, incoming.flat())
+      this.#remote = current
       const confirmed = new Set(remote.map(event => event.id))
       const combined = await this.store.update(state => ({
         events: mergeEvents(this.accountId, state.events, remote),
@@ -65,6 +76,15 @@ export class LabSync {
       }
       const saved = await this.store.update(state => ({ ...state, pendingIds: state.pendingIds.filter(id => !sending.has(id)) }))
       this.#publish(saved, saved.pendingIds.length ? 'pending' : 'synced')
+      if (files.length >= 32 && remote.length && !this.#closed && this.transport.compact) {
+        try {
+          await this.transport.compact(files, { schema: 1, privacy: 'tai-lab-private', accountId: this.accountId, events: remote })
+        } catch {
+          if (this.#closed) return
+          this.#snapshot = { ...this.#snapshot, error: 'El progreso se conservó. No se pudo completar la compactación en Drive.' }
+          this.#listeners.forEach(fn => fn())
+        }
+      }
     } catch (error) { this.#error(error); throw error }
   }
   #publish(state: StoredHistory, status: LabSyncStatus) {

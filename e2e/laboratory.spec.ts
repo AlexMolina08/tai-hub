@@ -24,6 +24,105 @@ async function showPractice(page: import('@playwright/test').Page) {
 async function openStudyOptions(page: import('@playwright/test').Page) {
   if (await page.locator('.lab-tools').getAttribute('open') === null) await page.getByText('Opciones de estudio', { exact: true }).click()
 }
+test('installs a private catalogue in Drive, resumes after a partial upload and rejects altered editions', async ({ page, context, browser, browserName, baseURL }) => {
+  const drive = new DriveFixture()
+  await drive.install(context, browserName === 'webkit')
+  const first = { ...samplePackage(), id: 'fixture-install-first' }
+  const second = { ...samplePackage(), id: 'fixture-install-second',
+    lessons: samplePackage().lessons.map(lesson => ({ ...lesson, title: 'Segunda lección de instalación' })) }
+  const file = (name: string, value: unknown) => ({ name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) })
+  const files = [file('primero.json', first), file('segundo.json', second)]
+  const prepare = async (target: import('@playwright/test').Page) => {
+    await target.goto(baseURL + '/tai-hub/')
+    await target.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+    await expect(target.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(target)
+    await target.getByText('Paquetes y copia del progreso', { exact: true }).click()
+    const input = target.getByLabel('Instalar paquetes privados en Drive', { exact: true })
+    await expect(input).toBeEnabled()
+    return input
+  }
+  const input = await prepare(page)
+  await input.setInputFiles([files[0], file('incompleto.json', { ...second, evidence: [] })])
+  await expect(page.getByRole('alert')).toBeVisible()
+  expect(drive.labPackageFiles()).toHaveLength(0)
+
+  drive.failLabPackageUploadAfter(1)
+  await input.setInputFiles(files)
+  await expect(page.getByRole('alert')).toContainText('Drive se ha quedado sin espacio')
+  await expect(page.getByText('1 de 2 paquetes instalados en Drive')).toBeVisible()
+  expect(drive.labPackageFiles()).toHaveLength(1)
+  await expect(page.getByText('2 lecciones disponibles', { exact: true })).toBeVisible()
+  await input.setInputFiles(files)
+  await expect(page.getByText('2 de 2 paquetes instalados en Drive')).toBeVisible()
+  expect(drive.labPackageFiles().map(({ body }) => body)).toEqual(files.map(entry => entry.buffer))
+  await input.setInputFiles(files)
+  await expect(input).toBeEnabled()
+  expect(drive.labPackageFiles()).toHaveLength(2)
+
+  const other = await browser.newContext()
+  try {
+    await drive.install(other, browserName === 'webkit')
+    const reopened = await other.newPage()
+    const upload = await prepare(reopened)
+    await upload.setInputFiles(file('alterado.json', { ...first, title: 'Contenido distinto con la misma edición' }))
+    await expect(reopened.getByRole('alert')).toContainText('Esa versión ya existe en Drive con otro contenido')
+    expect(drive.labPackageFiles()).toHaveLength(2)
+    const refresh = reopened.getByRole('button', { name: 'Cargar lecciones de Drive' })
+    const [{ body }] = drive.labPackageFiles()
+    const original = body[0]
+    body[0] = 0
+    await refresh.click()
+    await expect(reopened.getByRole('alert')).toContainText('El contenido del paquete no coincide')
+    body[0] = original
+    await refresh.click()
+    await expect(reopened.getByText('2 lecciones disponibles', { exact: true })).toBeVisible()
+    await expect(reopened.getByRole('alert')).toHaveCount(0)
+  } finally {
+    await other.close()
+  }
+})
+
+test('compacts private history only after verifying a replacement and preserves every source archive', async ({ page, context, browser, browserName, baseURL }) => {
+  const drive = new DriveFixture()
+  const events: LabEvent[] = Array.from({ length: 32 }, (_, index) => ({
+    id: `synthetic-exposure-${index}`, accountId: 'sample-account', deviceId: `device-${index % 2}`,
+    createdAt: '2026-11-11T10:00:00.000Z', kind: 'exposure', reason: 'presented', familyId: `family-${index}`,
+  }))
+  for (const event of events) drive.addLabHistory(event.id, [event])
+  const original = new Map(drive.labHistoryFiles('labEvents').map(({ file, body }) => [file.id, body.toString()]))
+  drive.failNextLabHistoryUpload = true
+  await drive.install(context, browserName === 'webkit')
+  const connect = async (target: import('@playwright/test').Page) => {
+    await target.goto(baseURL + '/tai-hub/')
+    await target.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+    await expect(target.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(target)
+  }
+  await connect(page)
+  await expect(page.getByRole('alert')).toContainText('No se pudo completar la compactación')
+  expect(drive.labHistoryFiles('labEventArchive')).toHaveLength(0)
+  expect(drive.labHistoryFiles('labEvents')).toHaveLength(32)
+  await page.getByRole('button', { name: 'Sincronizar progreso' }).click()
+  await expect.poll(() => drive.labHistoryFiles('labEventArchive').length).toBe(32)
+  expect(drive.labHistoryFiles('labEvents')).toHaveLength(1)
+  expect(new Map(drive.labHistoryFiles('labEventArchive').map(({ file, body }) => [file.id, body.toString()]))).toEqual(original)
+  const other = await browser.newContext()
+  try {
+    await drive.install(other, browserName === 'webkit')
+    const reopened = await other.newPage()
+    await connect(reopened)
+    await expect(reopened.getByRole('status').filter({ hasText: 'Sincronizado' })).toBeVisible()
+    await openStudyOptions(reopened)
+    const downloaded = reopened.waitForEvent('download')
+    await reopened.getByRole('button', { name: 'Exportar progreso' }).click()
+    const copy = JSON.parse(await readFile((await (await downloaded).path())!, 'utf8'))
+    expect(copy.events).toEqual(mergeEvents('sample-account', events))
+  } finally {
+    await other.close()
+  }
+})
+
 test('catalogue retains committed batches and rejects changes to an imported version', async ({ page, context, browserName }) => {
   const drive = new DriveFixture()
   const pack = samplePackage()

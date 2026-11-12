@@ -1,4 +1,5 @@
 import { GoogleSession } from './auth';
+import { sha256 } from './checksum';
 import { DriveClient, DriveError, FILE_FIELDS, FOLDER_MIME, appProperty, filePath, jsonBody } from './client';
 import type { DriveFile } from './client';
 import { externalUrl } from './types';
@@ -12,7 +13,11 @@ const ROOT = appProperty(APP_KEY, 'library');
 const INDEXES = appProperty(APP_KEY, 'pdfIndex');
 const STUDY = appProperty(APP_KEY, 'study');
 const JSON_MIME = 'application/json';
+const LAB_PACKAGES = appProperty(APP_KEY, 'labPackage');
+const LAB_ARCHIVE = 'labEventArchive';
 const KINDS = new Set<ResourceKind>(['pdf', 'html', 'video', 'image', 'audio', 'text', 'link', 'note', 'other']);
+
+export type LabPackageUpload = { file: File; editionKey: string; sha256: string };
 
 const KNOWN_MIME: Record<string, string> = {
   pdf: 'application/pdf',
@@ -430,13 +435,57 @@ export class DriveLibrary {
 
   async listLabFiles(accountId: string, kind: 'labEvents' | 'labPackage'): Promise<DriveFile[]> {
     const client = await this.#accountClient(accountId);
-    return client.list(appProperty(APP_KEY, kind), FILE_FIELDS);
+    const files = await client.list(appProperty(APP_KEY, kind), FILE_FIELDS);
+    if (kind === 'labEvents' && files.some(file => !file.ownedByMe || file.shared || file.trashed)) {
+      throw new Error('El laboratorio solo carga archivos privados de esta cuenta.');
+    }
+    return files;
+  }
+
+  async installLabPackages(
+    accountId: string, packages: LabPackageUpload[], prepare: () => Promise<void>, progress: (completed: number) => void,
+  ): Promise<void> {
+    const client = await this.#accountClient(accountId);
+    const existing = await client.list(LAB_PACKAGES, 'id,appProperties,ownedByMe,shared,trashed');
+    const installed = new Set<string>();
+    const requested = new Map(packages.map(pack => [pack.editionKey, pack]));
+    for (const file of existing) {
+      const key = file.appProperties?.labEdition;
+      const pack = key ? requested.get(key) : undefined;
+      if (!pack) continue;
+      if (!file.ownedByMe || file.shared || file.trashed) throw new Error('La edición existente en Drive debe ser privada y de tu propiedad.');
+      if (file.appProperties?.labSha256 !== pack.sha256) {
+        throw new Error('Esa versión ya existe en Drive con otro contenido. Conserva el archivo anterior y usa una versión nueva.');
+      }
+      installed.add(pack.editionKey);
+    }
+    await prepare();
+    progress(installed.size);
+    if (installed.size === packages.length) return;
+    const folderId = await this.#ensureFolder(client);
+    const folder = await client.json<DriveFile>(filePath(folderId), { fields: 'id,ownedByMe,shared,trashed' });
+    if (!folder.ownedByMe || folder.shared || folder.trashed) throw new Error('La carpeta de TAI Hub debe ser privada y de tu propiedad.');
+    for (const { file, editionKey, sha256 } of packages) {
+      if (installed.has(editionKey)) continue;
+      if (file.size > DOWNLOAD_LIMIT) throw new Error('El paquete supera 32 MB.');
+      const content = file.slice(0, file.size, JSON_MIME);
+      const saved = await client.upload({ name: file.name, mimeType: JSON_MIME, parents: [folderId],
+        appProperties: { [APP_KEY]: 'labPackage', labEdition: editionKey, labSha256: sha256 } }, content);
+      if (!saved.ownedByMe || saved.shared || saved.trashed || saved.appProperties?.[APP_KEY] !== 'labPackage'
+        || saved.appProperties.labEdition !== editionKey || saved.appProperties.labSha256 !== sha256) {
+        throw new Error('No se pudo verificar el archivo privado que devolvió Drive.');
+      }
+      installed.add(editionKey);
+      progress(installed.size);
+    }
   }
 
   async readLabFile(accountId: string, id: string, kind: 'labEvents' | 'labPackage'): Promise<unknown> {
     const client = await this.#accountClient(accountId);
     const file = await client.json<DriveFile>(filePath(id), { fields: FILE_FIELDS });
-    if (file.trashed || !file.ownedByMe || file.shared || file.appProperties?.[APP_KEY] !== kind) {
+    const type = file.appProperties?.[APP_KEY];
+    if (file.trashed || !file.ownedByMe || file.shared
+      || (type !== kind && !(kind === 'labEvents' && type === LAB_ARCHIVE))) {
       throw new Error('El laboratorio solo carga archivos privados de esta cuenta.');
     }
     const response = await client.media(filePath(id));
@@ -453,14 +502,32 @@ export class DriveLibrary {
         chunks.push(new Uint8Array(chunk.value));
       }
     } finally { reader.releaseLock(); }
-    return JSON.parse(await new Blob(chunks).text()) as unknown;
+    const body = new Blob(chunks);
+    const checksum = kind === 'labPackage' ? file.appProperties?.labSha256 : undefined;
+    if (checksum && checksum !== await sha256(await body.arrayBuffer())) {
+      throw new Error('El contenido del paquete no coincide con la edición instalada en Drive.');
+    }
+    return JSON.parse(await body.text()) as unknown;
   }
 
-  async appendLabEvents(accountId: string, value: unknown): Promise<void> {
+  async appendLabEvents(accountId: string, value: unknown): Promise<DriveFile> {
     const client = await this.#accountClient(accountId);
     const content = await jsonBlob(value);
-    await client.upload({ name: 'TAI Hub · Laboratorio ' + crypto.randomUUID(), mimeType: JSON_MIME,
+    return client.upload({ name: 'TAI Hub · Laboratorio ' + crypto.randomUUID(), mimeType: JSON_MIME,
       appProperties: { [APP_KEY]: 'labEvents' }, parents: [await this.#ensureFolder(client)] }, content);
+  }
+
+  async archiveLabEvents(accountId: string, files: Pick<DriveFile, 'id' | 'headRevisionId'>[]): Promise<void> {
+    const client = await this.#accountClient(accountId);
+    for (const reference of files) {
+      const path = filePath(reference.id);
+      const file = await client.json<DriveFile>(path, { fields: 'id,appProperties,ownedByMe,shared,trashed,headRevisionId' });
+      if (!file.ownedByMe || file.shared || file.trashed || file.appProperties?.[APP_KEY] !== 'labEvents'
+        || !reference.headRevisionId || file.headRevisionId !== reference.headRevisionId) continue;
+      await client.json<DriveFile>(path, { fields: 'id,appProperties' }, jsonBody('PATCH', {
+        appProperties: { [APP_KEY]: LAB_ARCHIVE },
+      }));
+    }
   }
 
   #client(): DriveClient {
