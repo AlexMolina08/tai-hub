@@ -968,6 +968,33 @@ test('catalogue filters topics and searches concepts without changing saved answ
   await expect(catalogue.getByRole('button', { name: /Referencias e igualdad/ })).toContainText('0 de 5 actividades respondidas')
 })
 
+test('catalogue orders lessons by curriculum unit across packages', async ({ page, context, browserName }) => {
+  const later = samplePackage(), earlier = samplePackage()
+  later.id = 'a-later'
+  later.objectives[0].topicId = 'III.1'
+  later.objectives[0].unitId = 'III.1-U10'
+  later.lessons[0].title = 'Modelado avanzado'
+  earlier.id = 'z-earlier'
+  earlier.objectives[0].topicId = 'III.1'
+  earlier.objectives[0].unitId = 'III.1-U02'
+  earlier.lessons[0].title = 'Modelado inicial'
+  const drive = new DriveFixture()
+  drive.addLabPackage('lab-later', later)
+  drive.addLabPackage('lab-earlier', earlier)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  const catalogue = page.getByRole('region', { name: 'Explorar lecciones' })
+  await catalogue.getByRole('combobox', { name: 'Tema', exact: true }).selectOption('III.1')
+  const lessons = catalogue.getByRole('button', { name: /^Modelado (inicial|avanzado)/ })
+  await expect(lessons).toHaveText([/^Modelado inicial/, /^Modelado avanzado/])
+  await lessons.first().click()
+  await expect(page.getByRole('heading', { name: 'Modelado inicial', exact: true })).toBeVisible()
+})
+
 test('private lesson persists answers, assistance and retries across navigation', async ({ page, context, browserName }) => {
   const drive = new DriveFixture(); drive.addLabPackage('lab-fixture', samplePackage())
   await drive.install(context, browserName === 'webkit')

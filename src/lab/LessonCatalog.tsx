@@ -7,7 +7,7 @@ const topics = blocks.filter(block => block.id === 'b3' || block.id === 'b4').fl
   block.topics.map(topic => ({ id: `${block.roman}.${topic.number}`, block: block.roman, title: topic.title })))
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
 const key = (pack: LabPackage, lesson: Lesson) => JSON.stringify([pack.id, pack.version, lesson.id])
-const editionOrder = new Intl.Collator('en', { numeric: true })
+const numericOrder = new Intl.Collator('en', { numeric: true })
 
 export function LessonCatalog({ packages, events, accountId, openLesson }: {
   packages: LabPackage[]; events: LabEvent[]; accountId: string; openLesson: (pack: LabPackage, lesson: Lesson) => void
@@ -21,7 +21,7 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
     const versions = new Map<string, LabPackage>()
     for (const pack of packages) {
       const previous = versions.get(pack.id)
-      if (!previous || (editionOrder.compare(pack.version, previous.version) || pack.version.localeCompare(previous.version)) > 0) {
+      if (!previous || (numericOrder.compare(pack.version, previous.version) || pack.version.localeCompare(previous.version)) > 0) {
         versions.set(pack.id, pack)
       }
     }
@@ -45,11 +45,16 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
       const progress = new Set(matching.map(event => event.activityId))
       return pack.lessons.map(lesson => {
         const own = lesson.objectiveIds.flatMap(id => objectives.get(id) ?? [])
-        const lessonTopics = [...new Set(own.map(objective => objective.topicId))]
+        const firstUnitByTopic = new Map<string, string>()
+        for (const { topicId, unitId } of own) {
+          const first = firstUnitByTopic.get(topicId)
+          if (!first || numericOrder.compare(unitId, first) < 0) firstUnitByTopic.set(topicId, unitId)
+        }
+        const lessonTopics = [...firstUnitByTopic.keys()]
         const content = (lessonCounts.get(lesson.id) ?? 0) > 1
           ? JSON.stringify([lesson, own, lesson.activityIds.map(id => activities.get(id))])
           : lesson.id
-        return { pack, lesson, topicIds: lessonTopics, answered: lesson.activityIds.filter(id => answered.has(id)).length,
+        return { pack, lesson, topicIds: lessonTopics, firstUnitByTopic, answered: lesson.activityIds.filter(id => answered.has(id)).length,
           progress: lesson.activityIds.filter(id => progress.has(id)).length, content,
           search: normalize([lesson.title, ...own.map(objective => objective.statement),
             ...topics.filter(topic => lessonTopics.includes(topic.id)).map(topic => topic.title)].join(' ')) }
@@ -85,6 +90,9 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
     const ai = topics.findIndex(topic => topic.id === a), bi = topics.findIndex(topic => topic.id === b)
     return (ai < 0 ? topics.length : ai) - (bi < 0 ? topics.length : bi)
   })
+  for (const [id, items] of orderedGroups) {
+    items.sort((a, b) => numericOrder.compare(a.firstUnitByTopic.get(id) ?? '', b.firstUnitByTopic.get(id) ?? ''))
+  }
   return <section className="lab-catalog" aria-labelledby="lab-catalog-heading">
     <header><h2 id="lab-catalog-heading">Explorar lecciones</h2><p>Elige un tema y avanza a tu ritmo.</p></header>
     <div className="lab-catalog-filters">
