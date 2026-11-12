@@ -575,9 +575,30 @@
               "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-09/Nota%20informativa%20F%C3%B3rmula%20Transformada%20%282%29.pdf"
             }
           ]
+        },
+        {
+          "title": "Fase de concurso",
+          "links": [
+            {
+              "label": "Resolución de la Comisión Permanente de Selección",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/2-RESOLUCINMRITOSPROVTAI-P_firmada_R5L4K0HR8X_154AB89SD658.pdf"
+            },
+            {
+              "label": "Acceso general",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/2-TAI-P-PFC-AL_GEN_CMR3F4LC5Z_154AB89SD658.pdf"
+            },
+            {
+              "label": "Cupo Norma Común 13",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/2-TAI-P-PFC-AL_CRD_338BSM4P1E_154AB89SD658.pdf"
+            },
+            {
+              "label": "Listado de aspirantes que no cumplen los requisitos",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/2_1-ANEXOEXCLUIDOSPROVTAI-P_5KY8R9JCKX_154AB89SD658.pdf"
+            }
+          ]
         }
       ],
-      "fingerprint": "f2368b6dfd6c09c760b6e84486ea08db1dc90834e3268355ae6574a5a9f78a1f"
+      "fingerprint": "db878d4bb3f3a3370eb910c6c17daca479f350736dc6532e2f116230e2b5541b"
     },
     {
       "year": 2024,
@@ -2807,9 +2828,17 @@
       ]
     }
   ],
-  "inapCheckedAt": "2026-11-12T08:17:27+00:00",
+  "inapCheckedAt": "2026-11-12T20:47:40+00:00",
   "boe": [],
   "boeThrough": "2026-11-12",
-  "sequence": 0,
-  "changes": []
+  "sequence": 1,
+  "changes": [
+    {
+      "label": "Ficha INAP actualizada · 2025 · Promoción interna",
+      "url": "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-promocion-interna-convocatoria-2025",
+      "detail": "Resolución de la Comisión Permanente de Selección · Cupo Norma Común 13 · Acceso general",
+      "id": 1,
+      "at": "2026-11-12T20:47:40+00:00"
+    }
+  ]
 }
