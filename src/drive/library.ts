@@ -18,6 +18,15 @@ const LAB_ARCHIVE = 'labEventArchive';
 const KINDS = new Set<ResourceKind>(['pdf', 'html', 'video', 'image', 'audio', 'text', 'link', 'note', 'other']);
 
 export type LabPackageUpload = { file: File; editionKey: string; sha256: string };
+export type LabPackageRevision = { fileId: string; headRevisionId: string; sha256: string };
+export type LabPackageDownload = { content: unknown; bytes: number; revision?: LabPackageRevision };
+
+export function labPackageRevision(file: DriveFile): LabPackageRevision | undefined {
+  const checksum = file.appProperties?.labSha256;
+  if (file.headRevisionId && checksum && /^[a-f0-9]{64}$/.test(checksum)) {
+    return { fileId: file.id, headRevisionId: file.headRevisionId, sha256: checksum };
+  }
+}
 
 const KNOWN_MIME: Record<string, string> = {
   pdf: 'application/pdf',
@@ -436,7 +445,7 @@ export class DriveLibrary {
   async listLabFiles(accountId: string, kind: 'labEvents' | 'labPackage'): Promise<DriveFile[]> {
     const client = await this.#accountClient(accountId);
     const files = await client.list(appProperty(APP_KEY, kind), FILE_FIELDS);
-    if (kind === 'labEvents' && files.some(file => !file.ownedByMe || file.shared || file.trashed)) {
+    if (files.some(file => !file.ownedByMe || file.shared || file.trashed || file.appProperties?.[APP_KEY] !== kind)) {
       throw new Error('El laboratorio solo carga archivos privados de esta cuenta.');
     }
     return files;
@@ -481,6 +490,14 @@ export class DriveLibrary {
   }
 
   async readLabFile(accountId: string, id: string, kind: 'labEvents' | 'labPackage'): Promise<unknown> {
+    return (await this.#readLabFile(accountId, id, kind)).content;
+  }
+
+  readLabPackage(accountId: string, id: string): Promise<LabPackageDownload> {
+    return this.#readLabFile(accountId, id, 'labPackage');
+  }
+
+  async #readLabFile(accountId: string, id: string, kind: 'labEvents' | 'labPackage'): Promise<LabPackageDownload> {
     const client = await this.#accountClient(accountId);
     const file = await client.json<DriveFile>(filePath(id), { fields: FILE_FIELDS });
     const type = file.appProperties?.[APP_KEY];
@@ -507,7 +524,11 @@ export class DriveLibrary {
     if (checksum && checksum !== await sha256(await body.arrayBuffer())) {
       throw new Error('El contenido del paquete no coincide con la edición instalada en Drive.');
     }
-    return JSON.parse(await body.text()) as unknown;
+    return {
+      content: JSON.parse(await body.text()) as unknown,
+      bytes: size,
+      revision: kind === 'labPackage' ? labPackageRevision(file) : undefined,
+    };
   }
 
   async appendLabEvents(accountId: string, value: unknown): Promise<DriveFile> {

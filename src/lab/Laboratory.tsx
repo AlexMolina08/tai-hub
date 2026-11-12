@@ -8,7 +8,7 @@ import { SQL_GRADING_VERSION } from './sql-output'
 import type { SqlResult } from './sql-runner'
 import { LabSync, type LabSnapshot } from './sync'
 import { browserHistoryStore } from './store'
-import { labTransport } from './drive'
+import { labTransport, loadLabCatalogue } from './drive'
 import { cachePackages, cachedPackages } from './content-store'
 import { readPackageFiles } from './package-files'
 import { assistanceFor, gradeChoice } from './grading'
@@ -171,19 +171,20 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     return () => { clearInterval(timer); window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh) }
   }, [sync, connected])
   async function loadDrive() {
-    setBusy(true); setError('')
+    setBusy(true); setError(''); setInstallStatus('Buscando paquetes en Drive…')
     try {
-      const files = await library.listLabFiles(accountId, 'labPackage')
-      const batchSize = 8
-      for (let start = 0; start < files.length; start += batchSize) {
-        const batch = files.slice(start, start + batchSize)
-        const inputs = await Promise.all(batch.map(file => library.readLabFile(accountId, file.id, 'labPackage')))
-        await cachePackages(accountId, inputs)
-      }
-    } catch (failure) { setError(message(failure)) }
-    try { setPackages(await cachedPackages(accountId)) }
-    catch (failure) { setError(message(failure)) }
-    finally { setBusy(false) }
+      setPackages(await loadLabCatalogue(library, accountId, (ready, total) => {
+        setInstallStatus(total === 0 ? 'Drive todavía no tiene paquetes del Laboratorio.' :
+          `${ready} de ${total} paquetes de Drive disponibles en este dispositivo`)
+      }))
+    } catch (failure) {
+      setError(message(failure))
+      setInstallStatus(status => status === 'Buscando paquetes en Drive…' ? '' : status)
+      try { setPackages(await cachedPackages(accountId)) }
+      catch (readFailure) { setError(message(readFailure)) }
+    } finally {
+      setBusy(false)
+    }
   }
   async function installFiles(files: File[], saveToDrive: boolean) {
     if (!files.length || busy) return

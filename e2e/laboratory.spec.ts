@@ -73,7 +73,7 @@ test('installs a private catalogue in Drive, resumes after a partial upload and 
     await expect(reopened.getByRole('alert')).toContainText('Esa versión ya existe en Drive con otro contenido')
     expect(drive.labPackageFiles()).toHaveLength(2)
     const refresh = reopened.getByRole('button', { name: 'Cargar lecciones de Drive' })
-    const [{ body }] = drive.labPackageFiles()
+    const [{ file: installedFile, body }] = drive.labPackageFiles()
     const original = body[0]
     body[0] = 0
     await refresh.click()
@@ -82,6 +82,27 @@ test('installs a private catalogue in Drive, resumes after a partial upload and 
     await refresh.click()
     await expect(reopened.getByText('2 lecciones disponibles', { exact: true })).toBeVisible()
     await expect(reopened.getByRole('alert')).toHaveCount(0)
+    await reopened.reload()
+    await expect(reopened.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(reopened)
+    const reads = drive.mediaReads.length
+    await refresh.click()
+    await expect(reopened.getByText('2 de 2 paquetes de Drive disponibles en este dispositivo')).toBeVisible()
+    expect(drive.mediaReads).toHaveLength(reads)
+
+    installedFile.shared = true
+    await refresh.click()
+    await expect(reopened.getByRole('alert')).toContainText('solo carga archivos privados')
+    expect(drive.mediaReads).toHaveLength(reads)
+
+    installedFile.shared = false
+    installedFile.headRevisionId = '2'
+    body[0] = 0
+    await refresh.click()
+    await expect(reopened.getByRole('alert')).toContainText('El contenido del paquete no coincide')
+    expect(drive.mediaReads.slice(reads)).toEqual([installedFile.id])
+    await expect(reopened.getByText('2 lecciones disponibles', { exact: true })).toBeVisible()
+    body[0] = original
   } finally {
     await other.close()
   }
