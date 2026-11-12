@@ -1,8 +1,8 @@
 import { bootstrap, hash } from 'virtual:lab-html'
 import type { HtmlCheck } from './model'
 
-const elements = new Set('a abbr article aside b blockquote br button caption code col colgroup dd details div dl dt em fieldset figcaption figure footer h1 h2 h3 h4 h5 h6 header hr i input kbd label legend li main mark nav ol option p pre s samp section select small span strong sub summary sup table tbody td textarea th thead tfoot tr u ul'.split(' '))
-const attributes = new Set('id class title lang dir role aria-label aria-labelledby aria-describedby aria-hidden colspan rowspan scope open start reversed type value name for placeholder disabled checked selected multiple required min max step rows cols style tabindex'.split(' '))
+const elements = new Set('a abbr article aside b blockquote br button caption code col colgroup dd details div dl dt em fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hr i input kbd label legend li main mark nav ol option p pre s samp section select small span strong sub summary sup table tbody td textarea th thead tfoot tr u ul'.split(' '))
+const attributes = new Set('id class title lang dir role aria-label aria-labelledby aria-describedby aria-hidden colspan rowspan scope headers open start reversed type value name for placeholder disabled checked selected multiple required maxlength pattern min max step rows cols style tabindex'.split(' '))
 export function previewDocument(html: string, css: string): string {
   if (html.length + css.length > 50_000) throw new Error('La vista admite hasta 50 KB de HTML y CSS.')
   const template = document.createElement('template')

@@ -1369,7 +1369,10 @@ test('HTML CSS preview measures real responsive styles, removes active content a
   const drive = new DriveFixture(); drive.addLabPackage('lab-html-css', pack)
   await drive.install(context, browserName === 'webkit')
   const forbidden: string[] = []
-  await context.route('**/forbidden-preview', route => { forbidden.push(route.request().url()); return route.abort() })
+  await context.route(/\/(forbidden-preview|preview-form-target|preview-link-target)$/, route => {
+    forbidden.push(route.request().url())
+    return route.abort()
+  })
   await page.goto('/tai-hub/')
   await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
@@ -1402,6 +1405,37 @@ test('HTML CSS preview measures real responsive styles, removes active content a
     try { localStorage.setItem('x', 'y') } catch { storageBlocked = true }
     return { parentBlocked, storageBlocked }
   })).toEqual({ parentBlocked: true, storageBlocked: true })
+  await htmlEditor.fill(`
+    <form id="demo-form" action="/preview-form-target" method="post" target="_top">
+      <label for="demo-code">Código</label>
+      <input id="demo-code" name="codigo" value="ABC" required maxlength="3" pattern="[A-Z]{3}">
+      <button id="demo-button" type="submit" formaction="/preview-form-target">Comprobar</button>
+      <input id="demo-submit" type="submit" value="Enviar" formaction="/preview-form-target">
+    </form>
+    <a id="demo-link" href="/preview-link-target" target="_top">Destino</a>
+    <table><caption>Datos</caption><tr><th id="demo-heading">Código</th></tr>
+      <tr><td headers="demo-heading">ABC</td></tr></table>`)
+  await cssEditor.fill('')
+  await page.getByRole('button', { name: 'Actualizar vista', exact: true }).click()
+  await expect(page.getByText('Vista actualizada. Puedes modificarla o comprobarla.', { exact: true })).toBeVisible()
+  const form = preview.locator('#demo-form')
+  await expect(form).not.toHaveAttribute('action')
+  await expect(form).not.toHaveAttribute('method')
+  await expect(form).not.toHaveAttribute('target')
+  await expect(preview.locator('#demo-code')).toHaveAttribute('maxlength', '3')
+  await expect(preview.locator('#demo-code')).toHaveAttribute('pattern', '[A-Z]{3}')
+  await expect(preview.locator('#demo-code:valid')).toHaveCount(1)
+  await preview.locator('#demo-code').fill('AB')
+  await expect(preview.locator('#demo-code:invalid')).toHaveCount(1)
+  await preview.locator('#demo-code').fill('ABC')
+  await expect(preview.locator('td')).toHaveAttribute('headers', 'demo-heading')
+  await expect(preview.locator('#demo-button')).toHaveAttribute('type', 'button')
+  await expect(preview.locator('#demo-submit')).not.toHaveAttribute('formaction')
+  await expect(preview.locator('#demo-link')).not.toHaveAttribute('href')
+  await preview.locator('#demo-submit').click()
+  await preview.locator('#demo-link').click()
+  await expect(form).toBeVisible()
+  expect(sandbox.url()).toBe('about:srcdoc')
   expect(forbidden).toEqual([])
   await htmlEditor.fill('<div></div>'.repeat(201))
   await page.getByRole('button', { name: 'Actualizar vista', exact: true }).click()
