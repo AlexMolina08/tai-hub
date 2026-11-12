@@ -107,6 +107,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [installStatus, setInstallStatus] = useState('')
+  const drivePackageInput = useRef<HTMLInputElement>(null)
   const currentPackage = packages.find(p => packageKey(p) === selected?.pack)
   const currentLesson = currentPackage?.lessons.find(l => l.id === selected?.lesson)
   const standalone = !selected?.lesson && !selected?.session && selected?.group
@@ -222,6 +223,13 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     </div>
     {!connected && <p>Copia local de tu biblioteca. Conecta Google Drive para verificar la cuenta y sincronizar.</p>}
     {(error || history.error) && <p className="banner error" role="alert">{error || history.error}</p>}
+    {installStatus && <p role="status">{installStatus}</p>}
+    <input ref={drivePackageInput} type="file" accept="application/json,.json" multiple hidden
+      aria-label="Instalar paquetes privados en Drive" disabled={!loaded || !connected || busy} onChange={event => {
+        const files = Array.from(event.currentTarget.files ?? [])
+        event.currentTarget.value = ''
+        void installFiles(files, true)
+      }} />
     {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && (currentLesson || currentSession || currentExam || standalone) ? <>
       <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> {currentLesson ? 'Volver a las lecciones' : 'Volver al laboratorio'}</button>
       {currentExam ? <ExamView key={JSON.stringify([packageKey(currentPackage), currentExam.id])} pack={currentPackage} form={currentExam}
@@ -271,8 +279,17 @@ function Workspace({ library, accountId, connected, openMaterial }: {
         open={(pack, form) => setSelected({ pack: packageKey(pack), exam: form.id })} />
       {packages.some(pack => pack.lessons.length) && <LessonCatalog packages={packages} events={history.events} accountId={accountId}
         openLesson={(pack, lesson) => setSelected({ pack: packageKey(pack), lesson: lesson.id })} />}
-      {!packages.length && <div className="lab-empty"><h2>Las lecciones se están preparando</h2>
-        <p>Se incorporarán al completar sus comprobaciones de contenido y funcionamiento.</p></div>}
+      {!packages.length && <section className="lab-empty" aria-labelledby="lab-start-title">
+        <h2 id="lab-start-title">Empieza a estudiar</h2>
+        <p>En tu primera instalación, selecciona todos los archivos JSON de la carpeta Paquetes que recibiste.</p>
+        {!connected && <p>Conecta Google Drive para instalar el catálogo.</p>}
+        <div className="lab-actions">
+          <button className="button primary" disabled={!connected || busy} onClick={() => drivePackageInput.current?.click()}>
+            Instalar paquetes privados en Drive
+          </button>
+        </div>
+        <p>Si ya instalaste el catálogo en otro dispositivo, pulsa <strong>Cargar lecciones de Drive</strong>.</p>
+      </section>}
       <details className="lab-map"><summary>Mapa de los 19 temas</summary>
         {blocks.filter(b => b.id === 'b3' || b.id === 'b4').map(block => <section key={block.id}>
           <h2>{block.title}</h2><ul>{block.topics.map(topic => <li key={topic.id}>{topic.title}</li>)}</ul>
@@ -285,12 +302,9 @@ function Workspace({ library, accountId, connected, openMaterial }: {
           event.currentTarget.value = ''
           void installFiles(files, false)
         }} /></label>
-        <label>Instalar paquetes privados en Drive<input type="file" accept="application/json,.json" multiple disabled={!loaded || !connected || busy} onChange={event => {
-          const files = Array.from(event.currentTarget.files ?? [])
-          event.currentTarget.value = ''
-          void installFiles(files, true)
-        }} /></label>
-        {installStatus && <p role="status">{installStatus}</p>}
+        {packages.length > 0 && <button className="button" disabled={!connected || busy} onClick={() => drivePackageInput.current?.click()}>
+          Instalar paquetes privados en Drive
+        </button>}
         <label>Restaurar progreso de esta cuenta<input type="file" accept="application/json,.json" onChange={async event => {
           const file = event.currentTarget.files?.[0]; if (!file || !sync) return
           try {

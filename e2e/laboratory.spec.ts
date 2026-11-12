@@ -37,7 +37,11 @@ test('installs a private catalogue in Drive, resumes after a partial upload and 
     await target.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
     await expect(target.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
     await openLab(target)
-    await target.getByText('Paquetes y copia del progreso', { exact: true }).click()
+    const start = target.getByRole('region', { name: 'Empieza a estudiar' })
+    await expect(start).toBeVisible()
+    const chooser = target.waitForEvent('filechooser')
+    await start.getByRole('button', { name: 'Instalar paquetes privados en Drive', exact: true }).click()
+    expect((await chooser).isMultiple()).toBe(true)
     const input = target.getByLabel('Instalar paquetes privados en Drive', { exact: true })
     await expect(input).toBeEnabled()
     return input
