@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
 import type { ExamForm, ExamRevision, LabEvent, LabPackage } from './model'
 import { examAnswers, examHeads, examRevisions, examRunReady, scoreExamSection, type ExamMark } from './exams'
 import { exportHistory, mergeEvents } from './history'
@@ -61,12 +61,19 @@ export function ExamView(props: ExamViewProps) {
   const [selectedRun, setSelectedRun] = useState<string>()
   const [questionIndex, setQuestionIndex] = useState(0)
   const [confirm, setConfirm] = useState(false)
+  const answerSheet = useRef<HTMLElement>(null)
   const questionHeading = useRef<HTMLLegendElement>(null)
-  const focusNext = useRef(false)
+  const confirmation = useRef<HTMLElement>(null)
+  const deliverButton = useRef<HTMLButtonElement>(null)
+  const resultHeading = useRef<HTMLHeadingElement>(null)
+  const focusAfterRender = useRef<RefObject<HTMLElement | null> | null>(null)
   useLayoutEffect(() => {
-    if (focusNext.current) questionHeading.current?.focus()
-    focusNext.current = false
-  }, [questionIndex])
+    const target = focusAfterRender.current?.current
+    if (target) {
+      focusAfterRender.current = null
+      target.focus()
+    }
+  })
   const clock = useRef({ wall: Date.now(), monotonic: performance.now() })
   const effectiveNow = () => Math.max(Date.now(), clock.current.wall + Math.floor(performance.now() - clock.current.monotonic))
   const [now, setNow] = useState(() => Date.now())
@@ -110,6 +117,9 @@ export function ExamView(props: ExamViewProps) {
     if (wall < Date.parse(previous.startedAt) - 60_000) return
     const expired = wall >= end
     const submitted = previous.submitted ?? (expired ? 'expired' : submit ? 'manual' : null)
+    if (submit || (expired && answerSheet.current?.contains(document.activeElement))) {
+      focusAfterRender.current = resultHeading
+    }
     void buffer.save({ ...previous, id: crypto.randomUUID(), deviceId, parentIds: parents.map(parent => parent.id),
       createdAt: new Date(expired ? Math.max(end, wall) : wall).toISOString(), submitted,
       answers: submitted ? previous.answers : next }, record)
@@ -136,6 +146,7 @@ export function ExamView(props: ExamViewProps) {
     const started = Date.now()
     const startedAt = new Date(started).toISOString()
     clock.current = { wall: started, monotonic: performance.now() }
+    focusAfterRender.current = questionHeading
     setNow(started); setSelectedRun(id); setQuestionIndex(0); setConfirm(false)
     void buffer.save({ kind: 'exam-revision', id, runId: id, accountId, deviceId, createdAt: startedAt, startedAt,
       deadlineAt: new Date(started + form.durationMinutes * 60_000).toISOString(), parentIds: [],
@@ -158,12 +169,13 @@ export function ExamView(props: ExamViewProps) {
   const answerable = ready && current && !current.submitted && answers && !expires && !clockError && !state.error
   function move(index: number) {
     if (index === questionIndex) { questionHeading.current?.focus(); return }
-    focusNext.current = true
+    focusAfterRender.current = questionHeading
     setQuestionIndex(index)
   }
   return <article className="lab-exam">
     <h2>{form.title}</h2>
     {runIds.length > 1 && <label>Intento guardado <select value={runId} onChange={event => {
+      focusAfterRender.current = null
       setSelectedRun(event.target.value); setQuestionIndex(0); setConfirm(false)
     }}>{runIds.map((id, index) => <option key={id} value={id}>Intento {runIds.length - index}</option>)}</select></label>}
     {state.error && <p role="alert">{state.error}</p>}
@@ -197,7 +209,7 @@ export function ExamView(props: ExamViewProps) {
           onClick={() => save(head, head.answers, false, heads)}>Conservar hoja {index + 1}</button>
       </div>)}
     </section>}
-    {answerable && <section aria-label="Hoja de respuestas">
+    {answerable && <section ref={answerSheet} aria-label="Hoja de respuestas">
       <div className="lab-exam-status">
         <p>{answers.size} de {items.length} respondidas</p>
         <p role="timer" aria-label="Tiempo restante">{time}</p>
@@ -225,19 +237,26 @@ export function ExamView(props: ExamViewProps) {
       <div className="lab-actions">
         <button className="button" disabled={questionIndex === 0} onClick={() => move(questionIndex - 1)}>Anterior</button>
         <button className="button" disabled={questionIndex === items.length - 1} onClick={() => move(questionIndex + 1)}>Siguiente</button>
-        <button className="button primary" disabled={unsaved} onClick={() => setConfirm(true)}>Entregar examen</button>
+        <button ref={deliverButton} className="button primary" disabled={unsaved} onClick={() => {
+          if (confirm) { confirmation.current?.focus(); return }
+          focusAfterRender.current = confirmation
+          setConfirm(true)
+        }}>Entregar examen</button>
       </div>
-      {confirm && <section aria-label="Confirmar entrega">
+      {confirm && <section ref={confirmation} tabIndex={-1} aria-label="Confirmar entrega">
         <p>Quedan {items.length - answers.size} preguntas en blanco. Tras la entrega podrás ver la corrección.</p>
         <div className="lab-actions">
           <button className="button primary" disabled={unsaved} onClick={() => save(current, current.answers, true)}>Confirmar entrega</button>
-          <button className="button" onClick={() => setConfirm(false)}>Seguir respondiendo</button>
+          <button className="button" onClick={() => {
+            focusAfterRender.current = deliverButton
+            setConfirm(false)
+          }}>Seguir respondiendo</button>
         </div>
       </section>}
     </section>}
     {ready && current && !current.submitted && expires && <p role="status">Tiempo agotado. Se entrega la hoja guardada.</p>}
     {ready && current?.submitted && answers && !unsaved && !state.error && <>
-      <h3>Resultado del examen</h3>
+      <h3 ref={resultHeading} tabIndex={-1}>Resultado del examen</h3>
       <p>{current.submitted === 'expired' ? 'Entrega al agotar el tiempo.' : 'Entrega confirmada.'} Puntuación directa de práctica.</p>
       {form.sections.map((section, index) => <ExamResult key={index} section={section} answers={answers} sources={pack.sources} />)}
       {heads.length === 1 && !runIds.some(id => examHeads(state.runs.get(id)!).some(head => head.submitted === null))
