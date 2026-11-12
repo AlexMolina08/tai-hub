@@ -33,6 +33,7 @@ import { LearningCapture } from './learning-capture'
 import { semanticWriteBuffer } from './semantic-buffer'
 import { LearningReading } from './LearningReading'
 import { LearningDashboard } from './LearningDashboard'
+import { InitialDiagnostic } from './InitialDiagnostic'
 import { ExamCatalog, ExamView } from './ExamView'
 import { DEFAULT_LEARNING_POLICY, deriveLearning } from './learning'
 import type { LearningDestination } from './recommendation'
@@ -252,6 +253,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     </> : <>
       {packages.length > 0 && learning.snapshot && <LearningDashboard snapshot={learning.snapshot} packages={packages}
         events={history.events} open={openRecommendation} />}
+      <InitialDiagnostic packages={packages} events={history.events} open={openRecommendation} />
       {learning.error && <p role="status">No se pudo calcular el progreso de aprendizaje: {learning.error} Tus respuestas siguen guardadas.</p>}
       {guidedContinuation && <section className="lab-continuation" aria-label="Retomar sesión guiada">
         <div><p className="context-label">Tu sesión guardada</p><h2>{guidedContinuation.session.title}</h2>
