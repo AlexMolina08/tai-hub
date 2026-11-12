@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { ArrowRight, Search } from 'lucide-react'
 import { blocks } from '../syllabus'
-import type { Attempt, LabEvent, LabPackage, Lesson } from './model'
+import type { Attempt, Draft, LabEvent, LabPackage, Lesson } from './model'
 
 const topics = blocks.filter(block => block.id === 'b3' || block.id === 'b4').flatMap(block =>
   block.topics.map(topic => ({ id: `${block.roman}.${topic.number}`, block: block.roman, title: topic.title })))
@@ -28,20 +28,47 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
     return versions
   }, [packages])
   const previousAvailable = packages.some(pack => latest.get(pack.id) !== pack && pack.lessons.length > 0)
-  const catalogue = useMemo(() => packages.filter(pack => includePrevious || latest.get(pack.id) === pack).flatMap(pack => {
-    const objectives = new Map(pack.objectives.map(objective => [objective.id, objective]))
-    const answered = new Set(events.filter((event): event is Attempt => event.kind === 'attempt' && event.accountId === accountId
-      && event.packageId === pack.id && event.packageVersion === pack.version && event.outcome !== 'omitted'
-      && pack.activities.some(activity => activity.id === event.activityId && activity.version === event.activityVersion))
-      .map(event => event.activityId))
-    return pack.lessons.map(lesson => {
-      const own = lesson.objectiveIds.flatMap(id => objectives.get(id) ?? [])
-      const lessonTopics = [...new Set(own.map(objective => objective.topicId))]
-      return { pack, lesson, topicIds: lessonTopics, answered: lesson.activityIds.filter(id => answered.has(id)).length,
-        search: normalize([lesson.title, ...own.map(objective => objective.statement),
-          ...topics.filter(topic => lessonTopics.includes(topic.id)).map(topic => topic.title)].join(' ')) }
+  const catalogue = useMemo(() => {
+    const current = packages.filter(pack => includePrevious || latest.get(pack.id) === pack)
+    const lessonCounts = new Map<string, number>()
+    if (!includePrevious) for (const pack of current) for (const lesson of pack.lessons) {
+      lessonCounts.set(lesson.id, (lessonCounts.get(lesson.id) ?? 0) + 1)
+    }
+    const entries = current.flatMap(pack => {
+      const objectives = new Map(pack.objectives.map(objective => [objective.id, objective]))
+      const activities = new Map(pack.activities.map(activity => [activity.id, activity]))
+      const matching = events.filter((event): event is Attempt | Draft => (event.kind === 'attempt' || event.kind === 'draft')
+        && event.accountId === accountId && event.packageId === pack.id && event.packageVersion === pack.version
+        && activities.get(event.activityId)?.version === event.activityVersion)
+      const answered = new Set(matching.filter((event): event is Attempt => event.kind === 'attempt' && event.outcome !== 'omitted')
+        .map(event => event.activityId))
+      const progress = new Set(matching.map(event => event.activityId))
+      return pack.lessons.map(lesson => {
+        const own = lesson.objectiveIds.flatMap(id => objectives.get(id) ?? [])
+        const lessonTopics = [...new Set(own.map(objective => objective.topicId))]
+        const content = (lessonCounts.get(lesson.id) ?? 0) > 1
+          ? JSON.stringify([lesson, own, lesson.activityIds.map(id => activities.get(id))])
+          : lesson.id
+        return { pack, lesson, topicIds: lessonTopics, answered: lesson.activityIds.filter(id => answered.has(id)).length,
+          progress: lesson.activityIds.filter(id => progress.has(id)).length, content,
+          search: normalize([lesson.title, ...own.map(objective => objective.statement),
+            ...topics.filter(topic => lessonTopics.includes(topic.id)).map(topic => topic.title)].join(' ')) }
+      })
     })
-  }), [packages, events, accountId, includePrevious, latest])
+    if (includePrevious) return entries
+    const distinct = new Map<string, typeof entries[number]>()
+    for (const item of entries) {
+      const previous = distinct.get(item.content)
+      if (previous?.progress && item.progress) {
+        distinct.set(key(item.pack, item.lesson), item)
+      } else if (!previous || item.progress > previous.progress) {
+        distinct.set(item.content, item)
+      }
+    }
+    return [...distinct.values()]
+  }, [packages, events, accountId, includePrevious, latest])
+  const titleCounts = new Map<string, number>()
+  for (const { lesson } of catalogue) titleCounts.set(lesson.title, (titleCounts.get(lesson.title) ?? 0) + 1)
   const availableTopics = topics.filter(topic => catalogue.some(item => item.topicIds.includes(topic.id))
     && (block === 'all' || topic.block === block))
   const words = normalize(query).trim().split(/\s+/).filter(Boolean)
@@ -84,7 +111,7 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
           onClick={() => openLesson(pack, lesson)}>
           <span><strong>{lesson.title}</strong><small>{lesson.minutes} min de contenido nuevo</small>
             <small>{answered} de {lesson.activityIds.length} actividades respondidas</small>
-            {catalogue.filter(item => item.lesson.title === lesson.title).length > 1
+            {(titleCounts.get(lesson.title) ?? 0) > 1
               && <small>{pack.title} · Edición {pack.version}</small>}</span>
           <ArrowRight size={19} aria-hidden="true" />
         </button>)}</div>
