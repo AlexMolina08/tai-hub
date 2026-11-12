@@ -40,7 +40,12 @@ export class LabSync {
   }
   refresh(): Promise<void> {
     if (this.#closed) return Promise.resolve()
-    if (this.#running) return this.#running
+    if (this.#running) {
+      return this.#running.then(() => {
+        // An edit may have arrived after the active pass selected its batch.
+        if (this.#snapshot.pendingIds.length) return this.refresh()
+      })
+    }
     this.#running = this.#synchronize().finally(() => { this.#running = undefined })
     return this.#running
   }

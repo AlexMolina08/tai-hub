@@ -203,6 +203,26 @@ describe('local-first synchronization', () => {
     await s.a.record([sampleAttempt()]); await s.a.refresh()
     expect(s.a.snapshot().pendingIds).toEqual(['a2'])
   })
+  it('uploads an edit when another refresh is requested during an upload', async () => {
+    const s = setup()
+    const append = s.transport.append
+    let overlappingRefresh: Promise<void> | undefined
+    s.transport.append = async batch => {
+      if (batch.events.some(event => event.id === 'a1')) {
+        await s.a.record([sampleAttempt('a2')])
+        overlappingRefresh = s.a.refresh()
+      }
+      await append(batch)
+    }
+    await s.a.record([sampleAttempt()])
+    await s.a.refresh()
+    expect(overlappingRefresh).toBeDefined()
+    await overlappingRefresh
+    expect(s.a.snapshot().pendingIds).toEqual([])
+    expect(s.a.snapshot().status).toBe('synced')
+    await s.b.refresh()
+    expect(s.b.snapshot().events.map(event => event.id)).toEqual(['a1', 'a2'])
+  })
   it('retains local work when a corrupt or cross-account replica is encountered', async () => {
     const s = setup(); await s.a.record([sampleAttempt()])
     s.files.push({ schema: 1, privacy: 'tai-lab-private', accountId: 'wrong', events: [] })
