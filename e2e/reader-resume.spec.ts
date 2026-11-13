@@ -43,6 +43,7 @@ test('returns to the same line, zoom and reading mode after reload and across br
   expect(horizontal).toBeGreaterThan(0)
 
   await page.reload()
+  if (bridge) await page.getByRole('button', { name: 'Reconectar', exact: true }).click()
   await expectReadingPoint(page, horizontal)
   await expect.poll(() => drive.savedStudy()).toMatch(/"offset":0\.3[56-8]/)
   await reader(page).getByRole('button', { name: 'Salir del modo lectura' }).click()
