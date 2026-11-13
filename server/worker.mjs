@@ -65,15 +65,24 @@ async function unseal(value, env, sessionId) {
 }
 
 async function exchange(env, params) {
+  const form = new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, ...params })
   const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST', signal: timeout(), redirect: 'error',
-    body: new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, ...params }),
+    method: 'POST', signal: timeout(), redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(),
   })
+  // Workers does not support redirect: 'error'. Never forward OAuth credentials on redirects.
+  if (response.status >= 300 && response.status < 400) throw new Error('Google redirected the token exchange')
   const value = await response.json()
   if (response.status === 400 && value.error === 'invalid_grant') return null
-  if (!response.ok || !tokenPattern.test(value.access_token ?? '') || value.token_type?.toLowerCase() !== 'bearer'
+  if (!response.ok || !tokenPattern.test(value.access_token ?? '') || typeof value.token_type !== 'string'
+    || value.token_type.toLowerCase() !== 'bearer'
     || !Number.isSafeInteger(value.expires_in) || value.expires_in < 1
-    || (value.scope !== undefined && value.scope.trim() !== scope)) throw new Error('Google OAuth response')
+    || (value.scope !== undefined && (typeof value.scope !== 'string' || value.scope.trim() !== scope))) {
+    const reason = !response.ok ? (['invalid_client', 'unauthorized_client', 'invalid_request', 'invalid_scope'].includes(value.error)
+      ? value.error : 'http_error') : 'unexpected_token_response'
+    console.warn('Drive token exchange rejected', { status: response.status, reason })
+    throw new Error('Google OAuth response')
+  }
   return value
 }
 
@@ -99,21 +108,27 @@ async function callback(request, env, url) {
   if (!state || !verifier || !code || state !== url.searchParams.get('state')
     || url.searchParams.has('error') || url.searchParams.getAll('state').length !== 1
     || url.searchParams.getAll('code').length !== 1) return redirect(home + '?drive=cancelled', clear)
+  let stage = 'exchange'
   try {
     const value = await exchange(env, { code, code_verifier: verifier, grant_type: 'authorization_code',
       redirect_uri: url.origin + auth + 'callback' })
     if (!value || value.scope?.trim() !== scope || !tokenPattern.test(value.refresh_token ?? '')) {
       return redirect(home + '?drive=reauthorize', clear)
     }
+    stage = 'account'
     const about = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(permissionId,emailAddress)', {
-      headers: { Authorization: 'Bearer ' + value.access_token }, signal: timeout(), redirect: 'error',
+      headers: { Authorization: 'Bearer ' + value.access_token }, signal: timeout(), redirect: 'manual',
     })
-    if (!about.ok) throw new Error('Drive could not verify the account')
+    if (!about.ok) {
+      console.warn('Drive account lookup rejected', { status: about.status })
+      throw new Error('Drive could not verify the account')
+    }
     const { user } = await about.json()
     if (!user?.permissionId || !env.ALLOWED_GOOGLE_ACCOUNT
       || user.emailAddress?.toLowerCase() !== env.ALLOWED_GOOGLE_ACCOUNT.toLowerCase()) {
       return redirect(home + '?drive=account', clear)
     }
+    stage = 'store'
     const secret = random()
     const id = await hash(secret)
     const previous = getCookie(request, sessionCookie)
@@ -123,7 +138,9 @@ async function callback(request, env, url) {
       .bind(Math.floor(Date.now() / 1000), previous ? await hash(previous) : '')
     await env.SESSIONS.batch([cleanup, create])
     return redirect(home + '?drive=connected', clear, cookie(sessionCookie, secret, sessionAge))
-  } catch {
+  } catch (error) {
+    const kind = ['TimeoutError', 'AbortError', 'TypeError'].includes(error?.name) ? error.name : 'Error'
+    console.warn('Drive session callback failed', { stage, kind })
     return redirect(home + '?drive=unavailable', clear)
   }
 }

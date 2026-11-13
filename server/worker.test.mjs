@@ -45,11 +45,13 @@ test('authorization, refresh after expiry, account restriction and session revoc
   let email = account
   let challenge
   globalThis.fetch = async (url, init) => {
+    assert.equal(init.redirect, 'manual')
     if (url.startsWith('https://www.googleapis.com/drive/v3/about?')) {
       return Response.json({ user: { permissionId: 'synthetic-drive-id', emailAddress: email } })
     }
     assert.equal(url, 'https://oauth2.googleapis.com/token')
-    const body = init.body
+    assert.equal(init.headers['Content-Type'], 'application/x-www-form-urlencoded')
+    const body = new URLSearchParams(init.body)
     assert.equal(body.get('client_secret'), env.GOOGLE_CLIENT_SECRET)
     if (body.get('grant_type') === 'authorization_code') {
       const actual = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.get('code_verifier')))).toString('base64url')
