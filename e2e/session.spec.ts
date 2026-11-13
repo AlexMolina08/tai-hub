@@ -5,7 +5,7 @@ const home = '/tai-hub/'
 const connectButton = (page: Page) => page.getByRole('button', { name: 'Conectar Google Drive', exact: true })
 const library = (page: Page) => page.getByRole('region', { name: 'Continuar estudio' })
 
-test('resumes the library after reload or a new tab without interaction or stored tokens', async ({ page, context }) => {
+test('resumes the library after reload without storing access tokens', async ({ page, context, browserName }) => {
   const drive = new DriveFixture()
   await drive.install(context)
   await page.goto(home)
@@ -14,6 +14,11 @@ test('resumes the library after reload or a new tab without interaction or store
 
   await page.reload()
   await expect(library(page)).toBeVisible()
+  if (browserName === 'webkit') {
+    await expect(page.getByRole('button', { name: 'Reconectar', exact: true })).toBeEnabled()
+    expect(drive.redirectPrompts).toEqual(['select_account'])
+    return
+  }
   expect(drive.redirectPrompts.at(-1)).toBe('none')
 
   const tab = await context.newPage()
@@ -32,7 +37,7 @@ test('resumes the library after reload or a new tab without interaction or store
   expect(drive.redirectPrompts.filter(prompt => prompt === 'none')).toHaveLength(2)
 })
 
-test('shows a single reconnect action when Google requires interaction', async ({ page, context }) => {
+test('shows a single reconnect action when Google requires interaction', async ({ page, context, browserName }) => {
   const drive = new DriveFixture()
   await drive.install(context)
   await page.goto(home)
@@ -40,14 +45,26 @@ test('shows a single reconnect action when Google requires interaction', async (
   await expect(library(page)).toBeVisible()
 
   drive.requireInteractiveLogin = true
+  if (browserName === 'webkit') {
+    await page.reload()
+    const reconnect = page.getByRole('button', { name: 'Reconectar', exact: true })
+    await expect(reconnect).toBeEnabled()
+    await page.reload()
+    await expect(reconnect).toBeEnabled()
+    expect(drive.redirectPrompts).toEqual(['select_account'])
+    await reconnect.click()
+    await expect(page.getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
+    return
+  }
   await page.reload()
-  await expect(connectButton(page)).toBeEnabled()
+  const reconnect = page.getByRole('button', { name: 'Reconectar', exact: true })
+  await expect(reconnect).toBeEnabled()
   expect(drive.redirectPrompts.filter(prompt => prompt === 'none')).toHaveLength(1)
   await page.reload()
-  await expect(connectButton(page)).toBeEnabled()
+  await expect(reconnect).toBeEnabled()
   expect(drive.redirectPrompts.filter(prompt => prompt === 'none')).toHaveLength(1)
   await expect(page.getByRole('alert')).toHaveCount(0)
-  await connectButton(page).click()
+  await reconnect.click()
   await expect(library(page)).toBeVisible()
 })
 
@@ -74,6 +91,10 @@ test('searches the saved PDF index on return without loading the PDF extractor',
   })
   await page.reload()
   await expect(library(page)).toBeVisible()
+  if (browserName === 'webkit') {
+    await page.getByRole('button', { name: 'Reconectar', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
+  }
   await expectReadyIndex()
   await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('observacion objetivo')
   await expect(page.getByRole('button', { name: /Documento de prueba General · Página 2/ })).toBeVisible()
@@ -134,4 +155,27 @@ test('macOS Safari can study from cache on reopen and reconnects in the same tab
   } finally {
     await context.close()
   }
+})
+
+test('preserves the catalogue and a verified session when the Drive listing fails', async ({ page, context, browserName }) => {
+  const drive = new DriveFixture()
+  await drive.install(context)
+  await page.goto(home)
+  await connectButton(page).click()
+  await expect(library(page)).toContainText('4 recursos')
+  let allowListing = false
+  await context.route('https://www.googleapis.com/drive/v3/files?**', route => {
+    const query = new URL(route.request().url()).searchParams.get('q')
+    return !allowListing && query?.includes("value='resource'")
+      ? route.fulfill({ status: 503, json: { error: { message: 'Fixture unavailable' } } })
+      : route.fallback()
+  })
+  await page.reload()
+  await expect(library(page)).toContainText('4 recursos')
+  if (browserName === 'webkit') await page.getByRole('button', { name: 'Reconectar', exact: true }).click()
+  await expect(page.getByText('No se pudo actualizar la biblioteca desde Drive.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
+  await expect(library(page)).toContainText('4 recursos')
+  allowListing = true
+  await expect(page.getByText('No se pudo actualizar la biblioteca desde Drive.')).toHaveCount(0)
 })

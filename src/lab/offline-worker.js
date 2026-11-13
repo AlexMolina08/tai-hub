@@ -41,12 +41,20 @@ self.addEventListener('message', event => {
     } catch (error) { port.postMessage({ error: error instanceof Error ? error.message : 'No se pudo guardar el acceso sin conexión.' }) }
   })())
 })
+async function navigate(request) {
+  const cached = await (await caches.open(cacheName)).match(manifest.base + 'index.html')
+  if (!cached) return fetch(request)
+  if (!self.navigator.onLine) return cached
+  try {
+    const response = await fetch(request, { cache: 'no-cache', signal: AbortSignal.timeout(3000) })
+    return response.ok ? response : cached
+  } catch { return cached }
+}
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url)
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return
   if (event.request.mode === 'navigate' && [manifest.base, manifest.base + 'index.html'].includes(url.pathname)) {
-    // A prepared application opens without a network round trip, including captive portals and expired sessions.
-    event.respondWith((async () => (await (await caches.open(cacheName)).match(manifest.base + 'index.html')) ?? fetch(event.request))())
+    event.respondWith(navigate(event.request))
   } else if (allowed.has(url.href)) {
     event.respondWith((async () => (await (await caches.open(cacheName)).match(url.href)) ?? fetch(event.request))())
   }

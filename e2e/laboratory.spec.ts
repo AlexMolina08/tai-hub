@@ -2324,8 +2324,13 @@ test('a delayed proposal records all three learning dimensions across devices an
 
     await first.clock.setFixedTime(new Date('2026-11-13T11:01:00Z'))
     await first.reload()
-    await expect(first.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
-    await openLab(first)
+    if (browserName === 'webkit') {
+      await expect(first.getByRole('heading', { name: 'Laboratorio TAI', exact: true })).toBeVisible()
+      await first.getByRole('button', { name: 'Reconectar', exact: true }).click()
+    } else {
+      await expect(first.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+      await openLab(first)
+    }
     await sync(first)
     await expect(dimensions(first)).toHaveText(['2', '1', '1'])
     await first.getByText('Paquetes y copia del progreso', { exact: true }).click()

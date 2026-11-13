@@ -250,11 +250,18 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   }, [library, accountId])
   useEffect(() => {
     if (!sync || !connected || !loaded) return
-    const refresh = () => { if (navigator.onLine) void sync.refresh().catch(() => {}) }
+    const refresh = () => {
+      if (navigator.onLine && document.visibilityState === 'visible') void sync.refresh().catch(() => {})
+    }
     refresh()
     const timer = setInterval(refresh, 60_000)
-    window.addEventListener('online', refresh); window.addEventListener('focus', refresh)
-    return () => { clearInterval(timer); window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh) }
+    window.addEventListener('online', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('online', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
   }, [sync, connected, loaded])
   async function loadDrive() {
     setBusy(true); setError(''); setInstallStatus('Buscando paquetes en Drive…')

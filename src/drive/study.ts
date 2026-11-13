@@ -154,6 +154,14 @@ export class StudySync {
     return () => this.#listeners.delete(listener);
   };
 
+  async load(): Promise<void> {
+    const cached = await localStudy(this.#accountId).catch(() => EMPTY);
+    if (this.#closed) return;
+    this.#replicas = { ...cached.replicas, ...this.#replicas };
+    this.#pending = mergeStudyOperations(cached.pending, this.#pending);
+    this.#publish(this.#pending.length ? 'pending' : 'idle');
+  }
+
   async apply(patch: StudyPatch): Promise<void> {
     if (this.#closed) return;
     this.#clock = Math.max(Date.now(), this.#clock + 1);
@@ -200,6 +208,7 @@ export class StudySync {
   };
 
   #backgroundRefresh = (): void => {
+    if (!navigator.onLine || document.visibilityState === 'hidden') return;
     void this.refresh().catch(() => {
       // Local changes remain queued and the UI can expose the sync state.
     });

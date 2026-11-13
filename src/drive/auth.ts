@@ -39,6 +39,7 @@ const REDIRECT_STATE = 'tai-hub.google-oauth.v1';
 const BROWSER_ACCOUNT = 'tai-hub.google-account.v1';
 const QUIET_RETRY = 'tai-hub.google-resume.v1';
 const REDIRECT_TIMEOUT = 5 * 60 * 1000;
+const REDIRECT_START_TIMEOUT = 8_000;
 const TOKEN_PATTERN = /^[a-zA-Z0-9._~+\/-]+=*$/;
 const OAUTH_FIELDS = ['state', 'access_token', 'token_type', 'scope', 'expires_in', 'error'];
 const MISSING_CLIENT = 'Falta configurar el cliente OAuth de TAI Hub.';
@@ -300,7 +301,7 @@ export class GoogleSession {
     this.#browserAccount = undefined;
     this.#expectedAccount = undefined;
     this.#returnTo = undefined;
-    this.#publish('ready');
+    this.#publish('ready', undefined, true);
   }
 
   #onAccountChange = (event: StorageEvent) => {
@@ -376,7 +377,7 @@ export class GoogleSession {
     const timeout = window.setTimeout(() => {
       cancel();
       this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : INVALID_REDIRECT);
-    }, REDIRECT_TIMEOUT);
+    }, REDIRECT_START_TIMEOUT);
     this.#cancelRedirect = cancel;
     window.addEventListener('pageshow', onReturn);
     this.#publish('connecting');
@@ -478,8 +479,8 @@ export class GoogleSession {
     this.#expiryTimer = undefined;
   }
 
-  #publish(status: AuthStatus, error?: string): void {
-    if (this.#snapshot.status === status && this.#snapshot.error === error) return;
+  #publish(status: AuthStatus, error?: string, force = false): void {
+    if (!force && this.#snapshot.status === status && this.#snapshot.error === error) return;
     this.#snapshot = { status, error };
     for (const listener of this.#listeners) listener();
   }
