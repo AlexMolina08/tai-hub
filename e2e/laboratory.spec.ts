@@ -79,8 +79,13 @@ async function openAssessmentSection(page: import('@playwright/test').Page, name
   await page.getByRole('navigation', { name: 'Secciones del Laboratorio' }).getByRole('button', { name, exact: true }).click()
 }
 async function openGuidedStage(page: import('@playwright/test').Page, name: RegExp) {
-  await page.getByRole('button', { name: 'Ver etapas', exact: true }).press('Enter')
-  await page.getByRole('dialog', { name: 'Etapas de la sesión' }).getByRole('button', { name }).press('Enter')
+  const trigger = page.getByRole('button', { name: 'Ver etapas', exact: true })
+  await trigger.scrollIntoViewIfNeeded()
+  await trigger.click()
+  const dialog = page.getByRole('dialog', { name: 'Etapas de la sesión' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name }).press('Enter')
+  await expect(dialog).toBeHidden()
 }
 async function syncAssessment(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
