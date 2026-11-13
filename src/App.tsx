@@ -70,6 +70,13 @@ function readReaderLocation(returnTo?: string): ReaderLocation | undefined {
   } catch { /* Browser storage unavailable or the saved reader location is invalid. */ }
 }
 
+function materialPdfPosition(sectionId: string, resource: Resource, previous?: PdfReadingPosition & { version: string }): PdfReadingPosition | undefined {
+  const match = /^pdf-page:([1-9]\d*)$/.exec(sectionId)
+  const page = match ? Number(match[1]) : undefined
+  if (page !== undefined && Number.isSafeInteger(page)) return { page }
+  return previous?.version === resource.version ? previous : undefined
+}
+
 export default function App() {
   const official = useOfficialInap()
   const auth = useSyncExternalStore(session.subscribe, session.snapshot)
@@ -637,7 +644,7 @@ export default function App() {
     {material && <Dialog title={material.resource.title} wide className="study-material-dialog" closeLabel="Volver al estudio" preserveScroll onClose={() => setMaterial(undefined)}>
       {material.resource.kind === 'pdf'
         ? <PdfPane resource={material.resource} access={verifiedAccess}
-          position={study.positions[material.resource.id]?.version === material.resource.version ? study.positions[material.resource.id] : undefined}
+          position={materialPdfPosition(material.sectionId, material.resource, study.positions[material.resource.id])}
           annotations={study.annotations[material.resource.id]?.[material.resource.version] ?? []}
           onPosition={position => markOpened(material.resource, position)} apply={apply}
           reconnect={() => connect()} download={() => library.download(material.resource)} />

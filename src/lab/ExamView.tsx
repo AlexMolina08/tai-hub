@@ -5,6 +5,7 @@ import { examAnswers, examHeads, examRevisions, examRunReady, scoreExamSection, 
 import { exportHistory, mergeEvents } from './history'
 import { RevisionWriteBuffer } from './revision-buffer'
 import { StudyText } from './StudyText'
+import { isBasicTechnologyTopic } from './study-scope'
 
 interface ExamContext {
   pack: LabPackage
@@ -59,8 +60,9 @@ export function ExamCatalog({ packages, events, accountId, open }: {
   if (!forms.length) return null
   return <section className="lab-guided-catalog" aria-label="Evaluaciones y exámenes">
     <h2>Evaluaciones y exámenes</h2>
-    <p>Simulacros cronometrados y supuestos prácticos con corrección justificada.</p>
-    <div className="lab-lesson-list">{forms.map(({ pack, form, previous }) => {
+    <p>Tests de la primera parte y supuestos prácticos con tiempo y corrección.</p>
+    <div className="lab-lesson-list">{forms.sort((a, b) => Number(b.pack.objectives.some(o => isBasicTechnologyTopic(o.topicId)))
+      - Number(a.pack.objectives.some(o => isBasicTechnologyTopic(o.topicId)))).map(({ pack, form, previous }) => {
       const heads = examHeads(examRevisions(events, accountId, pack, form))
       return <button className="lab-lesson" key={JSON.stringify([pack.id, pack.version, form.id])} onClick={() => open(pack, form)}>
         <span><strong>{form.title}</strong>

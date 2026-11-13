@@ -182,7 +182,7 @@
 @media (max-width: 800px) {
   .lab-guided-practice { padding: 1rem .8rem; }
   .lab-block-filter { width: 100%; }
-  .lab-block-filter button { flex: 1; min-height: 44px; }
+  .lab-block-filter button { flex: 1; min-height: 44px; padding-inline: .35rem; white-space: nowrap; }
   .lab-continuation { padding: 1.1rem; }
   .lab-continuation > .button { width: 100%; min-height: 44px; }
   .lab-toolbar { gap: .2rem .5rem; margin: .5rem 0 .8rem; padding-bottom: .6rem; }

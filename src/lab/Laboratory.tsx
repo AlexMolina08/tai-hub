@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowLeft, ArrowRight, BookOpen, Check, Download, RefreshCw } from 'lucide-react'
 import type { DriveLibrary } from '../drive/library'
-import { blocks } from '../syllabus'
+import { labBlocks, labTopics } from './study-scope'
 import type { Activity, Attempt, Draft, LabEvent, LabPackage, Lesson, SessionPosition, SqlActivity } from './model'
 import { compareSqlResults } from './sql-comparison'
 import { SQL_GRADING_VERSION } from './sql-output'
@@ -85,8 +85,8 @@ export default function Laboratory({ library, accountId, connected, openMaterial
   library: DriveLibrary; accountId?: string; connected: boolean; openMaterial: (resourceId: string, sectionId: string) => void
 }) {
   return <section className="laboratory" aria-label="Laboratorio TAI">
-    <div className="page-heading"><p className="context-label">Bloques III y IV</p><h1>Laboratorio TAI</h1>
-      <p>Lecciones, práctica y evaluaciones de III y IV.</p></div>
+    <div className="page-heading"><p className="context-label">Bloques II, III y IV</p><h1>Laboratorio TAI</h1>
+      <p>Teoría de II a IV y supuestos de III y IV.</p></div>
     {accountId ? <Workspace key={accountId} library={library} accountId={accountId} connected={connected} openMaterial={openMaterial} />
       : <p>Conecta tu biblioteca de Google Drive para cargar tus lecciones y tu progreso privado.</p>}
   </section>
@@ -397,8 +397,8 @@ function Workspace({ library, accountId, connected, openMaterial }: {
         </div>
         <p>Si ya instalaste el catálogo en otro dispositivo, pulsa <strong>Cargar lecciones de Drive</strong>.</p>
       </section>}
-      <details className="lab-map"><summary>Mapa de los 19 temas</summary>
-        {blocks.filter(b => b.id === 'b3' || b.id === 'b4').map(block => <section key={block.id}>
+      <details className="lab-map"><summary>Mapa de los {labTopics.length} temas</summary>
+        {labBlocks.map(block => <section key={block.id}>
           <h2>{block.title}</h2><ul>{block.topics.map(topic => <li key={topic.id}>{topic.title}</li>)}</ul>
         </section>)}
       </details>

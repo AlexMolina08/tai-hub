@@ -3,6 +3,7 @@ import type { LearningInput, LearningSnapshot } from './learning'
 import { learningObjectiveKey } from './learning'
 import { sessionResume } from './guided'
 import { draftHeads, draftKey } from './history'
+import { isBasicTechnologyTopic } from './study-scope'
 
 export type LearningDestination = { packageId: string; packageVersion: string } & (
   { kind: 'lesson'; lessonId: string; activityId?: string }
@@ -16,7 +17,7 @@ export interface LearningRecommendation {
   message: string
   evidenceIds: string[]
   objectiveKeys: string[]
-  block: 'III' | 'IV' | 'other'
+  block: 'II' | 'III' | 'IV' | 'other'
 }
 export interface RecommendationResult { items: LearningRecommendation[]; limitations: string[]; reserveExhausted: boolean }
 interface Candidate extends LearningRecommendation { rank: number; review: boolean }
@@ -35,7 +36,7 @@ export const recommendationId = (target: LearningDestination) => JSON.stringify(
   target.kind === 'lesson' ? target.lessonId : target.kind === 'activity' ? target.activityId : target.sessionId])
 const ownRef = (event: LabEvent, pack: LabPackage) => 'packageId' in event && event.packageId === pack.id && event.packageVersion === pack.version
 const blockOf = (topics: string[]): LearningRecommendation['block'] => topics.some(id => id.startsWith('III.')) ? 'III'
-  : topics.some(id => id.startsWith('IV.')) ? 'IV' : 'other'
+  : topics.some(id => id.startsWith('IV.')) ? 'IV' : topics.some(isBasicTechnologyTopic) ? 'II' : 'other'
 
 /** A bounded, explainable queue. The queue never changes mastery or blocks free exploration. */
 export function recommendLearning(input: RecommendationInput): RecommendationResult {
@@ -185,8 +186,11 @@ export function recommendLearning(input: RecommendationInput): RecommendationRes
       const reserved = activities.filter(activity => activity.phase === 'reserved' || activity.phase === 'delayed' && activity.evaluationIntent === 'transfer')
       reserves += reserved.length; freshReserves += reserved.filter(fresh).length
       const transfer = reserved.find(activity => fresh(activity) && (activity.phase === 'reserved' || objective.schedule?.overdue))
-      if (transfer && objective.qualifyingCorrectIds.length && !critical.length) add(pack, activityTarget(pack, transfer), 'Supuesto nuevo',
-        transfer.objectiveIds, 'transfer', 'Aplica lo que has estudiado a un supuesto distinto.', 5)
+      if (transfer && objective.qualifyingCorrectIds.length && !critical.length) {
+        const theory = isBasicTechnologyTopic(objective.topicId)
+        add(pack, activityTarget(pack, transfer), theory ? 'Pregunta de aplicación' : 'Supuesto nuevo',
+          transfer.objectiveIds, 'transfer', theory ? 'Aplica el concepto en una pregunta nueva.' : 'Aplica lo que has estudiado a un supuesto distinto.', 5)
+      }
     }
   }
 
@@ -215,9 +219,11 @@ export function recommendLearning(input: RecommendationInput): RecommendationRes
     else limitations.add('Conviene retomar IV, pero no hay una propuesta validada disponible. El mapa conserva todos sus temas.')
   }
   const skipped = new Set(input.skipped ?? []), chosen: Candidate[] = [], used = new Set<string>(), objectiveCounts = new Map<string, number>()
+  const preferences = candidates.some(candidate => candidate.block === 'II' && !skipped.has(candidate.id))
+    ? ['III', 'IV', 'II', 'III', 'IV'] : ['III', 'IV', 'III', 'III', 'IV']
   let reviewCount = 0
   while (chosen.length < Math.min(8, Math.max(1, input.limit ?? 8))) {
-    const preference = ['III', 'IV', 'III', 'III', 'IV'][chosen.length % 5]
+    const preference = preferences[chosen.length % preferences.length]
     const remaining = candidates.filter(candidate => !used.has(candidate.id) && !skipped.has(candidate.id)
       && (!candidate.review || reviewCount < 4) && candidate.objectiveKeys.every(key => (objectiveCounts.get(key) ?? 0) < 2))
       .sort((a, b) => a.rank - b.rank || Number(b.block === preference) - Number(a.block === preference) || a.id.localeCompare(b.id))

@@ -67,8 +67,9 @@ export class DriveFixture {
     this.resource(this.videoId, 'Vídeo de prueba', 'video', Buffer.alloc(0), 128 * 1024 ** 2)
   }
 
-  addPdf(id: string, title: string, pages: string[], size?: { width: number; height: number }) {
+  addPdf(id: string, title: string, pages: string[], size?: { width: number; height: number }, importKey?: string) {
     this.resource(id, title, 'pdf', fixturePdf(pages, size))
+    if (importKey) this.files.get(id)!.appProperties.importKey = importKey
   }
 
   addHtml(id: string, title: string, content: string, topicId = 'b3t1') {

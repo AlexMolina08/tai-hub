@@ -1032,7 +1032,32 @@ test('private lesson persists answers, assistance and retries across navigation'
   await expect.poll(() => drive.labEvents().some((event: any) => event.kind === 'assistance' && event.solutionViewed)).toBe(true)
   await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll')
 })
-test('rejects a planned package and retains the 19 topic map', async ({ page, context, browserName }) => {
+test('groups and searches Block II lessons independently of the practical track', async ({ page, context, browserName }) => {
+  const theory = samplePackage()
+  theory.id = 'fixture-theory'
+  theory.objectives[0].topicId = 'II.1'
+  theory.objectives[0].concepts = ['Caché']
+  theory.lessons[0].title = 'Lección de tecnología básica'
+  const drive = new DriveFixture()
+  drive.addLabPackage('theory', theory)
+  drive.addLabPackage('practical', samplePackage())
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  const catalogue = page.getByRole('region', { name: 'Explorar lecciones' })
+  await catalogue.getByRole('button', { name: 'Bloque II', exact: true }).click()
+  await expect(catalogue.getByRole('status')).toHaveText('1 lección disponible')
+  await catalogue.getByRole('searchbox').fill('cache')
+  await expect(catalogue.getByRole('heading', { name: /II.1.*Informática básica y arquitectura/ })).toBeVisible()
+  await expect(catalogue.getByRole('button', { name: /Lección de tecnología básica/ })).toBeVisible()
+  await expect(catalogue.getByRole('button', { name: /Lección sintética/ })).toHaveCount(0)
+  expect(await page.locator('.lab-block-filter').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+})
+
+test('rejects a planned package and retains the 24 topic map', async ({ page, context, browserName }) => {
   const pack = samplePackage(); pack.objectives[0].state = 'planned'
   const drive = new DriveFixture(); drive.addLabPackage('lab-unreviewed', pack)
   await drive.install(context, browserName === 'webkit')
@@ -1042,8 +1067,8 @@ test('rejects a planned package and retains the 19 topic map', async ({ page, co
   await openLab(page)
   await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
   await expect(page.getByRole('alert')).toContainText('no validado')
-  await page.getByText('Mapa de los 19 temas', { exact: true }).click()
-  await expect(page.locator('.lab-map li')).toHaveCount(19)
+  await page.getByText('Mapa de los 24 temas', { exact: true }).click()
+  await expect(page.locator('.lab-map li')).toHaveCount(24)
 })
 
 test('resumes the exact saved activity on a second browser context and retains subsequent navigation', async ({ page, context, browser, browserName }) => {

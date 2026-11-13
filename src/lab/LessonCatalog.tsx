@@ -1,10 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { ArrowRight, Search } from 'lucide-react'
-import { blocks } from '../syllabus'
 import type { Attempt, Draft, LabEvent, LabPackage, Lesson } from './model'
-
-const topics = blocks.filter(block => block.id === 'b3' || block.id === 'b4').flatMap(block =>
-  block.topics.map(topic => ({ id: `${block.roman}.${topic.number}`, block: block.roman, title: topic.title })))
+import { isBasicTechnologyTopic, labBlocks, labTopics as topics } from './study-scope'
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
 const key = (pack: LabPackage, lesson: Lesson) => JSON.stringify([pack.id, pack.version, lesson.id])
 const numericOrder = new Intl.Collator('en', { numeric: true })
@@ -50,7 +47,7 @@ function buildCatalogue(packages: LabPackage[], events: LabEvent[], accountId: s
         : lesson.id
       return { pack, lesson, topicIds: lessonTopics, firstUnitByTopic, answered: lesson.activityIds.filter(id => answered.has(id)).length,
         progress: lesson.activityIds.filter(id => progress.has(id)).length, content,
-        search: normalize([lesson.title, ...own.map(objective => objective.statement),
+        search: normalize([lesson.title, ...own.flatMap(objective => [objective.statement, ...objective.concepts]),
           ...topics.filter(topic => lessonTopics.includes(topic.id)).map(topic => topic.title)].join(' ')) }
     })
   })
@@ -90,7 +87,10 @@ export function nextCatalogueLesson(packages: LabPackage[], events: LabEvent[], 
   const entries = orderedLessonGroups(buildCatalogue(oldEdition ? [pack] : packages, events, accountId, false)).flatMap(([, items]) => items)
   const exact = entries.findIndex(item => item.pack === pack && item.lesson === lesson)
   const index = exact >= 0 ? exact : entries.findIndex(item => item.lesson.id === lesson.id)
-  return index >= 0 ? entries.slice(index + 1).find(item => item.lesson.id !== lesson.id) : undefined
+  if (index < 0) return undefined
+  const basicTechnology = entries[index].topicIds.some(isBasicTechnologyTopic)
+  return entries.slice(index + 1).find(item => item.lesson.id !== lesson.id
+    && item.topicIds.some(isBasicTechnologyTopic) === basicTechnology)
 }
 
 export function LessonCatalog({ packages, events, accountId, openLesson }: {
@@ -124,7 +124,7 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
       <label className="lab-catalog-search"><span className="sr-only">Buscar lecciones</span><Search size={18} aria-hidden="true" />
         <input ref={search} type="search" value={query} onChange={event => { setQuery(event.target.value); setLimit(lessonPageSize) }} placeholder="Buscar un concepto o una lección" /></label>
       <div className="lab-block-filter" aria-label="Filtrar por bloque">{[
-        ['all', 'Todos'], ['III', 'Bloque III'], ['IV', 'Bloque IV'],
+        ['all', 'Todos'], ...labBlocks.map(item => [item.roman, `Bloque ${item.roman}`]),
       ].map(([id, title]) => <button key={id} aria-pressed={block === id} onClick={() => { setBlock(id); setTopicId('all'); setLimit(lessonPageSize) }}>{title}</button>)}</div>
       <label className="lab-topic-filter">Tema<select value={topicId} onChange={event => { setTopicId(event.target.value); setLimit(lessonPageSize) }}>
         <option value="all">Todos los temas disponibles</option>
