@@ -1,7 +1,11 @@
 export const readerScript = `
+function goToSection(id, behavior) {
+  const section = document.getElementById(id);
+  if (section) window.scrollTo({top: window.scrollY + section.getBoundingClientRect().top, behavior});
+}
 addEventListener('message', event => {
   if (event.source !== parent || event.data?.type !== 'tai-study-section' || typeof event.data.id !== 'string' || event.data.id.length > 200) return;
-  document.getElementById(event.data.id)?.scrollIntoView({behavior:'instant',block:'start'});
+  goToSection(event.data.id, 'instant');
 });
 document.addEventListener('click', event => {
   const anchor = event.target.closest('a');
@@ -11,7 +15,7 @@ document.addEventListener('click', event => {
     event.preventDefault();
     let id = href.slice(1);
     try { id = decodeURIComponent(id); } catch {}
-    document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
+    goToSection(id, 'smooth');
   }
 });
 document.addEventListener('keydown', event => {

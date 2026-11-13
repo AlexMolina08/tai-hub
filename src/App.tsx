@@ -634,7 +634,7 @@ export default function App() {
       </nav>
     </div>
 
-    {material && <Dialog title={material.resource.title} wide className="study-material-dialog" closeLabel="Volver al estudio" onClose={() => setMaterial(undefined)}>
+    {material && <Dialog title={material.resource.title} wide className="study-material-dialog" closeLabel="Volver al estudio" preserveScroll onClose={() => setMaterial(undefined)}>
       {material.resource.kind === 'pdf'
         ? <PdfPane resource={material.resource} access={verifiedAccess}
           position={study.positions[material.resource.id]?.version === material.resource.version ? study.positions[material.resource.id] : undefined}
