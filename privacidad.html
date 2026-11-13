@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Privacidad · TAI Hub</title>
+    <link rel="icon" href="./mark.svg" type="image/svg+xml">
+    <style>
+      :root { color-scheme: light dark; font: 1rem/1.65 system-ui, sans-serif; }
+      body { margin: 0 auto; max-width: 65ch; padding: 2rem 1.25rem; }
+      h1, h2 { line-height: 1.2; }
+      h2 { margin-top: 2rem; font-size: 1.2rem; }
+      a { color: LinkText; text-underline-offset: 0.16em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="./">Volver a TAI Hub</a>
+      <h1>Privacidad en TAI Hub</h1>
+      <p>TAI Hub es una aplicación personal para preparar la oposición de Técnico Auxiliar de Informática. Usa Google Drive para guardar y consultar el material de estudio y sincronizar el progreso entre dispositivos.</p>
+
+      <h2>Acceso a Google Drive</h2>
+      <p>TAI Hub solicita el permiso <code>drive.file</code> para consultar y actualizar los archivos que crea o a los que das acceso. Usa los datos básicos de tu cuenta para identificar tu biblioteca y mostrar el espacio disponible. Tus archivos, respuestas y anotaciones se guardan en tu Drive. La aplicación conserva en tu navegador los datos necesarios para reanudar el estudio y guardar los cambios pendientes.</p>
+
+      <h2>Sesión persistente</h2>
+      <p>En la versión con sesión persistente, Cloudflare guarda el identificador de tu cuenta, el token de renovación cifrado y la fecha de caducidad de la sesión. El navegador conserva una cookie de sesión y usa un token de acceso temporal para consultar Drive directamente. Los materiales y el progreso se transfieren entre tu navegador y Google Drive.</p>
+
+      <h2>Control de tus datos</h2>
+      <p>Puedes cerrar la sesión en Ajustes y revocar el acceso en las conexiones de tu cuenta de Google. La versión con sesión persistente borra la sesión del servidor al desconectarla desde Ajustes. Los datos locales se pueden borrar desde los ajustes del navegador. Los archivos guardados en Drive se gestionan desde tu cuenta de Google Drive.</p>
+      <p>TAI Hub usa los datos de Google exclusivamente para darte acceso a la biblioteca y al progreso. Su uso se ajusta a los requisitos de uso limitado de la <a href="https://developers.google.com/terms/api-services-user-data-policy">Política de datos de usuario de los servicios de API de Google</a>.</p>
+    </main>
+  </body>
+</html>
