@@ -72,6 +72,10 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   }
   const activity = pack.activities.find(activity => activity.id === activityId)
   const nextActivity = activity ? stage.activityIds[stage.activityIds.indexOf(activity.id) + 1] : undefined
+  const nextStage = session.stages[stageIndex + 1]
+  const continueStudy = nextActivity ? { label: 'Siguiente ejercicio', run: () => void navigate(stageIndex, nextActivity) }
+    : nextStage ? { label: 'Continuar a ' + nextStage.title.toLocaleLowerCase('es'), run: () => void navigate(stageIndex + 1, nextStage.activityIds[0] ?? null) }
+    : undefined
   const referenceVisible = !!activity && stage.readings.some(reading =>
     pack.lessons.find(lesson => lesson.id === reading.lessonId)?.objectiveIds.some(id => activity.objectiveIds.includes(id)))
   const allIds = session.stages.flatMap(stage => stage.activityIds)
@@ -82,8 +86,9 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   const helped = sessionAssistance(pack, session, events, accountId)
   const names = { correct: 'Correcta', incorrect: 'Por revisar', omitted: 'Sin respuesta', partial: 'Parcial, con campos sin responder' }
   return <article className="lab-guided" aria-label="Sesión guiada">
-    <header className="lab-lesson-heading"><p className="context-label">Sesión guiada · {sessionMinutes(session)} min orientativos</p>
-      <h2 tabIndex={-1} data-study-heading>{session.title}</h2><p>Avanza a tu ritmo. Puedes parar y continuar desde otro dispositivo cuando se sincronice.</p></header>
+    <header className="lab-lesson-heading">
+      <h2 tabIndex={-1} data-study-heading>{session.title}</h2><p>{sessionMinutes(session)} min · {answered.size} de {allIds.length} actividades respondidas</p>
+    </header>
     <nav className="lab-guided-stages" ref={stages} aria-label="Etapas de la sesión">{session.stages.map((step, index) => <button key={step.id}
       aria-current={stageIndex === index ? 'step' : undefined} onClick={() => void navigate(index, step.activityIds[0] ?? null)}>
       <span>{index + 1}. {step.title}</span><small>{step.minutes} min</small>
@@ -102,7 +107,10 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
           {reading.explanationIndexes.map(index => <section key={'explanation-' + index}><h4>{lesson.explanation[index].title}</h4><StudyText text={lesson.explanation[index].body} /></section>)}
           {reading.workedExampleIndexes.length > 0 && <div className="lab-example">{reading.workedExampleIndexes.map(index => <section key={'example-' + index}>
             <h4>{lesson.workedExample[index].title}</h4><StudyText text={lesson.workedExample[index].body} /></section>)}</div>}
-          <button className="text-link" onClick={() => openMaterial(lesson.material.resourceId, lesson.material.sectionId)}>Consultar material completo: {lesson.title}</button>
+          <button className="button lab-material-link" onClick={event => {
+            event.currentTarget.focus({ preventScroll: true })
+            openMaterial(lesson.material.resourceId, lesson.material.sectionId)
+          }}>Consultar material completo: {lesson.title}</button>
           </LearningReading>
         </div>
       })}
@@ -111,8 +119,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
         aria-current={activityId === id ? 'step' : undefined} onClick={() => void navigate(stageIndex, id)}>
         {index + 1}{answered.has(id) && <Check size={11} aria-hidden="true" />}
       </button>)}</nav>}
-      {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible,
-        nextActivity ? { label: 'Siguiente ejercicio', run: () => void navigate(stageIndex, nextActivity) } : undefined)}</div>}
+      {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible, continueStudy)}</div>}
       {stage.kind === 'close' && <section className="lab-guided-summary" aria-label="Respuestas guardadas">
         <h4>{answered.size} de {allIds.length} actividades con respuesta guardada</h4>
         <p>Completar este recorrido no demuestra por sí solo comprensión, retención o transferencia.</p>

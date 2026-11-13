@@ -18,15 +18,20 @@ interface ExamViewProps extends ExamContext {
 }
 
 const buffers = new Map<string, RevisionWriteBuffer<ExamRevision>>()
+function updateUnloadWarning() {
+  if ([...buffers.values()].some(buffer => buffer.hasUnsaved())) window.addEventListener('beforeunload', warnBeforeUnload)
+  else window.removeEventListener('beforeunload', warnBeforeUnload)
+}
+export function clearExamBuffers(accountId: string) {
+  for (const key of buffers.keys()) if (JSON.parse(key)[0] === accountId) buffers.delete(key)
+  updateUnloadWarning()
+}
 function getBuffer({ accountId, pack, form }: ExamContext) {
   const key = JSON.stringify([accountId, pack.id, pack.version, form.id, form.version])
   let buffer = buffers.get(key)
   if (!buffer) {
-    buffer = new RevisionWriteBuffer<ExamRevision>(() => {
-      const warn = [...buffers.values()].some(buffer => buffer.hasUnsaved())
-      if (warn) window.addEventListener('beforeunload', warnBeforeUnload)
-      else window.removeEventListener('beforeunload', warnBeforeUnload)
-    }, { collision: 'Hay otra revisión con la misma identidad. Descarga la copia pendiente.', failure: 'No se pudo guardar el examen.' })
+    buffer = new RevisionWriteBuffer<ExamRevision>(updateUnloadWarning,
+      { collision: 'Hay otra revisión con la misma identidad. Descarga la copia pendiente.', failure: 'No se pudo guardar el examen.' })
     buffers.set(key, buffer)
   }
   return buffer

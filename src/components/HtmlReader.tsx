@@ -37,8 +37,8 @@ export function studyDocument(input: string): string {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>html{color-scheme:light;scroll-behavior:smooth}body{margin:0;color:#1a1a1a;background:#fff;font:17px/1.65 system-ui,sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}pre,.table-wrap{max-width:100%;overflow:auto}button{font:inherit;cursor:pointer}.copy-code{display:block;margin:.4rem 0 .8rem;padding:.3rem .65rem;background:#fff8e1;color:#714700;border:1px solid #c8820a;border-radius:5px}a{color:#825300}</style></head><body>${template.innerHTML}<script id="tai-reader-helper" nonce="${nonce}">${readerScript}</script></body></html>`
 }
 
-export function HtmlReader({ resource, library, connected, download, sectionId }: {
-  resource: Resource; library: DriveLibrary; connected: boolean; download: () => void; sectionId?: string
+export function HtmlReader({ resource, library, connected, download, sectionId, inDialog }: {
+  resource: Resource; library: DriveLibrary; connected: boolean; download: () => void; sectionId?: string; inDialog?: boolean
 }) {
   const [document, setDocument] = useState<string>()
   const [error, setError] = useState('')
@@ -78,9 +78,9 @@ export function HtmlReader({ resource, library, connected, download, sectionId }
     <div className="html-reader-toolbar">
       <span>Lectura privada</span>
       <div className="actions">
-        <button className="button" disabled={!connected || !document} aria-pressed={expanded} onClick={() => setExpanded(value => !value)}>
+        {!inDialog && <button className="button" disabled={!connected || !document} aria-pressed={expanded} onClick={() => setExpanded(value => !value)}>
           {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}{expanded ? 'Salir de lectura amplia' : 'Lectura amplia'}
-        </button>
+        </button>}
         <button className="button" disabled={!connected} onClick={download}><Download size={16} />Descargar HTML</button>
       </div>
     </div>

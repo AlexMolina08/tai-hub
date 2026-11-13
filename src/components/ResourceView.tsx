@@ -7,12 +7,13 @@ import { HtmlReader } from './HtmlReader'
 const images = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif', 'image/bmp'])
 const audio = new Set(['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav'])
 const richText = new Set(['application/rtf', 'application/x-rtf', 'text/rtf', 'text/richtext'])
-export function ResourceView({ resource, library, connected, download, sectionId }: {
+export function ResourceView({ resource, library, connected, download, sectionId, inDialog }: {
   resource: Resource
   library: DriveLibrary
   connected: boolean
   download: () => void
   sectionId?: string
+  inDialog?: boolean
 }) {
   const [preview, setPreview] = useState<{ url?: string; text?: string }>()
   const [error, setError] = useState(false)
@@ -41,7 +42,7 @@ export function ResourceView({ resource, library, connected, download, sectionId
   }, [resource.id, resource.version, previewMime, image, sound, text, library, connected, attempt])
 
   if (resource.kind === 'html' || resource.mimeType === 'text/html') return <HtmlReader
-    resource={resource} library={library} connected={connected} download={download} sectionId={sectionId} />
+    resource={resource} library={library} connected={connected} download={download} sectionId={sectionId} inDialog={inDialog} />
   if (resource.kind === 'note') return <div className="note-preview">{resource.note}</div>
   if (resource.kind === 'link') {
     const link = safeLink(resource.url)

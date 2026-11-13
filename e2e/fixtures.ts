@@ -229,16 +229,16 @@ export class DriveFixture {
       user: { permissionId: accountId, displayName: 'Cuenta de prueba', emailAddress: 'cuenta@example.test' },
       storageQuota: { limit: '16106127360', usage: '6000000000' },
     })
-    if (path === '/files/generateIds') return json({ ids: [`generated-${this.nextId++}`] })
+    if (path === '/files/generateIds') return json({ ids: Array.from({ length: Number(url.searchParams.get('count') ?? 1) }, () => `generated-${this.nextId++}`) })
     if (path === '/files' && method === 'GET') {
       const query = url.searchParams.get('q') ?? ''
-      const kind = query.match(/key='taiHub' and value='([^']+)'/)?.[1]
+      const kinds = [...query.matchAll(/key='taiHub' and value='([^']+)'/g)].map(match => match[1])
       const importKey = query.match(/key='importKey' and value='([^']+)'/)?.[1]
-      if (kind === 'resource' && this.rejectToken) {
+      if (kinds.includes('resource') && this.rejectToken) {
         this.rejectToken = false
         return json({ error: {} }, 401)
       }
-      return json({ files: [...this.files.values()].filter(file => !file.trashed && file.appProperties.taiHub === kind
+      return json({ files: [...this.files.values()].filter(file => !file.trashed && kinds.includes(file.appProperties.taiHub)
         && (!importKey || file.appProperties.importKey === importKey)) })
     }
     const revision = path.match(/^\/files\/([^/]+)\/revisions(?:\/([^/]+))?$/)
@@ -290,6 +290,7 @@ export class DriveFixture {
       }
       const file = {
         ...current, ...metadata, id: id ?? metadata.id, ownedByMe: true,
+        createdTime: current?.createdTime ?? new Date().toISOString(),
         size: String(body.byteLength), md5Checksum: md5(body),
         headRevisionId: String(Number(current?.headRevisionId ?? 0) + 1),
       }

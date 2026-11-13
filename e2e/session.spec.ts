@@ -105,3 +105,33 @@ test('leaves an open PDF readable after expiry and returns to the same page afte
   await expect(search).toHaveValue('observacion objetivo')
   await expect(page.getByRole('button', { name: /Documento de prueba General · Página 2/ })).toBeVisible()
 })
+
+test('macOS Safari can study from cache on reopen and reconnects in the same tab', async ({ browser, browserName, baseURL }) => {
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15',
+    viewport: { width: 1366, height: 900 },
+    isMobile: false,
+    hasTouch: false,
+  })
+  try {
+    const drive = new DriveFixture()
+    await drive.install(context, browserName === 'webkit')
+    const page = await context.newPage()
+    await page.goto(baseURL! + home)
+    await connectButton(page).click()
+    await expect(library(page)).toBeVisible()
+    await page.getByRole('button', { name: 'Laboratorio TAI', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Laboratorio TAI', exact: true })).toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Laboratorio TAI', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Reconectar', exact: true })).toBeEnabled()
+    expect(drive.redirectPrompts).toEqual(['select_account'])
+    await page.getByRole('button', { name: 'Reconectar', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Laboratorio TAI', exact: true })).toBeVisible()
+    await expect(page.getByText('Drive conectado', { exact: true })).toBeVisible()
+    expect(drive.redirectPrompts).toEqual(['select_account', null])
+    expect(context.pages()).toHaveLength(1)
+  } finally {
+    await context.close()
+  }
+})

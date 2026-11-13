@@ -1,7 +1,8 @@
 import type { LabEvent } from './model'
 import { mergeEvents } from './history'
 
-export interface StoredHistory { events: LabEvent[]; pendingIds: string[] }
+export interface HistoryGeneration { id: string; createdTime: string }
+export interface StoredHistory { events: LabEvent[]; pendingIds: string[]; generation?: HistoryGeneration }
 export interface HistoryStore {
   read(): Promise<StoredHistory>
   update(change: (state: StoredHistory) => StoredHistory): Promise<StoredHistory>

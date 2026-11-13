@@ -195,6 +195,16 @@ select, .resource-form input:not([type="file"]):not([type="checkbox"]), textarea
 .dialog-head { position: sticky; z-index: 1; top: 0; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 8px 13px 8px 17px; }
 .dialog-head h2 { font-size: 21px; letter-spacing: -.03em; }
 .dialog-body { padding: 15px 17px 19px; }
+.study-material-dialog { width: min(1080px, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); }
+.study-material-dialog .dialog-head { gap: 1rem; }
+.study-material-dialog .dialog-head h2 { min-width: 0; overflow-wrap: anywhere; }
+.study-material-dialog .dialog-head button { flex: none; min-width: 44px; min-height: 44px; }
+.study-material-dialog .html-reader > iframe { height: calc(100dvh - 12rem); min-height: 0; }
+@media (max-width: 600px) {
+  .study-material-dialog { width: calc(100% - 12px); max-height: calc(100dvh - 12px); }
+  .study-material-dialog .dialog-body { padding: 6px; }
+  .study-material-dialog .dialog-head h2 { font-size: 17px; }
+}
 .resource-form, .resource-form fieldset, .settings-panel { display: grid; gap: 13px; min-width: 0; }
 .resource-form fieldset { padding: 0; margin: 0; border: 0; }
 .resource-form label { display: grid; gap: 5px; font-size: 14px; font-weight: 620; }

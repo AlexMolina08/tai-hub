@@ -21,9 +21,11 @@ const Laboratory = lazy(() => import('./lab/Laboratory'))
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+const safari = /Version\/[\d.]+.*Safari\//.test(navigator.userAgent)
+const desktopSafari = safari && !ios
 const session = new GoogleSession(clientId, {
   redirectUri: new URL(import.meta.env.BASE_URL, window.location.origin).href,
-  useRedirect: ios,
+  useRedirect: ios || safari,
 })
 const library = new DriveLibrary(session)
 const emptyStudy: StudyState = { favorites: {}, positions: {}, annotations: {} }
@@ -52,6 +54,7 @@ const tones = ['cobalt', 'slate', 'violet', 'ochre']
 const tailabsUrl = 'https://tailabs.es/app/exams/tailabs'
 const emptyFilters = { kind: '', source: '', tag: '' }
 const readerLocationKey = 'tai-hub.reader-location.v1'
+const labViewKey = 'tai-hub.lab-view.v1'
 const searchBatch = 80
 const initialSearchLimits = { resources: searchBatch, pages: searchBatch }
 const emptyPageResults = { query: '', documents: '', hits: [] as PdfSearchHit[] }
@@ -81,7 +84,15 @@ export default function App() {
   const [indexError, setIndexError] = useState('')
   const [indexRun, setIndexRun] = useState(0)
   const [network, setNetwork] = useState(navigator.onLine)
-  const [view, setView] = useState<View>({ page: 'home' })
+  const [view, setView] = useState<View>(() => {
+    if (desktopSafari) {
+      try {
+        const remembered = session.localAccountId()
+        if (remembered && sessionStorage.getItem(labViewKey) === remembered) return { page: 'lab' }
+      } catch { /* Study remains reachable from the menu. */ }
+    }
+    return { page: 'home' }
+  })
   const [back, setBack] = useState<ListLocation>({ view: { page: 'home' }, scroll: 0 })
   const [filters, setFilters] = useState(emptyFilters)
   const [query, setQuery] = useState('')
@@ -90,6 +101,7 @@ export default function App() {
   const [searchError, setSearchError] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [modal, setModal] = useState<Modal>()
+  const [material, setMaterial] = useState<{ resource: Resource; sectionId: string }>()
   const [revisions, setRevisions] = useState<RevisionList>({})
   const [working, setWorking] = useState(false)
   const [notice, setNotice] = useState('')
@@ -115,8 +127,16 @@ export default function App() {
   const cleanQuery = query.trim()
 
   useEffect(() => {
-    if (clientId && !session.resume()) void session.prepare()
+    if (clientId && (desktopSafari || !session.resume())) void session.prepare()
   }, [])
+  useEffect(() => {
+    if (!desktopSafari) return
+    try {
+      const remembered = accountId ?? session.localAccountId()
+      if (view.page === 'lab' && remembered) sessionStorage.setItem(labViewKey, remembered)
+      else sessionStorage.removeItem(labViewKey)
+    } catch { /* The current study view is still available. */ }
+  }, [view.page, accountId])
   useLayoutEffect(() => { window.scrollTo({ top: nextScroll.current, behavior: 'instant' }) }, [view])
   const rememberReader = useCallback((location?: ReaderLocation) => {
     readerLocation.current = location
@@ -173,6 +193,7 @@ export default function App() {
     nextScroll.current = restoreScroll ?? 0
     if (restoreScroll === undefined && next.page !== 'resource') setFilters(emptyFilters)
     setView(next)
+    setMaterial(undefined)
     setDrawer(false)
     setNotice('')
     setError('')
@@ -182,8 +203,8 @@ export default function App() {
   }
   function connect(sameTab?: boolean) {
     setError('')
-    const returnTo = readerLocation.current
-    void session.connect({ sameTab, returnTo: returnTo && JSON.stringify(returnTo) }).catch(showError)
+    const returnTo = view.page === 'lab' ? 'lab' : readerLocation.current && JSON.stringify(readerLocation.current)
+    void session.connect({ sameTab, returnTo }).catch(showError)
   }
   const clearPrivate = useCallback(() => {
     verifiedAccount.current = undefined
@@ -195,6 +216,7 @@ export default function App() {
     setSearchLimits(initialSearchLimits)
     setPageResults(emptyPageResults)
     setModal(undefined)
+    setMaterial(undefined)
     setFilters(emptyFilters)
     setBack({ view: { page: 'home' }, scroll: 0 })
     nextScroll.current = 0
@@ -211,18 +233,17 @@ export default function App() {
     pendingRefresh.current = signal
     setWorking(true)
     try {
-      const user = await library.account()
+      const [user, items] = await Promise.all([library.account(), library.list()])
       signal.throwIfAborted()
       if (verifiedAccount.current && verifiedAccount.current !== user.id) clearPrivate()
-      const items = await library.list()
-      signal.throwIfAborted()
       verifiedAccount.current = user.id
       setAccount(user)
       setResources(items)
       setVerifiedAccess(signal)
       setError('')
       const returnTo = session.takeReturnLocation()
-      if (returnTo || restoreReader.current) {
+      if (returnTo === 'lab') setView({ page: 'lab' })
+      else if (returnTo || restoreReader.current) {
         const saved = readReaderLocation() ?? (returnTo ? readReaderLocation(returnTo) : undefined)
         const resource = saved && items.find(item => item.id === saved.view.id)
         if (saved?.accountId === user.id && resource) {
@@ -247,10 +268,10 @@ export default function App() {
   useEffect(() => {
     if (auth.status === 'connected' && network && !connected) void refresh()
     if (auth.status === 'ready' && verifiedAccount.current) clearPrivate()
-    if (auth.status === 'expired' && !verifiedAccount.current) session.resume()
-  }, [auth.status, connected, network, refresh, clearPrivate])
+    if (!desktopSafari && auth.status === 'expired' && !verifiedAccount.current && view.page !== 'lab') session.resume()
+  }, [auth.status, connected, network, refresh, clearPrivate, view.page])
   useEffect(() => {
-    if (view.page !== 'home' || modal) return
+    if (desktopSafari || view.page !== 'home' || modal) return
     const resumeOnReturn = () => {
       if (document.visibilityState === 'visible' && session.snapshot().status === 'expired') session.resume()
     }
@@ -506,7 +527,7 @@ export default function App() {
           <button className="button" disabled={!network || auth.status === 'loading' || auth.status === 'connecting' || working}
             onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{auth.status === 'connected' ? 'Reintentar' : 'Reconectar'}</button></div>}
         {!officialView && (error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
-          {!ios && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
+          {!ios && !safari && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
           {error && <button className="icon-button" aria-label="Cerrar aviso" onClick={() => setError('')}><X size={17} /></button>}
         </div>}
         {notice && <div className="banner success" role="status"><span>{notice}</span><button className="icon-button" aria-label="Cerrar aviso" onClick={() => setNotice('')}><X size={17} /></button></div>}
@@ -548,7 +569,11 @@ export default function App() {
             <div className="shortcut-grid">{mainNav.slice(1).map(({ page, label, icon: Icon }) => <button key={page} className="shortcut" onClick={() => navigate({ page })}><Icon size={19} /> {label}<ChevronRight size={16} /></button>)}</div>
           </section>
         </> : view.page === 'lab' ? <Suspense fallback={<p>Cargando laboratorio…</p>}><Laboratory library={library} accountId={labAccountId} connected={connected}
-          openMaterial={(id, sectionId) => { const resource = resources.find(r => r.id === id || (id.startsWith('import:') && r.importKey === id.slice(7))); if (resource) open(resource, undefined, undefined, sectionId); else setError('El material no está disponible en esta biblioteca.') }} /></Suspense>
+          openMaterial={(id, sectionId) => {
+            const resource = resources.find(r => r.id === id || (id.startsWith('import:') && r.importKey === id.slice(7)))
+            if (resource) setMaterial({ resource, sectionId })
+            else setError('El material no está disponible en esta biblioteca.')
+          }} /></Suspense>
         : officialView ? <OfficialInap {...official} /> : view.page === 'search' ? <>
           <div className="page-heading"><p className="context-label"><Search size={17} /> Biblioteca</p><h1>Búsqueda</h1><p>Busca por título, fuente y texto dentro de los PDF.</p></div>
           {loadingLibrary || (retryLibrary && !account) ? <div className="empty" role="status"><Cloud size={24} /><p>{libraryStatus}</p></div>
@@ -608,6 +633,17 @@ export default function App() {
         </button>
       </nav>
     </div>
+
+    {material && <Dialog title={material.resource.title} wide className="study-material-dialog" closeLabel="Volver al estudio" onClose={() => setMaterial(undefined)}>
+      {material.resource.kind === 'pdf'
+        ? <PdfPane resource={material.resource} access={verifiedAccess}
+          position={study.positions[material.resource.id]?.version === material.resource.version ? study.positions[material.resource.id] : undefined}
+          annotations={study.annotations[material.resource.id]?.[material.resource.version] ?? []}
+          onPosition={position => markOpened(material.resource, position)} apply={apply}
+          reconnect={() => connect()} download={() => library.download(material.resource)} />
+        : <ResourceView resource={material.resource} library={library} connected={connected} sectionId={material.sectionId}
+          download={() => download(material.resource)} inDialog />}
+    </Dialog>}
 
     {modal && <Dialog key={modal.kind} title={({
       add: 'Añadir recurso', edit: 'Editar recurso', manage: 'Opciones del recurso', trash: 'Enviar a la papelera',

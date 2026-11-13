@@ -113,7 +113,30 @@ export class DriveClient {
   }
 
   async json<T>(path: string, query?: Record<string, string>, init?: RequestInit): Promise<T> {
-    return (await this.#request(url(path, query), init)).json() as Promise<T>;
+    if (init?.method && init.method !== 'GET') return (await this.#request(url(path, query), init)).json() as Promise<T>;
+    const controller = new AbortController();
+    const abort = () => controller.abort(this.signal.reason);
+    this.signal.addEventListener('abort', abort, { once: true });
+    const timeout = setTimeout(() => controller.abort(), 12_000);
+    try {
+      return await (await this.#request(url(path, query), { ...init, signal: controller.signal })).json() as T;
+    } catch (error) {
+      if (controller.signal.aborted && !this.signal.aborted) {
+        throw new DriveError('Google Drive no respondió a tiempo. Puedes volver a intentarlo.', 0);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+      this.signal.removeEventListener('abort', abort);
+    }
+  }
+
+  async generateIds(count: number): Promise<string[]> {
+    const { ids } = await this.json<{ ids: string[] }>('/files/generateIds', { count: String(count), space: 'drive' });
+    if (!Array.isArray(ids) || ids.length !== count || new Set(ids).size !== count || ids.some(id => typeof id !== 'string' || !id)) {
+      throw new DriveError('Drive no devolvió los identificadores de los archivos.', 0);
+    }
+    return ids;
   }
 
   async list(query: string, fields = FILE_FIELDS): Promise<DriveFile[]> {
@@ -145,17 +168,14 @@ export class DriveClient {
     return this.#request(url(path, { alt: 'media' }));
   }
 
-  async upload(metadata: FileMetadata, content: Blob, id?: string, progress?: UploadProgress, keepRevision = false): Promise<DriveFile> {
+  async upload(metadata: FileMetadata, content: Blob, id?: string, progress?: UploadProgress, keepRevision = false, generatedId?: string): Promise<DriveFile> {
     const path = id ? filePath(id) : '/files';
     const method = id ? 'PATCH' : 'POST';
     const mime = content.type || 'application/octet-stream';
     const fields = FILE_FIELDS;
     const uploadOptions: Record<string, string> = { fields };
     if (keepRevision) uploadOptions.keepRevisionForever = 'true';
-    const { ids } = id
-      ? { ids: [] }
-      : await this.json<{ ids: string[] }>('/files/generateIds', { count: '1', space: 'drive' });
-    const newId = ids[0];
+    const newId = id ? undefined : generatedId ?? (await this.generateIds(1))[0];
     const replacement = id && keepRevision ? crypto.randomUUID() : undefined;
     const fileMetadata = { ...metadata };
     if (newId) fileMetadata.id = newId;
@@ -278,7 +298,7 @@ export class DriveClient {
       response = await fetch(address, {
         ...init,
         headers,
-        signal: this.signal,
+        signal: init.signal ?? this.signal,
         cache: 'no-store',
         credentials: 'omit',
         referrerPolicy: 'no-referrer',

@@ -2,6 +2,10 @@ import type { ActivityRef, LabEvent, LearningTarget } from './model'
 import { RevisionWriteBuffer } from './revision-buffer'
 
 const buffers = new Map<string, RevisionWriteBuffer<LabEvent>>()
+export function clearSemanticBuffers(accountId: string) {
+  for (const key of buffers.keys()) if (JSON.parse(key)[0] === accountId) buffers.delete(key)
+  updateWarning()
+}
 let warningAttached = false
 function warn(event: BeforeUnloadEvent) {
   if ([...buffers.values()].some(buffer => buffer.hasUnsaved())) { event.preventDefault(); event.returnValue = '' }

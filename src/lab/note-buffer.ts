@@ -5,6 +5,10 @@ import { RevisionWriteBuffer } from './revision-buffer'
 export class NoteWriteBuffer extends RevisionWriteBuffer<NoteRevision> {}
 
 const buffers = new Map<string, NoteWriteBuffer>()
+export function clearNoteBuffers(accountId: string) {
+  for (const key of buffers.keys()) if (JSON.parse(key)[0] === accountId) buffers.delete(key)
+  updateWarning()
+}
 let warningAttached = false
 function warnBeforeUnload(event: BeforeUnloadEvent) {
   if ([...buffers.values()].some(buffer => buffer.hasUnsaved())) { event.preventDefault(); event.returnValue = '' }

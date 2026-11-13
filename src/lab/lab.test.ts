@@ -239,3 +239,32 @@ describe('local-first synchronization', () => {
     expect(sync.snapshot().events).toHaveLength(0)
   })
 })
+
+it('starts a new history on all devices and ignores writes from before the reset', async () => {
+  const files = new Map<string, { batch: EventBatch; generation?: string }>()
+  const reset = { id: 'reset-1', createdTime: '2026-11-13T10:00:00.000Z' }
+  let active = false
+  const transport: LabTransport = {
+    list: async () => [...(active ? [{ id: reset.id, reset }] : []),
+      ...[...files.entries()].map(([id, value]) => ({ id, generation: value.generation }))],
+    read: async id => files.get(id)!.batch,
+    append: async (batch, generation) => { files.set(String(files.size), { batch, generation }) },
+    reset: async () => { active = true; return reset },
+  }
+  const first = new LabSync('account-a', memoryStore(), transport)
+  const stale = new LabSync('account-a', memoryStore(), transport)
+  await first.record([sampleAttempt()])
+  await first.refresh()
+  await stale.refresh()
+  await stale.record([sampleAttempt('before-reset')])
+  await first.reset()
+  expect(first.snapshot()).toMatchObject({ events: [], pendingIds: [], generation: reset, status: 'synced' })
+  await stale.refresh()
+  expect(stale.snapshot()).toEqual(first.snapshot())
+  expect(files.size).toBe(1)
+  await first.record([sampleAttempt('after-reset')])
+  await first.refresh()
+  await stale.refresh()
+  expect(stale.snapshot().events.map(event => event.id)).toEqual(['after-reset'])
+  expect(files.get('1')?.generation).toBe(reset.id)
+})

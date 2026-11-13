@@ -737,7 +737,7 @@ test('guided session resumes its stage and activity across devices and preserves
   await openLab(page)
   await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
   await page.getByRole('button', { name: /Sesión sintética/ }).click()
-  await expect(page.getByText('Sesión guiada · 36 min orientativos', { exact: true })).toBeVisible()
+  await expect(page.getByText('36 min · 0 de 5 actividades respondidas', { exact: true })).toBeVisible()
   const stages = page.getByRole('navigation', { name: 'Etapas de la sesión', exact: true })
   await stages.getByRole('button', { name: /2. Comprender/ }).click()
   await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
@@ -1258,10 +1258,20 @@ test('opens the exact material section and returns to the same activity', async 
   await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
   const read = page.getByRole('button', { name: 'Leer explicación', exact: true })
   if (await read.isVisible()) await read.click()
-  await page.getByRole('button', { name: 'Consultar material completo', exact: true }).click()
+  const material = page.getByRole('button', { name: 'Consultar material completo', exact: true })
+  await material.scrollIntoViewIfNeeded()
+  const scroll = await page.evaluate(() => scrollY)
+  await material.click()
+  await expect(page.getByRole('dialog', { name: 'Material sintético' })).toBeVisible()
   const frame = page.frameLocator('iframe[title="Material sintético"]')
   await expect(frame.getByRole('heading', { name: 'Apartado exacto' })).toBeInViewport()
-  await page.getByRole('button', { name: 'Volver', exact: true }).click()
+  await page.getByRole('button', { name: 'Volver al estudio', exact: true }).click()
+  await expect(material).toBeFocused()
+  expect(await page.evaluate(() => scrollY)).toBeCloseTo(scroll, 0)
+  if (await read.isVisible()) {
+    await expect(read).toHaveAttribute('aria-pressed', 'true')
+    await showPractice(page)
+  }
   await expect(page.getByRole('heading', { name: 'Ejemplo sintético p2', exact: true })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Inválida', exact: true })).toBeChecked()
 })
@@ -2141,6 +2151,7 @@ test('algorithm practice restores a different case and keeps its earlier attempt
 })
 
 test('continues from saved corrections through the diagnostic, proposals and lessons', async ({ page, context, browserName }, info) => {
+  test.setTimeout(75_000)
   if (browserName === 'webkit') await page.setViewportSize({ width: 390, height: 844 })
   const drive = new DriveFixture()
   await drive.install(context, browserName === 'webkit')
@@ -2219,4 +2230,74 @@ test('continues from saved corrections through the diagnostic, proposals and les
   await expect(page.getByRole('heading', { name: lessons[1], exact: true })).toBeFocused()
   if (browserName === 'webkit') await expect(button('Leer explicación')).toHaveAttribute('aria-pressed', 'true')
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+})
+
+test('a delayed proposal records all three learning dimensions across devices and a reset clears them', async ({ browser, browserName, baseURL }) => {
+  const drive = new DriveFixture()
+  const pack = samplePackage()
+  pack.activities.find(activity => activity.id === 'd1')!.evaluationIntent = 'transfer'
+  drive.addLabPackage('lab-learning-cycle', pack)
+  const [desktop, mobile] = await Promise.all([
+    browser.newContext({ viewport: { width: 1440, height: 900 } }),
+    browser.newContext({ viewport: { width: 390, height: 844 } }),
+  ])
+  try {
+    for (const context of [desktop, mobile]) await drive.install(context, browserName === 'webkit')
+    const [first, second] = await Promise.all([desktop.newPage(), mobile.newPage()])
+    const connect = async (page: import('@playwright/test').Page, at: string) => {
+      await page.clock.install({ time: new Date(at) })
+      await page.goto(baseURL + '/tai-hub/')
+      await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+      await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+      await openLab(page)
+      await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+    }
+    const sync = async (page: import('@playwright/test').Page) => {
+      await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
+      await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
+    }
+    const answer = async (page: import('@playwright/test').Page) => {
+      await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+      await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+      await expect(page.getByText('Respuesta correcta', { exact: true })).toBeVisible()
+    }
+    const dimensions = (page: import('@playwright/test').Page) => page.locator('.lab-learning-dimensions strong')
+    await connect(first, '2026-11-11T10:00:00Z')
+    await expect(dimensions(first)).toHaveText(['0', '0', '0'])
+    await first.getByRole('button', { name: /Lección sintética/ }).click()
+    await first.getByRole('button', { name: '3', exact: true }).click()
+    await answer(first)
+    await sync(first)
+    await first.getByRole('button', { name: 'Volver a las lecciones', exact: true }).click()
+    await expect(dimensions(first)).toHaveText(['1', '0', '0'])
+
+    await connect(second, '2026-11-13T11:00:00Z')
+    await sync(second)
+    await expect(dimensions(second)).toHaveText(['1', '0', '0'])
+    await expect(second.getByRole('region', { name: 'Siguiente paso recomendado' })).toContainText('Repaso del día')
+    await second.getByRole('button', { name: 'Empezar propuesta', exact: true }).click()
+    await expect(second.getByRole('heading', { name: 'Ejemplo sintético d1', exact: true })).toBeVisible()
+    await answer(second)
+    await sync(second)
+    await second.getByRole('button', { name: 'Volver al laboratorio', exact: true }).click()
+    await expect(dimensions(second)).toHaveText(['2', '1', '1'])
+
+    await first.clock.setFixedTime(new Date('2026-11-13T11:01:00Z'))
+    await first.reload()
+    await expect(first.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await openLab(first)
+    await sync(first)
+    await expect(dimensions(first)).toHaveText(['2', '1', '1'])
+    await first.getByText('Paquetes y copia del progreso', { exact: true }).click()
+    await first.getByRole('button', { name: 'Reiniciar historial', exact: true }).click()
+    await first.getByRole('button', { name: 'Empezar de cero', exact: true }).click()
+    await expect(first.getByText('Historial del laboratorio reiniciado.', { exact: true })).toBeVisible()
+    await expect(dimensions(first)).toHaveText(['0', '0', '0'])
+    await sync(second)
+    await expect(dimensions(second)).toHaveText(['0', '0', '0'])
+    await expect(second.getByRole('region', { name: 'Retomar el laboratorio' })).toHaveCount(0)
+    await expect(second.getByText('1 lección disponible', { exact: true })).toBeVisible()
+  } finally {
+    await Promise.all([desktop.close(), mobile.close()])
+  }
 })

@@ -3,6 +3,7 @@ import { cacheDownloadedPackages, cachedCatalogue, cachedPackages } from './cont
 import type { EventBatch } from './model'
 import { canonical } from './history'
 import type { LabTransport } from './sync'
+import type { DriveFile } from '../drive/client'
 import { parseEventBatch } from './validate'
 
 const checkpointBytes = 16 * 1024 ** 2
@@ -81,19 +82,29 @@ function eventBatches(batch: EventBatch): EventBatch[] {
 }
 
 export function labTransport(library: DriveLibrary, accountId: string): LabTransport {
+  function generation(file: DriveFile) {
+    if (!file.ownedByMe || file.shared || file.trashed || file.appProperties?.taiHub !== 'labReset'
+      || !file.createdTime || !Number.isFinite(Date.parse(file.createdTime))) {
+      throw new Error('Drive no confirmó el reinicio del historial.')
+    }
+    return { id: file.id, createdTime: file.createdTime }
+  }
   return {
-    list: () => library.listLabFiles(accountId, 'labEvents'),
+    list: async () => (await library.listLabHistory(accountId)).map(file => file.appProperties?.taiHub === 'labReset'
+      ? { id: file.id, reset: generation(file) }
+      : { id: file.id, headRevisionId: file.headRevisionId, generation: file.appProperties?.labGeneration }),
     read: id => library.readLabFile(accountId, id, 'labEvents'),
-    async append(batch) {
-      for (const part of eventBatches(batch)) await library.appendLabEvents(accountId, part)
+    reset: async () => generation(await library.resetLabHistory(accountId)),
+    async append(batch, generation) {
+      for (const part of eventBatches(batch)) await library.appendLabEvents(accountId, part, generation)
     },
-    async compact(files, batch) {
+    async compact(files, batch, generation) {
       const sources = files.filter(file => file.headRevisionId)
       if (sources.length !== files.length) return
       const parts = eventBatches(batch)
       if (parts.length >= sources.length) return
       for (const part of parts) {
-        const { id } = await library.appendLabEvents(accountId, part)
+        const { id } = await library.appendLabEvents(accountId, part, generation)
         const stored = parseEventBatch(await library.readLabFile(accountId, id, 'labEvents'), accountId)
         if (canonical(stored) !== canonical(part)) throw new Error('No se pudo verificar la copia compactada del progreso.')
       }

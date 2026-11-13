@@ -15,6 +15,7 @@ const STUDY = appProperty(APP_KEY, 'study');
 const JSON_MIME = 'application/json';
 const LAB_PACKAGES = appProperty(APP_KEY, 'labPackage');
 const LAB_ARCHIVE = 'labEventArchive';
+const LAB_RESET = 'labReset';
 const KINDS = new Set<ResourceKind>(['pdf', 'html', 'video', 'image', 'audio', 'text', 'link', 'note', 'other']);
 
 export type LabPackageUpload = { file: File; editionKey: string; sha256: string };
@@ -451,6 +452,16 @@ export class DriveLibrary {
     return files;
   }
 
+  async listLabHistory(accountId: string): Promise<DriveFile[]> {
+    const client = await this.#accountClient(accountId);
+    const files = await client.list(`${appProperty(APP_KEY, 'labEvents')} or ${appProperty(APP_KEY, LAB_RESET)}`, FILE_FIELDS);
+    if (files.some(file => !file.ownedByMe || file.shared || file.trashed
+      || !['labEvents', LAB_RESET].includes(file.appProperties?.[APP_KEY] ?? ''))) {
+      throw new Error('El laboratorio solo carga archivos privados de esta cuenta.');
+    }
+    return files;
+  }
+
   async installLabPackages(
     accountId: string, packages: LabPackageUpload[], prepare: () => Promise<void>, progress: (completed: number) => void,
   ): Promise<void> {
@@ -474,12 +485,14 @@ export class DriveLibrary {
     const folderId = await this.#ensureFolder(client);
     const folder = await client.json<DriveFile>(filePath(folderId), { fields: 'id,ownedByMe,shared,trashed' });
     if (!folder.ownedByMe || folder.shared || folder.trashed) throw new Error('La carpeta de TAI Hub debe ser privada y de tu propiedad.');
-    for (const { file, editionKey, sha256 } of packages) {
-      if (installed.has(editionKey)) continue;
+    const remaining = packages.filter(pack => !installed.has(pack.editionKey));
+    let ids: string[] = [];
+    for (const [index, { file, editionKey, sha256 }] of remaining.entries()) {
+      if (index % 100 === 0) ids = await client.generateIds(Math.min(100, remaining.length - index));
       if (file.size > DOWNLOAD_LIMIT) throw new Error('El paquete supera 32 MB.');
       const content = file.slice(0, file.size, JSON_MIME);
       const saved = await client.upload({ name: file.name, mimeType: JSON_MIME, parents: [folderId],
-        appProperties: { [APP_KEY]: 'labPackage', labEdition: editionKey, labSha256: sha256 } }, content);
+        appProperties: { [APP_KEY]: 'labPackage', labEdition: editionKey, labSha256: sha256 } }, content, undefined, undefined, false, ids[index % 100]);
       if (!saved.ownedByMe || saved.shared || saved.trashed || saved.appProperties?.[APP_KEY] !== 'labPackage'
         || saved.appProperties.labEdition !== editionKey || saved.appProperties.labSha256 !== sha256) {
         throw new Error('No se pudo verificar el archivo privado que devolvió Drive.');
@@ -531,11 +544,21 @@ export class DriveLibrary {
     };
   }
 
-  async appendLabEvents(accountId: string, value: unknown): Promise<DriveFile> {
+  async appendLabEvents(accountId: string, value: unknown, generation?: string): Promise<DriveFile> {
     const client = await this.#accountClient(accountId);
     const content = await jsonBlob(value);
     return client.upload({ name: 'TAI Hub · Laboratorio ' + crypto.randomUUID(), mimeType: JSON_MIME,
-      appProperties: { [APP_KEY]: 'labEvents' }, parents: [await this.#ensureFolder(client)] }, content);
+      appProperties: { [APP_KEY]: 'labEvents', ...(generation ? { labGeneration: generation } : {}) },
+      parents: [await this.#ensureFolder(client)] }, content);
+  }
+
+  async resetLabHistory(accountId: string): Promise<DriveFile> {
+    const client = await this.#accountClient(accountId);
+    const folderId = await this.#ensureFolder(client);
+    const folder = await client.json<DriveFile>(filePath(folderId), { fields: 'id,ownedByMe,shared,trashed' });
+    if (!folder.ownedByMe || folder.shared || folder.trashed) throw new Error('La carpeta de TAI Hub debe ser privada y de tu propiedad.');
+    return client.upload({ name: 'TAI Hub · Reinicio del laboratorio', mimeType: JSON_MIME,
+      appProperties: { [APP_KEY]: LAB_RESET }, parents: [folderId] }, await jsonBlob({ schema: 1 }));
   }
 
   async archiveLabEvents(accountId: string, files: Pick<DriveFile, 'id' | 'headRevisionId'>[]): Promise<void> {

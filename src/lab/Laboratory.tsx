@@ -13,7 +13,7 @@ import { cachePackages, cachedPackages } from './content-store'
 import { readPackageFiles } from './package-files'
 import { assistanceFor, gradeChoice } from './grading'
 import { draftHeads, exportHistory, mergeEvents, restoreHistory } from './history'
-import { draftWriteBuffer } from './draft-buffer'
+import { clearDraftBuffers, draftWriteBuffer } from './draft-buffer'
 import { ActiveTime } from './active-time'
 import { OfflineControls } from './OfflineControls'
 import { CodePanel } from './CodePanel'
@@ -30,11 +30,13 @@ import { GuidedSessionView } from './GuidedSessionView'
 import { sessionMinutes, sessionResume } from './guided'
 import { StudyNoteEditor } from './StudyNoteEditor'
 import { LearningCapture } from './learning-capture'
-import { semanticWriteBuffer } from './semantic-buffer'
+import { clearSemanticBuffers, semanticWriteBuffer } from './semantic-buffer'
+import { clearNoteBuffers } from './note-buffer'
+import { Dialog } from '../components/Dialog'
 import { LearningReading } from './LearningReading'
 import { LearningDashboard } from './LearningDashboard'
 import { diagnosticOrder, diagnosticTargets, InitialDiagnostic } from './InitialDiagnostic'
-import { ExamCatalog, ExamView } from './ExamView'
+import { clearExamBuffers, ExamCatalog, ExamView } from './ExamView'
 import { DEFAULT_LEARNING_POLICY, deriveLearning } from './learning'
 import { recommendLearning, type LearningDestination } from './recommendation'
 import './laboratory.css'
@@ -119,6 +121,14 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [installStatus, setInstallStatus] = useState('')
   const [skippedProposals, setSkippedProposals] = useState<string[]>([])
   const [showDiagnostic, setShowDiagnostic] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [resetNotice, setResetNotice] = useState(false)
+  const generationId = history.generation?.id
+  const [activeGeneration, setActiveGeneration] = useState(() => {
+    try { return sessionStorage.getItem('tai-lab-history-generation:' + accountId) ?? undefined }
+    catch { return undefined }
+  })
   const studyView = useRef<HTMLDivElement>(null)
   const diagnosticSummary = useRef<HTMLElement>(null)
   const focusDestination = useRef(false)
@@ -192,6 +202,24 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     },
   } : undefined
   useEffect(() => {
+    if (!loaded || activeGeneration === generationId) return
+    clearDraftBuffers(accountId)
+    clearSemanticBuffers(accountId)
+    clearNoteBuffers(accountId)
+    clearExamBuffers(accountId)
+    try {
+      const prefix = JSON.stringify(['tai-lab-activity', accountId]).slice(0, -1) + ','
+      for (const key of Object.keys(sessionStorage)) if (key.startsWith(prefix)) sessionStorage.removeItem(key)
+      sessionStorage.removeItem('tai-lab-location:' + accountId)
+      if (generationId) sessionStorage.setItem('tai-lab-history-generation:' + accountId, generationId)
+      else sessionStorage.removeItem('tai-lab-history-generation:' + accountId)
+    } catch { /* Account history remains reset in local storage and Drive. */ }
+    setSelected(undefined)
+    setSkippedProposals([])
+    setShowDiagnostic(false)
+    setActiveGeneration(generationId)
+  }, [accountId, loaded, activeGeneration, generationId])
+  useEffect(() => {
     if (!focusDestination.current) return
     focusDestination.current = false
     focusStudyHeading(studyView.current?.querySelector<HTMLElement>('[data-study-heading]'))
@@ -218,13 +246,13 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     return () => { alive = false; instance.close() }
   }, [library, accountId])
   useEffect(() => {
-    if (!sync || !connected) return
-    const refresh = () => { if (navigator.onLine) void sync.refresh().catch(e => setError(message(e))) }
+    if (!sync || !connected || !loaded) return
+    const refresh = () => { if (navigator.onLine) void sync.refresh().catch(() => {}) }
     refresh()
     const timer = setInterval(refresh, 60_000)
     window.addEventListener('online', refresh); window.addEventListener('focus', refresh)
     return () => { clearInterval(timer); window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh) }
-  }, [sync, connected])
+  }, [sync, connected, loaded])
   async function loadDrive() {
     setBusy(true); setError(''); setInstallStatus('Buscando paquetes en Drive…')
     try {
@@ -263,14 +291,24 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   }
   async function record(events: LabEvent[]) {
     if (!sync) throw new Error('El almacenamiento todavía no está listo.')
-    await sync.record(events)
-    if (connected && navigator.onLine) void sync.refresh().catch(e => setError(message(e)))
+    await sync.record(events, generationId ?? null)
+    if (connected && navigator.onLine) void sync.refresh().catch(() => {})
+  }
+  async function resetHistory() {
+    if (!sync || !connected || resetting) return
+    setResetting(true); setError(''); setResetNotice(false)
+    try {
+      await sync.reset()
+      setResetNotice(true)
+      setResetOpen(false)
+    } catch (failure) { setError(message(failure)) }
+    finally { setResetting(false) }
   }
   return <>
     <div className="lab-toolbar">
       <span role="status">{statusText[history.status]}{history.pendingIds.length > 0 && ` · ${history.pendingIds.length} cambios`}</span>
       {!currentLesson && !currentSession && !currentExam && !standalone && <button className="button" disabled={!connected || busy} onClick={() => void loadDrive()}><RefreshCw size={16} /> Cargar lecciones de Drive</button>}
-      <button className="button icon-button" aria-label="Sincronizar progreso" title="Sincronizar progreso" disabled={!sync || !connected} onClick={() => void sync?.refresh().catch(e => setError(message(e)))}><RefreshCw size={18} /></button>
+      <button className="button icon-button" aria-label="Sincronizar progreso" title="Sincronizar progreso" disabled={!sync || !connected} onClick={() => void sync?.refresh().catch(() => {})}><RefreshCw size={18} /></button>
       <details className="lab-tools"><summary>Opciones de estudio</summary><div>
         <button className="button" disabled={!sync || !loaded} onClick={() => download('laboratorio-progreso.json', exportHistory(accountId, history.events))}><Download size={16} /> Exportar progreso</button>
         <OfflineControls needsSql={packages.some(p => p.activities.some(a => a.kind === 'sql'))}
@@ -279,7 +317,8 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     </div>
     {!connected && <p>Copia local de tu biblioteca. Conecta Google Drive para verificar la cuenta y sincronizar.</p>}
     {(error || history.error) && <p className="banner error" role="alert">{error || history.error}</p>}
-    {installStatus && <p role="status">{installStatus}</p>}
+    {installStatus && (busy || !selected) && <p role="status">{installStatus}</p>}
+    {resetNotice && !selected && <p className="banner success" role="status">Historial del laboratorio reiniciado.</p>}
     <input ref={drivePackageInput} type="file" accept="application/json,.json" multiple hidden
       aria-label="Instalar paquetes privados en Drive" disabled={!loaded || !connected || busy} onChange={event => {
         const files = Array.from(event.currentTarget.files ?? [])
@@ -287,7 +326,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
         void installFiles(files, true)
       }} />
     <div ref={studyView}>
-    {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && (currentLesson || currentSession || currentExam || standalone) ? <>
+    {!loaded || activeGeneration !== generationId ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && (currentLesson || currentSession || currentExam || standalone) ? <>
       <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> {currentLesson ? 'Volver a las lecciones' : 'Volver al laboratorio'}</button>
       {currentExam ? <ExamView key={JSON.stringify([packageKey(currentPackage), currentExam.id])} pack={currentPackage} form={currentExam}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} />
@@ -377,9 +416,19 @@ function Workspace({ library, accountId, connected, openMaterial }: {
             await record(restoreHistory(accountId, await readText(file), history.events)); setError('')
           } catch (failure) { setError(message(failure)) }
         }} /></label>
+        <button className="button danger-text" disabled={!connected || !sync || busy} onClick={() => setResetOpen(true)}>Reiniciar historial</button>
       </details>
     </>}
     </div>
+    {resetOpen && <Dialog title="Reiniciar historial del laboratorio" onClose={() => { if (!resetting) setResetOpen(false) }}>
+      <p>Empieza de cero en los dispositivos que sincronizan esta cuenta. Las respuestas, los borradores, las notas y los exámenes anteriores quedan fuera del historial activo.</p>
+      <p>Si quieres conservar una copia, expórtala antes de reiniciar.</p>
+      {error && <p role="alert">{error}</p>}
+      <div className="lab-actions">
+        <button className="button" disabled={resetting} onClick={() => setResetOpen(false)}>Cancelar</button>
+        <button className="button danger" disabled={resetting} onClick={() => void resetHistory()}>{resetting ? 'Reiniciando…' : 'Empezar de cero'}</button>
+      </div>
+    </Dialog>}
   </>
 }
 
@@ -400,6 +449,7 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     return initialActivityId ? 'practice' : 'read'
   })
   const practice = useRef<HTMLElement>(null)
+  const explanation = useRef<HTMLElement>(null)
   const referenceId = useId()
   const [openReferenceFor, setOpenReferenceFor] = useState<string>()
   const [index, setIndex] = useState(() => {
@@ -409,9 +459,10 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     catch { return 0 }
   })
   useEffect(() => { try { sessionStorage.setItem(positionKey, String(index)) } catch { /* Answers still persist independently. */ } }, [index, positionKey])
-  function choosePane(next: 'read' | 'practice') {
+  function choosePane(next: 'read' | 'practice', moveFocus = false) {
     setPane(next)
     try { sessionStorage.setItem(positionKey + ':pane', next) } catch { /* Durable answers remain available. */ }
+    if (moveFocus) requestAnimationFrame(() => focusStudyHeading((next === 'practice' ? practice : explanation).current))
   }
   function chooseActivity(next: number) {
     setIndex(next)
@@ -434,7 +485,7 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
       <button aria-pressed={pane === 'practice'} onClick={() => choosePane('practice')}>Practicar <ArrowRight size={17} /></button>
     </div>}
     <div className="lab-session-columns">
-      {(!mobile || pane === 'read') && <section aria-label="Explicación y ejemplo" className="lab-explanation">
+      {(!mobile || pane === 'read') && <section ref={explanation} tabIndex={-1} aria-label="Explicación y ejemplo" className="lab-explanation">
         {!mobile && !isPractice && <div className="lab-reference-note">
           <h3><BookOpen size={18} aria-hidden="true" /> Explicación</h3>
           {!desktopReference && <p>Intenta responder de memoria. Si abres la explicación antes de comprobar tu respuesta, contará como apoyo de lectura.</p>}
@@ -447,12 +498,15 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
           {readingVisible && <LearningReading pack={pack} lesson={lesson} accountId={accountId} deviceId={deviceId} events={events} record={record}>
             {lesson.explanation.map((s, i) => <section key={i}><h3>{s.title}</h3><StudyText text={s.body} /></section>)}
             <div className="lab-example"><h3>Ejemplo resuelto</h3>{lesson.workedExample.map((s, i) => <section key={i}><h4>{s.title}</h4><StudyText text={s.body} /></section>)}</div>
-            <button className="text-link" onClick={() => { choosePane('practice'); openMaterial(lesson.material.resourceId, lesson.material.sectionId) }}>Consultar material completo</button>
-            {mobile && <button className="button primary lab-start-practice" onClick={() => choosePane('practice')}>Empezar a practicar <ArrowRight size={17} /></button>}
+            <button className="button lab-material-link" onClick={event => {
+              event.currentTarget.focus({ preventScroll: true })
+              openMaterial(lesson.material.resourceId, lesson.material.sectionId)
+            }}><BookOpen size={17} aria-hidden="true" /> Consultar material completo</button>
+            {mobile && <button className="button primary lab-start-practice" onClick={() => choosePane('practice', true)}>Empezar a practicar <ArrowRight size={17} /></button>}
           </LearningReading>}
         </div>
       </section>}
-      {(!mobile || pane === 'practice') && <section ref={practice} className="lab-practice" aria-label="Práctica">
+      {(!mobile || pane === 'practice') && <section ref={practice} tabIndex={-1} className="lab-practice" aria-label="Práctica">
         <div className="lab-steps" aria-label="Actividades de la lección">{activities.map((a, i) => <button className="button" key={a.id}
           title={a.title + (answered.has(a.id) ? ' · Respondida' : '')} aria-current={index === i ? 'step' : undefined}
           onClick={() => chooseActivity(i)}>{i + 1}{answered.has(a.id) && <Check size={11} aria-hidden="true" />}</button>)}</div>
