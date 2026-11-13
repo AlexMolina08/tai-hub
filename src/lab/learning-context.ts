@@ -10,6 +10,7 @@ function requireValue(condition: unknown, message: string): asserts condition { 
 const reciprocal = (e: LabEvent) => e.kind === 'exposure' || e.kind === 'assistance' || e.kind === 'ipv4-prediction'
   || e.kind === 'attempt' && !e.ipv4
 const refKeys = ['packageId', 'packageVersion', 'activityId', 'activityVersion', 'attemptGroupId'] as const
+const learningFormatters = new Map<string, Intl.DateTimeFormat>()
 export const sameLearningTarget = (a: LearningTarget, b: LearningTarget) => a.kind === b.kind && (a.kind === 'activity' && b.kind === 'activity'
   ? refKeys.every(k => a[k] === b[k]) : a.kind === 'lesson' && b.kind === 'lesson'
     && ['packageId', 'packageVersion', 'lessonId', 'lessonVersion'].every(k => a[k as keyof typeof a] === b[k as keyof typeof b]))
@@ -19,8 +20,14 @@ export function captureLearningClock(createdAt: string, clockSessionId: string, 
   zone = Intl.DateTimeFormat().resolvedOptions().timeZone): LearningClock {
   const time = Date.parse(createdAt)
   requireValue(Number.isFinite(time) && text(clockSessionId) && Number.isFinite(monotonicMs) && monotonicMs >= 0, 'Reloj de aprendizaje inválido.')
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(time)
+  let formatter = learningFormatters.get(zone)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+    if (learningFormatters.size >= 32) learningFormatters.clear()
+    learningFormatters.set(zone, formatter)
+  }
+  const parts = formatter.formatToParts(time)
   const p = Object.fromEntries(parts.map(part => [part.type, part.value]))
   const local = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), Number(p.second))
   return { day: `${p.year}-${p.month}-${p.day}`, zone, offsetMinutes: (local - Math.floor(time / 1000) * 1000) / 60000,
@@ -110,7 +117,7 @@ export function validateLearningHistory(events: readonly LabEvent[]) {
     }
   }
   for (const f of events) {
-    validateLearningEvent(f)
+    if (f.kind !== 'learning-context') validateLearningEvent(f)
     if (!('learningContextId' in f) || !f.learningContextId) continue
     const c = all.get(f.learningContextId)
     if (!c) { missing.add(f.learningContextId); continue }
