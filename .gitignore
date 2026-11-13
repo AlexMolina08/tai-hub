@@ -165,3 +165,9 @@ vite.config.ts.timestamp-*
 *.mkv
 *.m4v
 *.avi
+
+# Local configuration and staged static assets for the optional OAuth service
+/server/wrangler.local.jsonc
+/server/.dev.vars*
+/server/.wrangler/
+/server/assets/

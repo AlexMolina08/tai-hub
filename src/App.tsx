@@ -24,9 +24,23 @@ const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 const safari = /Version\/[\d.]+.*Safari\//.test(navigator.userAgent)
 const useRedirect = ios || safari
+const managedDrive = import.meta.env.VITE_DRIVE_SESSION === 'managed'
+const managedLoginError = (() => {
+  if (!managedDrive) return ''
+  const url = new URL(window.location.href)
+  const result = url.searchParams.get('drive')
+  if (!result) return ''
+  url.searchParams.delete('drive')
+  window.history.replaceState(window.history.state, '', url.href)
+  if (result === 'connected') return ''
+  if (result === 'account') return 'Esta cuenta de Google no tiene acceso a la biblioteca.'
+  if (result === 'cancelled') return 'Se canceló la conexión con Google.'
+  return 'Google no pudo completar la conexión. Vuelve a intentarlo.'
+})()
 const session = new GoogleSession(clientId, {
   redirectUri: new URL(import.meta.env.BASE_URL, window.location.origin).href,
   useRedirect,
+  sessionPath: managedDrive ? import.meta.env.BASE_URL + 'session/' : undefined,
 })
 const library = new DriveLibrary(session)
 const emptyStudy: StudyState = { favorites: {}, positions: {}, annotations: {} }
@@ -96,7 +110,7 @@ export default function App() {
   const [indexRun, setIndexRun] = useState(0)
   const [network, setNetwork] = useState(navigator.onLine)
   const [view, setView] = useState<View>(() => {
-    if (useRedirect) {
+    if (useRedirect || managedDrive) {
       try {
         const remembered = session.localAccountId()
         if (remembered && sessionStorage.getItem(labViewKey) === remembered) return { page: 'lab' }
@@ -116,7 +130,7 @@ export default function App() {
   const [revisions, setRevisions] = useState<RevisionList>({})
   const [working, setWorking] = useState(false)
   const [notice, setNotice] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(managedLoginError)
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('tai-theme') || 'system' }
     catch { return 'system' }
@@ -142,7 +156,21 @@ export default function App() {
     if (clientId && (useRedirect || !session.resume())) void session.prepare()
   }, [])
   useEffect(() => {
-    if (!useRedirect) return
+    if (!managedDrive) return
+    const renew = () => {
+      if (document.visibilityState === 'visible') void session.renew()
+    }
+    const timer = window.setInterval(renew, 30_000)
+    document.addEventListener('visibilitychange', renew)
+    window.addEventListener('online', renew)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', renew)
+      window.removeEventListener('online', renew)
+    }
+  }, [])
+  useEffect(() => {
+    if (!useRedirect && !managedDrive) return
     try {
       const remembered = accountId ?? session.localAccountId()
       if (view.page === 'lab' && remembered) sessionStorage.setItem(labViewKey, remembered)
@@ -178,6 +206,7 @@ export default function App() {
   useLayoutEffect(() => {
     if (!accountId) return
     if (view.page !== 'resource' || currentVersion === undefined) {
+      if (restoreReader.current && view.page === 'home') return
       rememberReader()
       return
     }
@@ -324,7 +353,7 @@ export default function App() {
     if (auth.status === 'connected' && network && !connected) void refresh()
     if (auth.status === 'ready' && (verifiedAccount.current || lastCatalogue.current) && !session.localAccountId()) clearPrivate()
     if (!useRedirect && auth.status === 'expired' && !verifiedAccount.current && view.page !== 'lab') session.resume()
-  }, [auth.status, connected, network, refresh, clearPrivate, view.page])
+  }, [auth, connected, network, refresh, clearPrivate, view.page])
   useEffect(() => {
     if (!network || auth.status !== 'connected' || catalogueRetry === 0) return
     const timer = setTimeout(() => { void refresh() }, Math.min(60_000, 2_000 * 2 ** (catalogueRetry - 1)))
@@ -742,7 +771,9 @@ export default function App() {
             <button className="button" onClick={() => setModal({ kind: 'import' })}><Upload size={16} /> Importar carpeta</button>
           </> : <button className="button primary" disabled={!clientId || !network || auth.status === 'loading' || auth.status === 'connecting' || working}
             onClick={() => auth.status === 'connected' ? void refresh() : connect()}><Cloud size={17} /> {auth.status === 'connected' ? 'Reintentar' : 'Conectar Drive'}</button>}
-            {(account || session.localAccountId() || auth.status === 'connected') && <button className="button" onClick={() => { session.disconnect(); clearPrivate() }}><LogOut size={16} /> Desconectar</button>}
+            {(account || session.localAccountId() || auth.status === 'connected') && <button className="button" onClick={() => {
+              void session.signOut().then(clearPrivate).catch(showError)
+            }}><LogOut size={16} /> Desconectar</button>}
           </div>
         </section>
         {account && <section><h3>Índice de búsqueda</h3><p>{indexStats.indexed} PDF indexados · {indexStats['no-text']} sin texto extraíble · {indexStats.pending} pendientes</p>

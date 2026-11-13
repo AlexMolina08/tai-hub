@@ -1,0 +1,17 @@
+{
+  "name": "tai-hub",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-13",
+  "preview_urls": false,
+  "assets": {
+    "directory": "./assets",
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/tai-hub/session/*"]
+  },
+  "vars": {
+    "APP_ORIGIN": "https://tai-hub.YOUR-SUBDOMAIN.workers.dev"
+  },
+  "d1_databases": [
+    { "binding": "SESSIONS", "database_name": "tai-hub-sessions", "database_id": "YOUR-D1-ID" }
+  ]
+}

@@ -25,7 +25,7 @@ type GoogleOAuth = {
 };
 
 type Access = { token: string; signal: AbortSignal };
-type SessionOptions = { redirectUri?: string; useRedirect?: boolean };
+type SessionOptions = { redirectUri?: string; useRedirect?: boolean; sessionPath?: string };
 type RedirectRequest = {
   state: string; expiresAt: number; redirectUri: string; clientId: string;
   generation?: string; returnTo?: string;
@@ -102,6 +102,10 @@ export class GoogleSession {
   #clientId: string;
   #redirectUri?: string;
   #useRedirect: boolean;
+  #sessionPath?: string;
+  #sessionRequest?: AbortController;
+  #renewAt = 0;
+  #lastRejectedAt?: number;
   #google?: GoogleOAuth;
   #snapshot: AuthSnapshot = { status: 'loading' };
   #listeners = new Set<() => void>();
@@ -115,10 +119,11 @@ export class GoogleSession {
   #redirectReturned = false;
   #returnTo?: string;
 
-  constructor(clientId: string, { redirectUri, useRedirect = false }: SessionOptions = {}) {
+  constructor(clientId: string, { redirectUri, useRedirect = false, sessionPath }: SessionOptions = {}) {
     this.#clientId = clientId.trim();
     this.#redirectUri = redirectUri;
     this.#useRedirect = useRedirect;
+    this.#sessionPath = sessionPath;
     if (typeof window !== 'undefined') {
       this.#consumeRedirect();
       this.#browserAccount = readBrowserAccount(this.#clientId);
@@ -141,6 +146,11 @@ export class GoogleSession {
   };
 
   async prepare(): Promise<void> {
+    if (this.#sessionPath) {
+      if (this.#snapshot.status === 'loading') this.#publish('ready');
+      await this.renew();
+      return;
+    }
     if (this.#google) return;
     if (!this.#validClient()) {
       this.#publish('error', MISSING_CLIENT);
@@ -159,7 +169,7 @@ export class GoogleSession {
   }
 
   resume(): boolean {
-    if (!this.#validClient() || !this.#browserAccount || this.#credential || this.#redirectReturned
+    if (this.#sessionPath || !this.#validClient() || !this.#browserAccount || this.#credential || this.#redirectReturned
       || this.#cancelConnect || this.#cancelRedirect || !navigator.onLine || !this.#callbackUrl()) return false;
     try {
       if (Number(window.sessionStorage.getItem(QUIET_RETRY)) > Date.now()) return false;
@@ -179,6 +189,7 @@ export class GoogleSession {
   }
 
   connect({ sameTab = this.#useRedirect || !this.#google, returnTo }: { sameTab?: boolean; returnTo?: string } = {}): Promise<void> {
+    if (this.#sessionPath) return this.#startManagedSession();
     if (!this.#validClient()) return Promise.reject(new Error(MISSING_CLIENT));
     if (this.#cancelConnect || this.#cancelRedirect) return Promise.reject(new Error('Ya hay una autorización de Google en curso.'));
     if (!sameTab && !this.#google) return Promise.reject(new Error('El acceso de Google aún no está disponible.'));
@@ -244,10 +255,69 @@ export class GoogleSession {
     });
   }
 
+  async #startManagedSession(): Promise<void> {
+    if (this.#snapshot.status === 'connecting') return;
+    this.#sessionRequest?.abort();
+    const request = new AbortController();
+    this.#sessionRequest = request;
+    this.#publish('connecting');
+    try {
+      const response = await this.#managedRequest('start', request);
+      const { url } = await response.json();
+      const destination = new URL(url);
+      if (!response.ok || destination.origin !== 'https://accounts.google.com'
+        || destination.pathname !== '/o/oauth2/v2/auth') throw new Error(FAILED);
+      request.signal.throwIfAborted();
+      window.location.assign(destination.href);
+      this.#publish('ready');
+    } catch (error) {
+      if (request.signal.aborted) return;
+      this.#publish('error', FAILED);
+      throw error;
+    } finally {
+      if (this.#sessionRequest === request) this.#sessionRequest = undefined;
+    }
+  }
+
+  #managedRequest(action: string, request: AbortController): Promise<Response> {
+    const address = new URL(this.#sessionPath + action, window.location.origin);
+    if (address.origin !== window.location.origin) throw new Error(FAILED);
+    return fetch(address, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      signal: AbortSignal.any([request.signal, AbortSignal.timeout(8_000)]) });
+  }
+
+  async renew(): Promise<void> {
+    if (!this.#sessionPath || this.#sessionRequest || !navigator.onLine || Date.now() < this.#renewAt) return;
+    const request = new AbortController();
+    this.#sessionRequest = request;
+    this.#renewAt = Date.now() + 15_000;
+    try {
+      const response = await this.#managedRequest('token', request);
+      request.signal.throwIfAborted();
+      if (response.status === 401) {
+        this.#clearAccess();
+        this.#renewAt = Infinity;
+        this.#publish(this.#browserAccount ? 'expired' : 'ready');
+        return;
+      }
+      if (!response.ok) throw new Error(FAILED);
+      const { token, expiresIn, accountId } = await response.json();
+      request.signal.throwIfAborted();
+      if (typeof token !== 'string' || !TOKEN_PATTERN.test(token) || !Number.isSafeInteger(expiresIn)
+        || expiresIn <= 0 || typeof accountId !== 'string' || !accountId) throw new Error(FAILED);
+      this.#expectedAccount = accountId;
+      this.#acceptToken(token, expiresIn);
+    } catch {
+      if (!request.signal.aborted && !this.#credential) this.#publish(this.#browserAccount ? 'expired' : 'ready');
+    } finally {
+      if (this.#sessionRequest === request) this.#sessionRequest = undefined;
+    }
+  }
+
   rememberAccount(email?: string, accountId?: string): void {
     const previous = accountId && readBrowserAccount(this.#clientId);
-    if (this.#expectedAccount && (accountId !== this.#expectedAccount || !previous
-      || previous.generation !== this.#browserAccount?.generation)) {
+    if (this.#expectedAccount && (accountId !== this.#expectedAccount || (!this.#sessionPath
+      && (!previous || previous.generation !== this.#browserAccount?.generation)))) {
       this.expire();
       throw new SessionExpiredError();
     }
@@ -281,6 +351,29 @@ export class GoogleSession {
     this.#clearAccess();
     this.#expectedAccount = undefined;
     if (!this.#cancelConnect && !this.#cancelRedirect) this.#publish('expired', RECONNECT);
+    if (this.#sessionPath) {
+      const now = Date.now();
+      if (this.#lastRejectedAt === undefined || now - this.#lastRejectedAt >= 15_000) {
+        this.#lastRejectedAt = now;
+        this.#renewAt = 0;
+        void this.renew();
+      }
+    }
+  }
+
+  async signOut(): Promise<void> {
+    if (this.#sessionPath) {
+      this.#sessionRequest?.abort();
+      const request = new AbortController();
+      this.#sessionRequest = request;
+      try {
+        const response = await this.#managedRequest('logout', request);
+        if (!response.ok) throw new Error('No se pudo cerrar la sesión de Drive. Vuelve a intentarlo.');
+      } finally {
+        if (this.#sessionRequest === request) this.#sessionRequest = undefined;
+      }
+    }
+    this.disconnect();
   }
 
   disconnect(): void {
@@ -294,6 +387,9 @@ export class GoogleSession {
   }
 
   #dropSession(): void {
+    this.#sessionRequest?.abort();
+    this.#sessionRequest = undefined;
+    if (this.#sessionPath) this.#renewAt = Infinity;
     this.#cancelConnect?.();
     this.#cancelRedirect?.();
     this.#clearAccess();
@@ -468,6 +564,7 @@ export class GoogleSession {
       expiresAt: Date.now() + lifetime,
       controller: new AbortController(),
     };
+    if (this.#sessionPath) this.#renewAt = Date.now() + Math.max(1000, lifetime - 45_000);
     this.#expiryTimer = window.setTimeout(() => this.expire(), lifetime);
     this.#publish('connected');
   }
