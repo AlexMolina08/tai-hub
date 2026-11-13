@@ -85,6 +85,26 @@ test('reads private HTML with navigation, selectable text and contained tables; 
     const top = element.getBoundingClientRect().top
     return top >= -2 && top < doc.documentElement.clientHeight && (doc.scrollingElement?.scrollTop ?? 0) > 0
   })).toBe(true)
+  // Finish the first jump before recording the reading point for the index round trip.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await firstAnchor.click()
+  const readingOffset = await frame.locator('body').evaluate(() => {
+    const element = document.scrollingElement!
+    window.scrollTo({ top: (element.scrollHeight - element.clientHeight) / 2, behavior: 'instant' })
+    return window.scrollY
+  })
+  await page.getByRole('button', { name: 'Índice', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Volver a la lectura', exact: true })).toBeVisible()
+  await expect(firstAnchor).toBeInViewport()
+  await page.getByRole('button', { name: 'Volver a la lectura', exact: true }).click()
+  await expect.poll(() => frame.locator('body').evaluate(() => window.scrollY)).toBeCloseTo(readingOffset, 0)
+  if (page.viewportSize()!.width <= 600) {
+    const toolbar = page.locator('.html-reader-toolbar')
+    const bounds = (await toolbar.boundingBox())!
+    expect(bounds.height).toBeLessThan(64)
+    expect((await page.getByRole('button', { name: 'Descargar HTML' }).boundingBox())!.width).toBeGreaterThanOrEqual(44)
+    expect((await page.locator('.html-reader > iframe').boundingBox())!.height).toBeGreaterThan(page.viewportSize()!.height * 0.85)
+  }
   expect(await page.locator('iframe').getAttribute('sandbox')).not.toContain('allow-same-origin')
   if (!process.env.TAI_PRIVATE_HTML) {
     await frame.locator('body').evaluate(body => {

@@ -567,7 +567,7 @@ export default function App() {
   const inapLabel = official.unread ? 'Convocatorias INAP, novedades disponibles' : 'Convocatorias INAP'
   const officialView = view.page === 'inap'
 
-  return <div className="app-shell">
+  return <div className={view.page === 'lab' ? 'app-shell app-shell-lab' : 'app-shell'}>
     <a className="skip-link" href="#main">Saltar al contenido</a>
     <span className="sr-only" role="status">{official.unread && 'Hay novedades de INAP y BOE.'}</span>
     {drawer && <button className="scrim" aria-label="Cerrar navegación" onClick={() => setDrawer(false)} />}
@@ -616,8 +616,8 @@ export default function App() {
       </header>
 
       <main className={current ? 'content content-reader' : 'content'} id="main" tabIndex={-1}>
-        {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && !officialView && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
-        {!officialView && (account || labAccountId) && !connected && <div className="banner" role="status"><CloudOff size={18} />
+        {!network && view.page !== 'lab' && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && !officialView && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
+        {!officialView && view.page !== 'lab' && account && !connected && <div className="banner" role="status"><CloudOff size={18} />
           <span>{recoveringDrive || auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Reconecta Drive para actualizar la biblioteca y sincronizar.'}</span>
           <button className="button" disabled={!network || auth.status === 'loading' || auth.status === 'connecting' || working}
             onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{retryLibrary || recoveringDrive ? 'Reintentar' : 'Reconectar'}</button></div>}
@@ -666,6 +666,8 @@ export default function App() {
             <div className="shortcut-grid">{mainNav.slice(1).map(({ page, label, icon: Icon }) => <button key={page} className="shortcut" onClick={() => navigate({ page })}><Icon size={19} /> {label}<ChevronRight size={16} /></button>)}</div>
           </section>
         </> : view.page === 'lab' ? <Suspense fallback={<p>Cargando laboratorio…</p>}><Laboratory library={library} accountId={labAccountId} connected={connected}
+          canConnect={!!clientId && network && !working && auth.status !== 'loading' && auth.status !== 'connecting'}
+          reconnect={() => auth.status === 'connected' ? void refresh() : connect()}
           openMaterial={(id, sectionId) => {
             const resource = resources.find(r => r.id === id || (id.startsWith('import:') && r.importKey === id.slice(7)))
             if (resource) setMaterial({ resource, sectionId })
@@ -725,6 +727,7 @@ export default function App() {
 
       <nav className="mobile-nav" aria-label="Accesos principales">
         {mainNav.map(({ page, label, icon: Icon }) => <button key={page} aria-current={view.page === page ? 'page' : undefined} onClick={() => navigate({ page })}><Icon size={19} />{label}</button>)}
+        <button aria-current={view.page === 'lab' ? 'page' : undefined} aria-label="Abrir Laboratorio TAI" onClick={() => navigate({ page: 'lab' })}><BookOpen size={19} />Laboratorio</button>
         <button aria-current={officialView ? 'page' : undefined} aria-label={inapLabel} onClick={() => navigate({ page: 'inap' })}>
           <InapIcon unread={official.unread} /> INAP
         </button>
@@ -739,7 +742,7 @@ export default function App() {
           onPosition={position => markOpened(material.resource, position)} apply={apply}
           reconnect={() => connect()} download={() => library.download(material.resource)} />
         : <ResourceView resource={material.resource} library={library} connected={connected} sectionId={material.sectionId}
-          download={() => download(material.resource)} inDialog />}
+          download={() => download(material.resource)} closeDialog={() => setMaterial(undefined)} />}
     </Dialog>}
 
     {modal && <Dialog key={modal.kind} title={({

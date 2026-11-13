@@ -209,27 +209,7 @@ export default function PdfReader({
     document.documentElement.classList.add('pdf-reading-active')
     toggle?.focus({ preventScroll: true })
 
-    function handleKeys(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !event.defaultPrevented) {
-        event.preventDefault()
-        setReadingMode(false)
-      }
-      if (event.key !== 'Tab') return
-      const controls = Array.from(surface.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
-      )).filter(element => element.getClientRects().length)
-      const first = controls[0]
-      const last = controls.at(-1)
-      if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
-        event.preventDefault()
-        const next = event.shiftKey ? last : first
-        next?.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeys)
     return () => {
-      document.removeEventListener('keydown', handleKeys)
       for (const element of inactive) element.inert = false
       document.documentElement.classList.remove('pdf-reading-active')
     }
@@ -296,14 +276,29 @@ export default function PdfReader({
 
   function handleReaderKeys(event: ReactKeyboardEvent<HTMLElement>) {
     if (event.defaultPrevented || event.repeat) return
-    if (event.key === 'Escape' && (showSearch || showNotes)) {
+    if (event.key === 'Escape' && (showSearch || showNotes || readingMode)) {
       event.preventDefault()
       if (showSearch) {
         setShowSearch(false)
         searchToggle.current?.focus({ preventScroll: true })
-      } else {
+      } else if (showNotes) {
         setShowNotes(false)
         notesToggle.current?.focus({ preventScroll: true })
+      } else {
+        setReadingMode(false)
+      }
+      return
+    }
+    if (readingMode && event.key === 'Tab') {
+      const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+      )).filter(element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+      const first = controls[0]
+      const last = controls.at(-1)
+      if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
+        event.preventDefault()
+        const next = event.shiftKey ? last : first
+        next?.focus()
       }
       return
     }
@@ -455,9 +450,13 @@ export default function PdfReader({
     role={readingMode ? 'dialog' : undefined} aria-modal={readingMode || undefined}
     aria-label={readingMode ? 'Modo lectura PDF' : 'Lector PDF'} onKeyDown={handleReaderKeys}>
     <div className="pdf-toolbar">
-      <div className="pdf-tools" role="group" aria-label="Navegación de páginas">
+      <div className="pdf-tools pdf-tools-pages" role="group" aria-label="Navegación de páginas">
         <button type="button" aria-label="Página anterior" disabled={!pdf || page <= 1} onClick={() => jump(page - 1)}><ChevronLeft /></button>
-        <form className="pdf-page-form" onSubmit={event => { event.preventDefault(); jump(pageInput ? Number(pageInput) : page) }}>
+        <form className="pdf-page-form" onSubmit={event => {
+          event.preventDefault()
+          jump(pageInput ? Number(pageInput) : page)
+          scroll.current?.focus({ preventScroll: true })
+        }}>
           <input aria-label="Número de página" inputMode="numeric" pattern="[0-9]*" value={pageInput} disabled={!pdf}
             onChange={event => setPageInput(event.target.value)} onKeyDown={event => {
               if (event.key === 'Escape' && pageInput !== String(page)) {

@@ -178,6 +178,20 @@ describe('Same-tab Google OAuth', () => {
     expect(location.assign).toHaveBeenCalledTimes(1);
   });
 
+  it('accepts a valid OAuth return after the browser has spent eight seconds leaving the page', async () => {
+    vi.useFakeTimers();
+    const { location } = mockRedirectBrowser();
+    const options = { redirectUri: CALLBACK, useRedirect: true };
+    const session = newSession(options);
+    await session.connect();
+    const state = new URL(location.assign.mock.calls[0][0]).searchParams.get('state')!;
+
+    await vi.advanceTimersByTimeAsync(9_000);
+    expect(session.snapshot().status).toBe('error');
+    returnedToken(location, state);
+    expect(newSession(options).access().token).toBe(TEST_TOKEN);
+  });
+
   it.each([
     ['incorrect state', { state: 'unexpected' }],
     ['wrong token type', { token_type: 'Basic' }],

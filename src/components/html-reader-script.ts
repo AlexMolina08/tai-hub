@@ -1,12 +1,36 @@
 export const readerScript = `
+const contents = [...document.querySelectorAll('nav')].find(nav => nav.querySelector('a[href^="#"]'));
+let returnToReading = null;
+function tellIndexState() {
+  if (contents) parent.postMessage({type:'tai-study-index-state', canReturn: returnToReading !== null}, '*');
+}
+function toggleIndex() {
+  if (!contents) return;
+  if (returnToReading !== null) {
+    window.scrollTo({top: returnToReading, behavior:'instant'});
+    returnToReading = null;
+  } else {
+    returnToReading = window.scrollY;
+    const details = contents.querySelector('details');
+    if (details) details.open = true;
+    const focus = contents.querySelector('summary, a[href^="#"]');
+    focus?.focus({preventScroll:true});
+    window.scrollTo({top: window.scrollY + contents.getBoundingClientRect().top, behavior:'instant'});
+  }
+  tellIndexState();
+}
 function goToSection(id, behavior) {
   const section = document.getElementById(id);
   if (section) window.scrollTo({top: window.scrollY + section.getBoundingClientRect().top, behavior});
 }
 addEventListener('message', event => {
-  if (event.source !== parent || event.data?.type !== 'tai-study-section' || typeof event.data.id !== 'string' || event.data.id.length > 200) return;
-  goToSection(event.data.id, 'instant');
+  if (event.source !== parent) return;
+  if (event.data?.type === 'tai-study-index') toggleIndex();
+  if (event.data?.type === 'tai-study-section' && typeof event.data.id === 'string' && event.data.id.length <= 200) {
+    goToSection(event.data.id, 'instant');
+  }
 });
+tellIndexState();
 document.addEventListener('click', event => {
   const anchor = event.target.closest('a');
   if (!anchor) return;
@@ -15,7 +39,9 @@ document.addEventListener('click', event => {
     event.preventDefault();
     let id = href.slice(1);
     try { id = decodeURIComponent(id); } catch {}
-    goToSection(id, 'smooth');
+    returnToReading = null;
+    tellIndexState();
+    goToSection(id, matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth');
   }
 });
 document.addEventListener('keydown', event => {

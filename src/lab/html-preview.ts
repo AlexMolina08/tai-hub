@@ -20,11 +20,17 @@ export function previewDocument(html: string, css: string): string {
 }
 
 /** The helper measures real DOM/CSS; expected answers remain in the parent and are never evaluated as code. */
-export function inspectHtml(frame: HTMLIFrameElement, source: { html: string; css: string }, width: number,
+export function inspectHtml(container: HTMLElement, source: { html: string; css: string }, width: number,
   checks: HtmlCheck[], signal?: AbortSignal): Promise<(string | null)[]> {
   const documentSource = previewDocument(source.html, source.css)
   signal?.throwIfAborted()
   return new Promise((resolve, reject) => {
+    const frame = document.createElement('iframe')
+    frame.title = 'Resultado HTML y CSS'
+    frame.referrerPolicy = 'no-referrer'
+    frame.setAttribute('sandbox', 'allow-scripts')
+    frame.style.width = width + 'px'
+    frame.srcdoc = documentSource
     const token = crypto.randomUUID()
     let finished = false
     const finish = (error?: Error, values?: (string | null)[]) => {
@@ -46,6 +52,7 @@ export function inspectHtml(frame: HTMLIFrameElement, source: { html: string; cs
       } else if (event.data.kind === 'html-error' && event.data.token === token) finish(new Error('Un selector de esta actividad no es válido.'))
     }
     window.addEventListener('message', receive); signal?.addEventListener('abort', abort, { once: true })
-    frame.style.width = width + 'px'; frame.setAttribute('sandbox', 'allow-scripts'); frame.srcdoc = documentSource
+    // Navigating a connected iframe adds entries to the browser's joint session history.
+    container.replaceChildren(frame)
   })
 }

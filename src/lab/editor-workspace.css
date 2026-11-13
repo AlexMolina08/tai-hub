@@ -1,0 +1,132 @@
+.lab-editor-workspace {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  margin: 1rem 0 0;
+  background: transparent;
+  color: var(--text);
+  container-type: inline-size;
+}
+.lab-editor-workspace:not(:modal) { position: static; overflow: visible; }
+.lab-editor-workspace:modal {
+  position: fixed;
+  inset: 0;
+  width: min(100% - 2rem, 76rem);
+  max-height: min(90dvh, var(--editor-viewport-height, 90dvh));
+  margin: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overscroll-behavior: contain;
+  scroll-padding-block: .7rem;
+}
+.lab-editor-workspace::backdrop { background: #1719269c; }
+.lab-editor-inner { min-width: 0; }
+.lab-editor-workspace:modal .lab-editor-inner { padding: clamp(.8rem, 2.5vw, 1.6rem); }
+.lab-editor-header, .lab-editor-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .25rem .75rem;
+  margin-bottom: .5rem;
+}
+.lab-editor-workspace h4 { margin: 0; font-size: .95rem; }
+.lab-editor-workspace summary { min-height: 44px; }
+.lab-editor-workspace .lab-editor-prompt { margin-bottom: .5rem; }
+.lab-editor-prompt > :last-child { margin-bottom: .65rem; }
+.lab-editor-layout, .lab-editor-fields { min-width: 0; }
+.lab-editor-fields label {
+  display: block;
+  margin: .65rem 0 .4rem;
+  font-size: .875rem;
+  font-weight: 600;
+}
+.lab-editor-workspace textarea {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  min-height: 8rem;
+  padding: .75rem;
+  border-radius: 10px;
+  background: var(--bg);
+  font: 1rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  tab-size: 2;
+  resize: vertical;
+}
+.lab-editor-workspace:modal textarea { height: clamp(10rem, 49dvh, 31rem); }
+.lab-editor-workspace .lab-actions { margin: .75rem 0; }
+.lab-editor-reset { margin-top: .35rem; }
+.lab-editor-workspace > .lab-editor-inner [role="status"]:empty { display: none; }
+.lab-editor-output { min-width: 0; margin-top: 1rem; }
+.lab-editor-output pre { margin: 0; }
+.lab-editor-output .lab-sql-table {
+  max-height: 22rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: auto;
+  overscroll-behavior-inline: contain;
+}
+.lab-editor-output .lab-sql-table p { padding: .5rem .65rem; color: var(--muted); }
+.lab-editor-result-dialog .lab-sql-table { max-height: none; }
+.lab-editor-result-dialog pre { max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lab-editor-pane-tabs { display: none; }
+.lab-html-preview-controls { margin-bottom: .7rem; }
+.lab-html-preview-controls label { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; font-size: .875rem; }
+.lab-html-preview-controls select { width: auto; margin: 0; }
+.lab-editor-preview-pane { min-width: 0; }
+.lab-editor-preview-pane iframe { width: 100%; }
+
+@container (min-width: 53rem) {
+  .lab-editor-layout:has(.lab-editor-output, .lab-editor-preview-pane) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.4rem;
+  }
+  .lab-editor-layout .lab-editor-output { margin-top: .65rem; }
+}
+
+@container (max-width: 38rem) {
+  .lab-editor-pane-tabs { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .lab-editor-pane-tabs .button { flex: 1 0 auto; }
+  .lab-editor-pane-tabs [aria-pressed="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .lab-editor-html [data-pane-active="false"]:not(.lab-editor-preview-pane) { display: none; }
+  /* Keep the iframe laid out at its test width even when the preview tab is closed. */
+  .lab-editor-html .lab-editor-preview-pane[data-pane-active="false"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    clip-path: inset(50%);
+  }
+}
+
+@media (max-width: 700px), (max-width: 1024px) and (pointer: coarse) {
+  .lab-editor-workspace:modal {
+    inset: var(--editor-viewport-top, 0px) 0 auto;
+    width: 100%;
+    height: var(--editor-viewport-height, 100dvh);
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  .lab-editor-workspace:modal .lab-editor-inner {
+    padding-inline: max(.8rem, env(safe-area-inset-left)) max(.8rem, env(safe-area-inset-right));
+    padding-top: max(.8rem, env(safe-area-inset-top));
+    padding-bottom: max(.8rem, env(safe-area-inset-bottom));
+  }
+  .lab-editor-workspace:modal textarea {
+    height: clamp(7rem, calc(var(--editor-viewport-height, 100dvh) - 13rem), 25rem);
+  }
+}

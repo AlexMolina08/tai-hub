@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { LabEvent, LabPackage, Lesson } from './model'
 import { LearningCapture } from './learning-capture'
 import { semanticWriteBuffer } from './semantic-buffer'
 
 /** Contact with visible lesson text is recorded, never inferred to be completed reading. */
-export function LearningReading({ pack, lesson, accountId, deviceId, events, record, children }: {
+export function LearningReading({ pack, lesson, accountId, deviceId, events, record, children, onReady }: {
   pack: LabPackage; lesson: Lesson; accountId: string; deviceId: string;
-  events: LabEvent[]; record: (events: LabEvent[]) => Promise<void>; children: ReactNode
+  events: LabEvent[]; record: (events: LabEvent[]) => Promise<void>; children: ReactNode; onReady?: () => void
 }) {
   const latest = useRef(events)
   latest.current = events
@@ -24,6 +24,9 @@ export function LearningReading({ pack, lesson, accountId, deviceId, events, rec
     void saving.then(saved => { if (active && saved) setReady(true) })
     return () => { active = false }
   }, [])
+  const readyCallback = useRef(onReady)
+  readyCallback.current = onReady
+  useLayoutEffect(() => { if (ready) readyCallback.current?.() }, [ready])
   if (ready) return children
   return entries.some(entry => entry.status === 'failed') ? <p role="status">No se pudo guardar la consulta. La explicación estará disponible al reintentar, para distinguir las respuestas con apoyo de lectura.
     <button className="text-link" onClick={() => {

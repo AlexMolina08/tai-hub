@@ -137,8 +137,8 @@ kbd { display: none; white-space: nowrap; border: 1px solid var(--line); border-
 .shortcut-grid { display: grid; gap: 8px; }
 .shortcut { min-height: 55px; font-size: 14px; font-weight: 650; }
 .shortcut > svg:first-child { color: var(--accent); }
-.mobile-nav { position: fixed; z-index: 5; inset: auto 0 0; padding: 4px max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--sidebar); border-top: 1px solid var(--line); }
-.mobile-nav button { min-height: 50px; display: grid; place-content: center; justify-items: center; gap: 5px; border: 0; background: transparent; font-size: 11px; font-weight: 620; color: var(--muted); border-radius: 7px; }
+.mobile-nav { position: fixed; z-index: 5; inset: auto 0 0; padding: 4px max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--sidebar); border-top: 1px solid var(--line); }
+.mobile-nav button { min-height: 50px; display: grid; place-content: center; justify-items: center; gap: 5px; border: 0; background: transparent; font-size: clamp(9px, 2.6vw, 11px); font-weight: 620; color: var(--muted); border-radius: 7px; }
 .mobile-nav button[aria-current] { background: var(--accent-soft); color: var(--accent); }
 .topic-list { display: grid; gap: 8px; max-width: 850px; }
 .topic-list button { min-height: 67px; }

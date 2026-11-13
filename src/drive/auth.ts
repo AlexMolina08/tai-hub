@@ -264,9 +264,11 @@ export class GoogleSession {
     this.#publish('connecting');
     try {
       const response = await this.#managedRequest('start', request);
+      if (!response.ok) throw new Error('La conexión persistente con Drive no está disponible en este momento.');
       const { url } = await response.json();
+      if (typeof url !== 'string') throw new Error(FAILED);
       const destination = new URL(url);
-      if (!response.ok || destination.origin !== 'https://accounts.google.com'
+      if (destination.origin !== 'https://accounts.google.com'
         || destination.pathname !== '/o/oauth2/v2/auth') throw new Error(FAILED);
       request.signal.throwIfAborted();
       window.location.assign(destination.href);
@@ -389,6 +391,7 @@ export class GoogleSession {
     try {
       if (readBrowserAccount(this.#clientId)) window.localStorage.removeItem(BROWSER_ACCOUNT);
       window.sessionStorage.removeItem(QUIET_RETRY);
+      window.sessionStorage.removeItem(REDIRECT_STATE);
     } catch {
       // Disconnect in memory even when storage is unavailable.
     }
@@ -462,10 +465,13 @@ export class GoogleSession {
       ...(this.#hint ? { login_hint: this.#hint } : {}),
       ...(quiet ? { prompt: 'none' } : this.#hint ? {} : { prompt: 'select_account' }),
     }).toString();
-    const cancel = () => {
+    const stopWaiting = () => {
       clearTimeout(timeout);
       window.removeEventListener('pageshow', onReturn);
       this.#cancelRedirect = undefined;
+    };
+    const cancel = () => {
+      stopWaiting();
       // Back navigation can restore the page that started the authorization from Safari's cache.
       try {
         const saved = JSON.parse(window.sessionStorage.getItem(REDIRECT_STATE) ?? 'null') as RedirectRequest | null;
@@ -480,7 +486,9 @@ export class GoogleSession {
       this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : CANCELLED);
     };
     const timeout = window.setTimeout(() => {
-      cancel();
+      // Safari can keep the old page alive during a slow cross-origin navigation.
+      // Let the user retry without expiring Google's pending one-time state early.
+      stopWaiting();
       this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : INVALID_REDIRECT);
     }, REDIRECT_START_TIMEOUT);
     this.#cancelRedirect = cancel;

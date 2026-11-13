@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowLeft, ArrowRight, Check, ListChecks } from 'lucide-react'
+import { Dialog } from '../components/Dialog'
 import type { Activity, Attempt, GuidedSession, LabEvent, LabPackage, SessionPosition } from './model'
 import { sessionAssistance, sessionMinutes } from './guided'
 import { StudyText } from './StudyText'
 import { StudyNoteEditor } from './StudyNoteEditor'
 import { LearningReading } from './LearningReading'
+import './assessment-ui.css'
 
 export function GuidedSessionView({ pack, session, accountId, deviceId, events, record, openMaterial, renderActivity, initialPosition, onPosition, afterSession }: {
   pack: LabPackage; session: GuidedSession; accountId: string; deviceId: string; events: LabEvent[]
@@ -22,8 +24,10 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
     : initialPosition?.activityId && stage.activityIds.includes(initialPosition.activityId) ? initialPosition.activityId : stage.activityIds[0] ?? null)
   const [completed, setCompleted] = useState(initialPosition?.completed ?? false)
   const [error, setError] = useState('')
+  const [showStages, setShowStages] = useState(false)
+  const [showActivities, setShowActivities] = useState(false)
   const content = useRef<HTMLElement>(null)
-  const stages = useRef<HTMLElement>(null)
+  const moveFocus = useRef(false)
   const navigation = useRef<Promise<void>>(Promise.resolve())
   const mounted = useRef(false)
   const event = (stageId: string, activityId: string | null, completed = false): SessionPosition => ({
@@ -41,22 +45,12 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
       .catch(failure => { if (active) setError(String(failure)) })
     return () => { active = false; mounted.current = false }
   }, [])
-  useEffect(() => {
-    const nav = stages.current
-    if (!nav) return
-    const keepCurrentVisible = () => {
-      const current = nav.querySelector<HTMLElement>('[aria-current="step"]')
-      if (!current) return
-      const viewport = nav.getBoundingClientRect(), button = current.getBoundingClientRect()
-      // Adjust only this horizontal strip; restoring a session must not scroll its reading position.
-      if (button.left < viewport.left + 4) nav.scrollLeft += button.left - viewport.left - 4
-      else if (button.right > viewport.right - 4) nav.scrollLeft += button.right - viewport.right + 4
-    }
-    keepCurrentVisible()
-    const observer = new ResizeObserver(keepCurrentVisible)
-    observer.observe(nav)
-    return () => observer.disconnect()
-  }, [stageIndex])
+  useLayoutEffect(() => {
+    if (!moveFocus.current) return
+    moveFocus.current = false
+    content.current?.focus({ preventScroll: true })
+    content.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }, [stageIndex, activityId, completed])
   function navigate(nextStage: number, nextActivity: string | null, finish = false) {
     navigation.current = navigation.current.then(async () => {
       if (!mounted.current) return
@@ -65,8 +59,8 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
         await record([position])
         if (!mounted.current) return
         onPosition?.(position)
+        moveFocus.current = true
         setStageIndex(nextStage); setActivityId(nextActivity); setCompleted(finish); setError('')
-        requestAnimationFrame(() => { content.current?.focus(); content.current?.scrollIntoView({ block: 'start', behavior: 'instant' }) })
       } catch (failure) { if (mounted.current) setError(failure instanceof Error ? failure.message : 'No se pudo guardar el punto de la sesión.') }
     })
     return navigation.current
@@ -86,17 +80,33 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   const answered = new Set(attempts.filter(attempt => attempt.outcome !== 'omitted').map(attempt => attempt.activityId))
   const helped = sessionAssistance(pack, session, events, accountId)
   const names = { correct: 'Correcta', incorrect: 'Por revisar', omitted: 'Sin respuesta', partial: 'Parcial, con campos sin responder' }
+  const firstPendingStage = session.stages.findIndex(step => step.activityIds.some(id => !answered.has(id)))
+  const firstPending = session.stages[firstPendingStage]?.activityIds.find(id => !answered.has(id))
   return <article className="lab-guided" aria-label="Sesión guiada">
     <header className="lab-lesson-heading">
       <h2 tabIndex={-1} data-study-heading>{session.title}</h2><p>{sessionMinutes(session)} min · {answered.size} de {allIds.length} actividades respondidas</p>
     </header>
-    <nav className="lab-guided-stages" ref={stages} aria-label="Etapas de la sesión">{session.stages.map((step, index) => <button key={step.id}
-      aria-current={stageIndex === index ? 'step' : undefined} onClick={() => void navigate(index, step.activityIds[0] ?? null)}>
-      <span>{index + 1}. {step.title}</span><small>{step.minutes} min</small>
-    </button>)}</nav>
+    <nav className="lab-guided-overview" aria-label="Etapas de la sesión">
+      <span>Etapa {stageIndex + 1} de {session.stages.length} · {stage.minutes} min orientativos</span>
+      <button type="button" className="text-link" aria-haspopup="dialog" onClick={event => {
+        event.currentTarget.focus({ preventScroll: true }); setShowStages(true)
+      }}><ListChecks size={17} aria-hidden="true" /> Ver etapas</button>
+    </nav>
+    {showStages && <Dialog title="Etapas de la sesión" className="lab-guided-index" closeLabel="Volver a la sesión" showCloseLabel preserveScroll
+      onClose={() => setShowStages(false)}>
+      <ol className="lab-assessment-list">{session.stages.map((step, index) => <li key={step.id}>
+        <button type="button" className="lab-assessment-row" aria-current={stageIndex === index ? 'step' : undefined}
+          onClick={() => {
+            setShowStages(false)
+            if (stageIndex !== index) void navigate(index, step.activityIds[0] ?? null)
+          }}>
+          <span><strong>{index + 1}. {step.title}</strong><small>{step.minutes} min orientativos</small></span>
+          {stageIndex === index && <Check size={18} aria-hidden="true" />}
+        </button>
+      </li>)}</ol>
+    </Dialog>}
     {error && <p role="alert">{error}</p>}
     <section className="lab-guided-content" ref={content} tabIndex={-1} aria-labelledby="guided-stage-title">
-      <div className="lab-activity-position"><span>Etapa {stageIndex + 1} de {session.stages.length}</span><span>{stage.minutes} min orientativos</span></div>
       <h3 id="guided-stage-title">{stage.title}</h3><StudyText text={stage.instructions} />
       {stage.kind === 'recover' && <p className="lab-mode">Si es tu primera vez, úsalo como punto de partida. Una respuesta repetida conserva su historial.</p>}
       {stage.kind === 'transfer' && <p className="lab-mode">Variantes de práctica. Esta sesión conserva las reservas de evaluación.</p>}
@@ -115,15 +125,34 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
           </LearningReading>
         </div>
       })}
-      {stage.activityIds.length > 1 && <nav className="lab-steps" aria-label="Actividades de esta etapa">{stage.activityIds.map((id, index) => <button
-        className="button" key={id} title={assessment ? `Ejercicio ${index + 1}` : pack.activities.find(activity => activity.id === id)!.title}
-        aria-current={activityId === id ? 'step' : undefined} onClick={() => void navigate(stageIndex, id)}>
-        {index + 1}{answered.has(id) && <Check size={11} aria-hidden="true" />}
-      </button>)}</nav>}
+      {stage.activityIds.length > 1 && <nav className="lab-guided-overview" aria-label="Actividades de esta etapa">
+        <span>Actividad {stage.activityIds.indexOf(activityId ?? '') + 1} de {stage.activityIds.length}</span>
+        <button type="button" className="text-link" aria-haspopup="dialog" onClick={event => {
+          event.currentTarget.focus({ preventScroll: true }); setShowActivities(true)
+        }}>Ver actividades</button>
+      </nav>}
+      {showActivities && <Dialog title="Actividades de esta etapa" className="lab-guided-index" closeLabel="Volver a la actividad" showCloseLabel preserveScroll
+        onClose={() => setShowActivities(false)}>
+        <ol className="lab-assessment-list">{stage.activityIds.map((id, index) => <li key={id}>
+          <button type="button" className="lab-assessment-row" aria-current={activityId === id ? 'step' : undefined}
+            onClick={() => {
+              setShowActivities(false)
+              if (activityId !== id) void navigate(stageIndex, id)
+            }}>
+            <span><strong>{assessment ? `Ejercicio ${index + 1}` : pack.activities.find(activity => activity.id === id)?.title}</strong>
+              <small>{answered.has(id) ? 'Respondida' : 'Pendiente'}</small></span>
+            {activityId === id && <Check size={18} aria-hidden="true" />}
+          </button>
+        </li>)}</ol>
+      </Dialog>}
       {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible, continueStudy, assessment)}</div>}
       {stage.kind === 'close' && <section className="lab-guided-summary" aria-label="Respuestas guardadas">
         <h4>{answered.size} de {allIds.length} actividades con respuesta guardada</h4>
-        <p>Completar este recorrido no demuestra por sí solo comprensión, retención o transferencia.</p>
+        {firstPending && <p>{allIds.length - answered.size} pendientes.
+          {' '}<button className="text-link" type="button" onClick={() => void navigate(firstPendingStage, firstPending)}>
+            Ir a la primera pendiente
+          </button>
+        </p>}
         <StudyNoteEditor target={{ kind: 'session', purpose: 'reflection', packageId: pack.id, packageVersion: pack.version,
           sessionId: session.id, sessionVersion: session.version }} accountId={accountId} deviceId={deviceId} events={events} record={record}
           label="Errores y próximo paso" />
@@ -138,7 +167,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
           : <button className="button primary" onClick={() => void navigate(stageIndex, null, true)}>Cerrar sesión de estudio</button>}
       </section>}
     </section>
-    <nav className="lab-activity-navigation" aria-label="Cambiar etapa">
+    <nav className="lab-activity-navigation lab-guided-bottom" aria-label="Cambiar etapa">
       <button className="button" disabled={stageIndex === 0} onClick={() => void navigate(stageIndex - 1, session.stages[stageIndex - 1].activityIds[0] ?? null)}><ArrowLeft size={16} /> Etapa anterior</button>
       {stageIndex < session.stages.length - 1 && <button className="button primary" onClick={() => void navigate(stageIndex + 1, session.stages[stageIndex + 1].activityIds[0] ?? null)}>Siguiente etapa <ArrowRight size={16} /></button>}
     </nav>

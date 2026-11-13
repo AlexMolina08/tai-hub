@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { DriveFixture } from './fixtures'
+import { samplePackage } from '../src/lab/fixtures.test-support'
 
 test('expands the PDF and keeps page, zoom and highlights when leaving reading mode', async ({
   page, context, browserName, isMobile,
@@ -202,4 +203,75 @@ test('shows download progress and recovery in reading mode', async ({ page, cont
   await download.click()
   expect((await finished).suggestedFilename()).toBe('test-pdf-one.pdf')
   await expect(reader.getByRole('alert')).toHaveCount(0)
+})
+
+test('keeps the PDF and page jump usable at 320 px in the library', async ({ page, context, browserName }) => {
+  await page.setViewportSize({ width: 320, height: 660 })
+  await new DriveFixture().install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Buscar en la biblioteca' }).fill('Documento de prueba')
+  await page.getByRole('button', { name: /^Documento de prueba General/ }).click()
+  const scroll = page.getByRole('region', { name: 'Página del PDF' })
+  await expect(scroll.getByRole('img', { name: 'Página 1 del PDF' })).toBeVisible()
+  await expect(page.locator('.topbar')).toBeHidden()
+  let bounds = (await scroll.boundingBox())!
+  expect(bounds.height).toBeGreaterThan(660 * 0.64)
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(660)
+  if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches)) {
+    await page.setViewportSize({ width: 844, height: 390 })
+    await expect(page.locator('.topbar')).toBeHidden()
+    bounds = (await scroll.boundingBox())!
+    expect(bounds.height).toBeGreaterThan(220)
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(390)
+    await page.setViewportSize({ width: 320, height: 660 })
+  }
+
+  await page.getByRole('button', { name: 'Modo lectura', exact: true }).click()
+  const reader = page.getByRole('dialog', { name: 'Modo lectura PDF' })
+  const toolbar = reader.locator('.pdf-toolbar')
+  const input = reader.getByRole('textbox', { name: 'Número de página' })
+  await input.fill('2')
+  expect(await toolbar.evaluate(bar => bar.scrollWidth <= bar.clientWidth)).toBe(true)
+  await expect(reader.getByRole('button', { name: 'Aumentar zoom' })).toBeInViewport({ ratio: 1 })
+  await reader.getByRole('button', { name: 'Ir a la página' }).click()
+  await expect(input).toHaveValue('2')
+  await expect(scroll).toBeFocused()
+  await expect(scroll.getByRole('img', { name: 'Página 2 del PDF' })).toBeVisible()
+  await reader.getByRole('button', { name: 'Salir del modo lectura' }).click()
+  await expect(page.getByRole('textbox', { name: 'Número de página' })).toHaveValue('2')
+})
+
+test('opens the exact PDF page from a lesson in a single scroller and returns to the lesson', async ({ page, context, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 740 })
+  const pack = samplePackage()
+  pack.lessons[0].material = { resourceId: 'test-pdf-one', sectionId: 'pdf-page:2' }
+  const drive = new DriveFixture()
+  drive.addLabPackage('test-pdf-material', pack)
+  await drive.install(context, browserName === 'webkit')
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await page.getByRole('button', { name: 'Abrir Laboratorio TAI' }).click()
+  await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
+  await page.getByRole('button', { name: /Lección sintética/ }).click()
+  const material = page.getByRole('button', { name: 'Consultar material completo' })
+  await material.click()
+  const dialog = page.getByRole('dialog', { name: 'Documento de prueba', exact: true })
+  const scroll = dialog.getByRole('region', { name: 'Página del PDF' })
+  await expect(scroll.getByRole('img', { name: 'Página 2 del PDF' })).toBeInViewport()
+  expect(await dialog.evaluate(element => element.scrollHeight <= element.clientHeight + 1)).toBe(true)
+  const exit = dialog.getByRole('button', { name: 'Volver al estudio' })
+  await expect(exit).toBeInViewport({ ratio: 1 })
+
+  const enterReading = dialog.getByRole('button', { name: 'Modo lectura', exact: true })
+  await enterReading.click()
+  const reader = page.getByRole('dialog', { name: 'Modo lectura PDF' })
+  await expect(reader.getByRole('img', { name: 'Página 2 del PDF' })).toBeInViewport()
+  await page.keyboard.press('Escape')
+  await expect(enterReading).toBeFocused()
+  await expect(dialog).toBeVisible()
+  await exit.click()
+  await expect(material).toBeFocused()
 })

@@ -38,3 +38,15 @@ export function studyContinuation(packages: LabPackage[], events: LabEvent[], ac
 
 export const activityLocationKey = (accountId: string, pack: LabPackage, lesson: Lesson) =>
   JSON.stringify(['tai-lab-activity', accountId, pack.id, pack.version, lesson.id])
+
+export const readingLocationKey = (accountId: string) => JSON.stringify(['tai-lab-reading', accountId])
+
+export function savedReading(accountId: string, packages: LabPackage[]) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(readingLocationKey(accountId)) ?? 'null')
+    if (!saved || !Number.isFinite(Date.parse(saved.savedAt))) return
+    const pack = packages.find(candidate => candidate.id === saved.pack && candidate.version === saved.version)
+    const lesson = pack?.lessons.find(candidate => candidate.id === saved.lesson && candidate.state === 'validated')
+    if (pack && lesson) return { pack, lesson, savedAt: saved.savedAt as string }
+  } catch { /* The map remains available without a saved reading. */ }
+}

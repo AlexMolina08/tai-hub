@@ -191,8 +191,9 @@ export function PdfPages({
 
   return <div className="pdf-pages" style={{
     width: pageWidth,
-    height: Math.max(layout.end, layout.offsets[pdf.numPages - 1]
-      + Math.max(viewport.height, hostRef.current?.clientHeight ?? 0)),
+    height: layout.end,
+    // Keep the last page's top reachable as soon as the search panel or keyboard closes.
+    minHeight: `calc(${layout.offsets[pdf.numPages - 1]}px + 100%)`,
   }}>
     {Array.from({ length: stop - start + 1 }, (_, offset) => {
       const index = start + offset

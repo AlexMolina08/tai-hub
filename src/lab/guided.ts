@@ -13,11 +13,9 @@ export function sessionAssistance(pack: LabPackage, session: GuidedSession, even
 
 export interface SessionResume { pack: LabPackage; session: GuidedSession; position: SessionPosition }
 
-/** Keep the newest valid position per edition, including completion. A completed session must not
- * fall back to an older unfinished event. Concurrent answers retain their separate immutable history.
- */
-export function sessionResume(packages: LabPackage[], events: LabEvent[], accountId: string): SessionResume | undefined {
-  const seen = new Set<string>()
+/** A completed session supersedes earlier unfinished positions for the same edition. */
+export function sessionPositions(packages: LabPackage[], events: LabEvent[], accountId: string): SessionResume[] {
+  const latest = new Map<string, SessionResume>()
   const positions = events.filter((event): event is SessionPosition => event.kind === 'session-position' && event.accountId === accountId)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id.localeCompare(a.id))
   for (const position of positions) {
@@ -27,8 +25,11 @@ export function sessionResume(packages: LabPackage[], events: LabEvent[], accoun
     if (!pack || !session || !stage || (position.activityId !== null && !stage.activityIds.includes(position.activityId))
       || (position.completed && (stage.kind !== 'close' || position.activityId !== null))) continue
     const key = JSON.stringify([pack.id, pack.version, session.id, session.version])
-    if (seen.has(key)) continue
-    seen.add(key)
-    if (!position.completed) return { pack, session, position }
+    if (!latest.has(key)) latest.set(key, { pack, session, position })
   }
+  return [...latest.values()]
+}
+
+export function sessionResume(packages: LabPackage[], events: LabEvent[], accountId: string): SessionResume | undefined {
+  return sessionPositions(packages, events, accountId).find(({ position }) => !position.completed)
 }

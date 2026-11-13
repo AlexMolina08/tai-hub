@@ -1,34 +1,68 @@
 import { useState } from 'react'
 import { ArrowRight, CalendarDays, Layers, Lightbulb } from 'lucide-react'
+import { labTopics } from './study-scope'
 import type { LearningSnapshot } from './learning'
 import type { LearningRecommendation, RecommendationResult } from './recommendation'
 
-export function LearningDashboard({ snapshot, queue, open, skip, reset }: {
+export function LearningDashboard({ snapshot, queue, open, skip, reset, initialTopic }: {
   snapshot: LearningSnapshot; queue: RecommendationResult; open: (proposal: LearningRecommendation) => void
-  skip: (id: string) => void; reset: () => void
+  skip: (id: string) => void; reset: () => void; initialTopic?: string
 }) {
+  const [block, setBlock] = useState(initialTopic?.split('.')[0] ?? 'all')
+  const [topic, setTopic] = useState(initialTopic ?? 'all')
+  const objectiveTopics = new Map(snapshot.objectives.map(objective => [objective.key, objective.topicId]))
+  const items = queue.items.filter(proposal => (block === 'all' || proposal.block === block)
+    && (topic === 'all' || proposal.objectiveKeys.some(key => objectiveTopics.get(key) === topic)))
+  return <section className="lab-learning" aria-label="Cola de repaso">
+    <div className="lab-review-filters">
+      <label>Bloque<select value={block} onChange={event => { setBlock(event.target.value); setTopic('all') }}>
+        <option value="all">Todos</option>
+        {['II', 'III', 'IV'].map(item => <option value={item} key={item}>Bloque {item}</option>)}
+      </select></label>
+      <label>Tema<select value={topic} onChange={event => setTopic(event.target.value)}>
+        <option value="all">Todos los temas</option>
+        {labTopics.filter(item => block === 'all' || item.block === block).map(item =>
+          <option value={item.id} key={item.id}>{item.id} · {item.title}</option>)}
+      </select></label>
+    </div>
+    {items.length ? <ul className="lab-review-list">{items.map(proposal => {
+      const topics = [...new Set(proposal.objectiveKeys.flatMap(key => objectiveTopics.get(key) ?? []))]
+      return <li key={proposal.id} className="lab-review-row">
+        <div><p className="context-label">{topics.length ? topics.join(', ') + ' · ' : ''}{reasonLabels[proposal.reason]}</p>
+          <h3>{proposal.title}</h3><p>{proposal.message}</p></div>
+        <div className="lab-actions">
+          <button className="button primary" onClick={() => open(proposal)}>Empezar propuesta <ArrowRight size={17} aria-hidden="true" /></button>
+          <button className="text-link" onClick={() => skip(proposal.id)}>Omitir propuesta</button>
+        </div>
+      </li>
+    })}</ul> : <p>No hay propuestas en esta selección. <button className="text-link" onClick={reset}>Restablecer propuestas</button></p>}
+    {queue.limitations.length > 0 && <details><summary>Disponibilidad de los repasos</summary>
+      {queue.limitations.map(limit => <p key={limit}>{limit}</p>)}
+    </details>}
+  </section>
+}
+
+const reasonLabels = {
+  resume: 'Actividad en curso',
+  prerequisite: 'Base recomendada',
+  'critical-error': 'Para repasar',
+  due: 'Repaso del día',
+  continue: 'Siguiente lección',
+  transfer: 'Caso nuevo',
+  'balance-iv': 'Repaso del bloque IV',
+}
+
+export function TopicLearning({ snapshot, topic }: { snapshot: LearningSnapshot; topic?: string }) {
   const [expanded, setExpanded] = useState(false)
-  const next = queue.items[0]
-  const count = (field: 'understandingIds' | 'retentionIds' | 'transferIds') => new Set(snapshot.objectives.flatMap(objective => objective[field])).size
+  const objectives = snapshot.objectives.filter(objective => !topic || objective.topicId === topic)
+  if (!objectives.length) return null
+
+  const count = (field: 'understandingIds' | 'retentionIds' | 'transferIds') => new Set(objectives.flatMap(objective => objective[field])).size
   const labels = { insufficient: 'En aprendizaje', consolidated: 'Consolidado', 'review-open': 'Pendiente de repaso', uncertain: 'Comprobación incompleta' }
-  const reasonLabels = {
-    resume: 'Actividad en curso',
-    prerequisite: 'Base recomendada',
-    'critical-error': 'Para repasar',
-    due: 'Repaso del día',
-    continue: 'Siguiente lección',
-    transfer: 'Caso nuevo',
-    'balance-iv': 'Repaso del bloque IV',
-  }
-  const visible = expanded ? snapshot.objectives : snapshot.objectives.filter(objective => objective.qualifyingCorrectIds.length || objective.reviews.length).slice(0, 4)
-  return <section className="lab-learning" aria-labelledby="lab-learning-heading">
-    {next ? <section className="lab-next-step" aria-label="Siguiente paso recomendado">
-      <div><p className="context-label">Siguiente paso · {reasonLabels[next.reason]}</p><h2 data-study-heading tabIndex={-1}>{next.title}</h2><p>{next.message}</p></div>
-      <div className="lab-actions"><button className="button primary" onClick={() => open(next)}>Empezar propuesta <ArrowRight size={17} /></button>
-        <button className="text-link" onClick={() => skip(next.id)}>Otra propuesta</button></div>
-    </section> : <p>No quedan propuestas en esta selección. Puedes explorar las lecciones o <button className="text-link" onClick={reset}>restablecer propuestas</button>.</p>}
-    <header><p className="context-label">Tu progreso</p><h2 id="lab-learning-heading" data-study-heading tabIndex={-1}>Comprender, recordar, aplicar</h2>
-      <p className="lab-learning-lead">Tu avance en {snapshot.objectives.length} objetivos de estudio.</p></header>
+  const visible = expanded ? objectives : objectives.filter(objective => objective.qualifyingCorrectIds.length || objective.reviews.length).slice(0, 4)
+  return <details className="lab-learning-details lab-topic-learning">
+    <summary>Comprensión, retención y transferencia</summary>
+    <p>{objectives.filter(objective => objective.status === 'consolidated').length} de {objectives.length} objetivos consolidados</p>
     <div className="lab-learning-dimensions">
       <div><Lightbulb size={20} aria-hidden="true" /><strong>{count('understandingIds')}</strong><h3>Comprensión</h3><p>Primeras respuestas correctas sin ayuda.</p></div>
       <div><CalendarDays size={20} aria-hidden="true" /><strong>{count('retentionIds')}</strong><h3>Retención</h3><p>Aciertos al repasar después del intervalo previsto.</p></div>
@@ -45,7 +79,6 @@ export function LearningDashboard({ snapshot, queue, open, skip, reset }: {
       <p>Los intervalos orientativos son 1, 3, 7, 14 y 30 días. Usamos las fechas de tus dispositivos y el historial disponible; la sincronización puede completar o revisar los indicadores.</p>
       <p>Las respuestas antiguas siguen guardadas. Si les faltan datos sobre presentación, ayudas o fechas, no se convierten en nueva evidencia.</p>
       {snapshot.uncertainties.length > 0 && <p>Hay evidencia pendiente o ambigua. Sus límites aparecen al revisar cada objetivo.</p>}
-      {queue.limitations.map(limit => <p key={limit}>{limit}</p>)}
     </details>
     {(visible.length > 0 || expanded) && <div className="lab-objective-progress">{visible.map(objective => <details key={objective.key}>
       <summary><span>{objective.title}</span><small>{labels[objective.status]}</small></summary>
@@ -57,7 +90,7 @@ export function LearningDashboard({ snapshot, queue, open, skip, reset }: {
       {objective.reasons.map((reason, index) => <p key={`${reason.code}:${index}`}>{reason.message}</p>)}
       <small>Edición {objective.packageVersion} · {objective.topicId}</small>
     </details>)}</div>}
-    {snapshot.objectives.length > 0 && <button className="text-link" onClick={() => setExpanded(value => !value)}>
+    {objectives.length > 0 && <button className="text-link" onClick={() => setExpanded(value => !value)}>
       {expanded ? 'Mostrar solo progreso reciente' : 'Ver todos los objetivos disponibles'}</button>}
-  </section>
+  </details>
 }
