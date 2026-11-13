@@ -26,13 +26,16 @@ test('managed Drive session recovers after a rejected token and survives a reloa
   await drive.install(context)
   let requests = 0
   let signedIn = true
+  let resume: () => void = () => {}
+  const renewal = new Promise<void>(resolve => { resume = resolve })
   const address = new URL('/tai-hub/session/', baseURL)
-  await context.route(address.href + '*', route => {
+  await context.route(address.href + '*', async route => {
     const action = new URL(route.request().url()).pathname.split('/').at(-1)
     if (action === 'logout') { signedIn = false; return route.fulfill({ json: {} }) }
     expect(action).toBe('token')
     expect(route.request().method()).toBe('POST')
     requests++
+    if (requests === 2) await renewal
     return signedIn
       ? route.fulfill({ json: { accountId: 'sample-account', token: 'fixture-token', expiresIn: 3600 } })
       : route.fulfill({ status: 401, json: {} })
@@ -41,6 +44,12 @@ test('managed Drive session recovers after a rejected token and survives a reloa
   const ready = page.getByRole('button', { name: 'Añadir recurso', exact: true })
   await expect(ready).toBeEnabled()
   await page.reload()
+  try {
+    await expect(page.getByText('Recuperando acceso a Drive…')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Reconectar', exact: true })).toHaveCount(0)
+  } finally {
+    resume()
+  }
   await expect(ready).toBeEnabled()
   expect(requests).toBe(2)
   expect(drive.redirectPrompts).toEqual([])

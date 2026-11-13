@@ -149,7 +149,7 @@ export class GoogleSession {
 
   async prepare(): Promise<void> {
     if (this.#sessionPath) {
-      if (this.#snapshot.status === 'loading') this.#publish('ready');
+      if (this.#snapshot.status === 'loading') this.#publish(this.#browserAccount && navigator.onLine ? 'recovering' : 'ready');
       await this.renew();
       return;
     }

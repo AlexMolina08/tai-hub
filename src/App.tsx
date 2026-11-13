@@ -139,7 +139,7 @@ export default function App() {
   const nextScroll = useRef(0)
   const verifiedAccount = useRef<string | undefined>(undefined)
   const pendingRefresh = useRef<AbortSignal | undefined>(undefined)
-  const lastCatalogue = useRef<string | undefined>(undefined)
+  const lastCatalogue = useRef<{ accountId: string; cachedItems?: Resource[] } | undefined>(undefined)
   const restoreReader = useRef(true)
   const readerLocation = useRef<ReaderLocation | undefined>(undefined)
   const study = useSyncExternalStore(sync ? fn => sync.subscribe(fn) : subscribeIdle, sync ? () => sync.snapshot() : getEmptyStudy)
@@ -186,7 +186,7 @@ export default function App() {
     void readCatalogue(remembered).then(saved => {
       if (!active || !saved || lastCatalogue.current || session.localAccountId() !== remembered
         || (verifiedAccount.current && verifiedAccount.current !== remembered)) return
-      lastCatalogue.current = remembered
+      lastCatalogue.current = { accountId: remembered }
       setAccount(saved.account)
       setResources(saved.resources)
       setCatalogueReady(true)
@@ -194,7 +194,8 @@ export default function App() {
     return () => { active = false }
   }, [])
   useEffect(() => {
-    if (!account || !catalogueReady || lastCatalogue.current !== account.id) return
+    if (!account || !catalogueReady || lastCatalogue.current?.accountId !== account.id
+      || lastCatalogue.current.cachedItems === resources) return
     void saveCatalogue(account, resources).catch(() => {})
   }, [account, catalogueReady, resources])
   useLayoutEffect(() => { window.scrollTo({ top: nextScroll.current, behavior: 'instant' }) }, [view])
@@ -302,7 +303,7 @@ export default function App() {
     try {
       const user = await library.account()
       signal.throwIfAborted()
-      const previousAccount = verifiedAccount.current ?? lastCatalogue.current
+      const previousAccount = verifiedAccount.current ?? lastCatalogue.current?.accountId
       if (previousAccount && previousAccount !== user.id) clearPrivate()
       verifiedAccount.current = user.id
       setAccount(user)
@@ -320,7 +321,11 @@ export default function App() {
         return
       }
       const { items } = result
-      lastCatalogue.current = user.id
+      // A reload after the first listing must be able to open the local copy.
+      const cacheWritten = lastCatalogue.current?.accountId !== user.id
+        && await saveCatalogue(user, items).then(() => true, () => false)
+      signal.throwIfAborted()
+      lastCatalogue.current = { accountId: user.id, cachedItems: cacheWritten ? items : undefined }
       setResources(items)
       setCatalogueReady(true)
       setCatalogueRetry(0)
@@ -560,6 +565,8 @@ export default function App() {
   const libraryStatus = !network ? 'Sin conexión.' : catalogueError || (error ? 'La biblioteca no se pudo cargar.' : 'Cargando biblioteca…')
   const retryLibrary = auth.status === 'connected'
   const recoveringDrive = auth.status === 'recovering'
+  const restoringDrive = recoveringDrive || auth.status === 'loading' || auth.status === 'connecting' || working
+    || (managedDrive && retryLibrary && !catalogueError)
   const connectLabel = retryLibrary ? loadingLibrary ? libraryStatus : 'Reintentar'
     : loadingLibrary ? 'Conectando…' : 'Conectar Google Drive'
   const indexLabel = !indexStats.indexed && indexStats.pending
@@ -618,9 +625,9 @@ export default function App() {
       <main className={current ? 'content content-reader' : 'content'} id="main" tabIndex={-1}>
         {!network && view.page !== 'lab' && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && !officialView && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
         {!officialView && view.page !== 'lab' && account && !connected && <div className="banner" role="status"><CloudOff size={18} />
-          <span>{recoveringDrive || auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Reconecta Drive para actualizar la biblioteca y sincronizar.'}</span>
+          <span>{restoringDrive ? 'Recuperando acceso a Drive…' : retryLibrary ? libraryStatus : 'Reconecta Drive para actualizar la biblioteca y sincronizar.'}</span>
           <button className="button" disabled={!network || auth.status === 'loading' || auth.status === 'connecting' || working}
-            onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{retryLibrary || recoveringDrive ? 'Reintentar' : 'Reconectar'}</button></div>}
+            onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{retryLibrary || recoveringDrive ? 'Reintentar' : auth.status === 'loading' || auth.status === 'connecting' ? 'Conectando…' : 'Reconectar'}</button></div>}
         {!officialView && (error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
           {!ios && !safari && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
           {error && <button className="icon-button" aria-label="Cerrar aviso" onClick={() => setError('')}><X size={17} /></button>}

@@ -160,8 +160,30 @@ test('macOS Safari can study from cache on reopen and reconnects in the same tab
 test('preserves the catalogue and a verified session when the Drive listing fails', async ({ page, context, browserName }) => {
   const drive = new DriveFixture()
   await drive.install(context)
+  await context.addInitScript(() => {
+    const open = IDBFactory.prototype.open
+    const success = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'onsuccess')!
+    IDBFactory.prototype.open = function (name, version) {
+      const request = open.call(this, name, version)
+      if (name !== 'tai-hub-library-v1' || sessionStorage.getItem('catalogue-cache-opened')) return request
+      sessionStorage.setItem('catalogue-cache-opened', 'true')
+      // Pause the real database before its first write transaction can start.
+      Object.defineProperty(request, 'onsuccess', {
+        set(handler: (event: Event) => void) {
+          success.set!.call(request, (event: Event) => {
+            document.documentElement.dataset.catalogueCachePending = 'true'
+            document.addEventListener('test-catalogue-cache-release', () => handler.call(request, event), { once: true })
+          })
+        },
+      })
+      return request
+    }
+  })
   await page.goto(home)
   await connectButton(page).click()
+  await expect(page.locator('html')).toHaveAttribute('data-catalogue-cache-pending', 'true')
+  await expect(page.getByRole('heading', { name: '4 recursos', exact: true })).toHaveCount(0)
+  await page.evaluate(() => document.dispatchEvent(new Event('test-catalogue-cache-release')))
   await expect(library(page)).toContainText('4 recursos')
   let allowListing = false
   await context.route('https://www.googleapis.com/drive/v3/files?**', route => {
