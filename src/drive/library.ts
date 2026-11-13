@@ -428,8 +428,7 @@ export class DriveLibrary {
 
   async readStudyFile<T>(accountId: string, id: string): Promise<T> {
     const client = await this.#accountClient(accountId);
-    const response = await client.media(filePath(id));
-    return response.json() as Promise<T>;
+    return client.readMedia(filePath(id), response => response.json() as Promise<T>);
   }
 
   async writeStudyFile(accountId: string, writer: string, value: unknown, existingId?: string): Promise<DriveFile> {
@@ -518,28 +517,29 @@ export class DriveLibrary {
       || (type !== kind && !(kind === 'labEvents' && type === LAB_ARCHIVE))) {
       throw new Error('El laboratorio solo carga archivos privados de esta cuenta.');
     }
-    const response = await client.media(filePath(id));
-    if (!response.body) throw new Error('El archivo del laboratorio está vacío.');
-    const reader = response.body.getReader();
-    const chunks: Uint8Array<ArrayBuffer>[] = [];
-    let size = 0;
-    try {
-      while (true) {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        size += chunk.value.byteLength;
-        if (size > DOWNLOAD_LIMIT) { await reader.cancel(); throw new Error('El paquete excede el límite de descarga.'); }
-        chunks.push(new Uint8Array(chunk.value));
-      }
-    } finally { reader.releaseLock(); }
-    const body = new Blob(chunks);
+    const body = await client.readMedia(filePath(id), async response => {
+      if (!response.body) throw new Error('El archivo del laboratorio está vacío.');
+      const reader = response.body.getReader();
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      let size = 0;
+      try {
+        while (true) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          size += chunk.value.byteLength;
+          if (size > DOWNLOAD_LIMIT) { await reader.cancel(); throw new Error('El paquete excede el límite de descarga.'); }
+          chunks.push(new Uint8Array(chunk.value));
+        }
+      } finally { reader.releaseLock(); }
+      return new Blob(chunks);
+    });
     const checksum = kind === 'labPackage' ? file.appProperties?.labSha256 : undefined;
     if (checksum && checksum !== await sha256(await body.arrayBuffer())) {
       throw new Error('El contenido del paquete no coincide con la edición instalada en Drive.');
     }
     return {
       content: JSON.parse(await body.text()) as unknown,
-      bytes: size,
+      bytes: body.size,
       revision: kind === 'labPackage' ? labPackageRevision(file) : undefined,
     };
   }

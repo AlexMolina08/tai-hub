@@ -17,7 +17,7 @@ function d1() {
     database,
     prepare(sql) {
       const statement = database.prepare(sql)
-      return { bind: (...args) => ({ run: () => statement.run(...args), first: () => statement.get(...args) }) }
+      return { bind: (...args) => ({ run: () => ({ meta: statement.run(...args) }), first: () => statement.get(...args) }) }
     },
     async batch(statements) {
       database.exec('BEGIN')
@@ -75,6 +75,7 @@ test('authorization, refresh after expiry, account restriction and session revoc
       const destination = new URL((await response.json()).url)
       assert.equal(destination.searchParams.get('access_type'), 'offline')
       assert.equal(destination.searchParams.get('scope'), scope)
+      assert.ok(!destination.href.includes(encodeURIComponent(account)))
       challenge = destination.searchParams.get('code_challenge')
       return { state: destination.searchParams.get('state'), cookie: response.headers.getSetCookie()[0].split(';')[0] }
     }
@@ -84,6 +85,9 @@ test('authorization, refresh after expiry, account restriction and session revoc
       }), env)
     }
     assert.equal((await post('token')).status, 401)
+    const unconfigured = await worker.fetch(new Request(prefix + 'start', { method: 'POST', headers: { Origin: origin } }),
+      { ...env, GOOGLE_CLIENT_SECRET: undefined })
+    assert.equal(unconfigured.status, 503)
     assert.equal((await post('start', '', 'https://other.example.test')).status, 403)
     const start = await begin()
     assert.equal((await finish(start, 'different-state')).headers.get('Location'), '/tai-hub/?drive=cancelled')
@@ -105,7 +109,12 @@ test('authorization, refresh after expiry, account restriction and session revoc
     outage = true
     assert.equal((await post('token', cookie)).status, 503)
     outage = false
-    assert.equal((await (await post('token', cookie)).json()).token, 'access-2')
+    const now = Math.floor(Date.now() / 1000)
+    sessions.database.prepare('UPDATE sessions SET expires = ?').run(now + 60)
+    const renewed = await post('token', cookie)
+    assert.equal((await renewed.json()).token, 'access-2')
+    assert.match(renewed.headers.get('Set-Cookie'), /Max-Age=7776000/)
+    assert.ok(sessions.database.prepare('SELECT expires FROM sessions').get().expires >= now + 7776000)
     assert.equal((await post('logout', cookie, 'https://other.example.test')).status, 403)
     forceRevoke = true
     assert.equal((await post('token', cookie)).status, 401)

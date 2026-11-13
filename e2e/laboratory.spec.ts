@@ -15,6 +15,10 @@ async function openLab(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Laboratorio TAI', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Laboratorio TAI', exact: true })).toBeVisible()
 }
+async function restoreDriveAfterReload(page: import('@playwright/test').Page, browserName: string) {
+  if (browserName === 'webkit') await page.getByRole('button', { name: 'Reconectar', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
+}
 async function showPractice(page: import('@playwright/test').Page) {
   const button = page.getByRole('button', { name: 'Practicar', exact: true })
   if ((page.viewportSize()?.width ?? 1440) <= 800) {
@@ -83,7 +87,7 @@ test('installs a private catalogue in Drive, resumes after a partial upload and 
     await expect(reopened.getByText('2 lecciones disponibles', { exact: true })).toBeVisible()
     await expect(reopened.getByRole('alert')).toHaveCount(0)
     await reopened.reload()
-    await expect(reopened.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await restoreDriveAfterReload(reopened, browserName)
     await openLab(reopened)
     const reads = drive.mediaReads.length
     await refresh.click()
@@ -294,7 +298,7 @@ test('exam resumes in two contexts, keeps corrections hidden, and scores only el
     await expect(a.getByRole('heading', { name: 'Resultado del examen' })).toBeVisible()
     await expect(a.getByRole('radio')).toHaveCount(0)
     await a.reload()
-    await expect(a.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await restoreDriveAfterReload(a, browserName)
     await openLab(a)
     await expect(a.getByText('1,67 de 20 puntos · 2 aciertos · 1 error · 17 en blanco')).toBeVisible()
     const events = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
@@ -401,7 +405,7 @@ test('learning context survives reload and preserves the first response before l
   await sync()
   const presented = events().filter(event => event.kind === 'learning-context' && event.action === 'present')
   expect(presented).toHaveLength(1)
-  await page.reload(); await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await page.reload(); await restoreDriveAfterReload(page, browserName)
   await openLab(page); await showPractice(page)
   await expect(page.getByRole('radio', { name: 'Inválida', exact: true })).toBeChecked()
   await sync()
@@ -653,7 +657,7 @@ test('IPv4 predictions persist before reveal, converge across devices and preser
     expect(remoteEvents().find(event => event.kind === 'attempt' && event.ordinal === 3)).toMatchObject({ outcome: 'partial',
       ipv4: { comparison: { lower: 'correct', upper: 'omitted', member: 'omitted' } } })
     const attemptIds = remoteEvents().filter(event => event.kind === 'attempt').map(event => event.id).sort()
-    await a.reload(); await expect(a.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(a)
+    await a.reload(); await restoreDriveAfterReload(a, browserName); await openLab(a)
     await expect(a.getByRole('region', { name: 'Resultado del bloque IPv4', exact: true })).toBeVisible()
     for (const width of [320, 390]) {
       await a.setViewportSize({ width, height: 844 })
@@ -778,7 +782,7 @@ test('guided session resumes its stage and activity across devices and preserves
     await otherStages.getByRole('button', { name: /2. Comprender/ }).click()
     await expect(resumed.getByText('Compara cada opción.', { exact: true })).toBeVisible()
     await resumed.reload()
-    await expect(resumed.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await restoreDriveAfterReload(resumed, browserName)
     await expect(resumed.getByRole('button', { name: 'Abrir navegación', exact: true })).toBeVisible()
     await openLab(resumed)
     await expect(resumed.getByText('Compara cada opción.', { exact: true })).toBeVisible()
@@ -794,7 +798,7 @@ test('guided session resumes its stage and activity across devices and preserves
     await expect(summary.locator('p').filter({ has: resumed.getByText('Ejemplo sintético i2', { exact: true }) })).toContainText('Hay pistas o soluciones consultadas.')
     await resumed.getByRole('button', { name: 'Cerrar sesión de estudio', exact: true }).click()
     await expect(resumed.getByText('Sesión cerrada. Tus respuestas y ayudas siguen guardadas.', { exact: true })).toBeVisible()
-    await resumed.reload(); await expect(resumed.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(resumed)
+    await resumed.reload(); await restoreDriveAfterReload(resumed, browserName); await openLab(resumed)
     await expect(resumed.getByText('Sesión cerrada. Tus respuestas y ayudas siguen guardadas.', { exact: true })).toBeVisible()
     await expect(resumed.locator('.lab-guided-practice')).toHaveCount(0)
     await resumed.getByRole('button', { name: 'Volver al laboratorio', exact: true }).click()
@@ -853,7 +857,7 @@ test('personal notes preserve concurrent edits, closing reflections and export r
     await reflection.fill('Revisar el caso límite y volver mañana.')
     await expect(a.getByRole('region', { name: 'Errores y próximo paso', exact: true })).toContainText('Nota guardada.')
     await sync(a)
-    await a.reload(); await expect(a.getByRole('region', { name: 'Continuar estudio' })).toBeVisible(); await openLab(a)
+    await a.reload(); await restoreDriveAfterReload(a, browserName); await openLab(a)
     await expect(reflection).toHaveValue('Revisar el caso límite y volver mañana.')
     for (const width of [320, 390]) {
       await a.setViewportSize({ width, height: 844 })
@@ -1109,8 +1113,7 @@ test('resumes the exact saved activity on a second browser context and retains s
     await resumed.getByRole('button', { name: '3', exact: true }).click()
     await expect(resumed.locator('.lab-activity').getByRole('heading', { name: 'Enunciado', exact: true })).toBeVisible()
     await resumed.reload()
-    // Reload can perform an authentication redirect before the mobile menu exists.
-    await expect(resumed.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+    await restoreDriveAfterReload(resumed, browserName)
     await expect(resumed.getByRole('button', { name: 'Abrir navegación', exact: true })).toBeVisible()
     await openLab(resumed)
     await expect(resumed.locator('.lab-activity').getByRole('heading', { name: 'Enunciado', exact: true })).toBeVisible()
@@ -1781,11 +1784,9 @@ test('signal experiments compare two conditions and retain the calculation acros
 
   if (browserName !== 'webkit') {
     await context.setOffline(false)
-    await page.getByRole('button', { name: 'Inicio', exact: true }).click()
-    await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
-    await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
-    await openLab(page)
   }
+  await page.getByRole('button', { name: 'Reconectar', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
   await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
   await expect(page.locator('.lab-toolbar > [role="status"]')).toHaveText('Sincronizado')
   const events = mergeEvents('sample-account', drive.labEvents() as LabEvent[])
@@ -1880,6 +1881,7 @@ test('frame simulations retain edited parameters, grade the saved prediction and
   await expect(check).toBeEnabled()
   await expect(page.getByRole('region', { name: 'Guardado del borrador' })).toHaveCount(0)
   await page.reload()
+  if (browserName === 'webkit') await restoreDriveAfterReload(page, browserName)
   await openLab(page)
   await expect(firstBit).toBeChecked()
   await expect(parityBit).toBeChecked()
@@ -1944,6 +1946,7 @@ test('access simulation separates a routed broadcast boundary from a cut link', 
   await collision.selectOption('Sí')
   await expect(page.getByRole('region', { name: 'Guardado del borrador' })).toHaveCount(0)
   await page.reload()
+  if (browserName === 'webkit') await restoreDriveAfterReload(page, browserName)
   await openLab(page)
   await expect(remote).toHaveValue('Puente')
   await expect(cutC).toBeChecked()
@@ -2003,6 +2006,7 @@ test('recursive trace keeps its cursor separately from the graded prediction', a
   await expect(trace.getByText(/Retorna el marco #3 con n = 1 y devuelve 1/)).toBeVisible()
   await expect(page.getByRole('region', { name: 'Guardado del borrador' })).toHaveCount(0)
   await page.reload()
+  if (browserName === 'webkit') await restoreDriveAfterReload(page, browserName)
   await openLab(page)
   await expect(trace.getByText('Paso 4 de 10.')).toBeVisible()
   await trace.getByRole('button', { name: 'Paso anterior' }).click()
@@ -2097,6 +2101,7 @@ test('functional dependency practice persists a manual sequence and its trace', 
   await expect(trace.getByText(/Con C → D se añade D/)).toBeVisible()
   await expect(page.getByRole('region', { name: 'Guardado del borrador' })).toHaveCount(0)
   await page.reload()
+  if (browserName === 'webkit') await restoreDriveAfterReload(page, browserName)
   await openLab(page)
   await expect(trace.getByText('Paso 3 de 5.')).toBeVisible()
   await expect(rule(3)).toHaveValue('A → B')
@@ -2156,6 +2161,7 @@ test('algorithm practice restores a different case and keeps its earlier attempt
   await page.getByRole('textbox', { name: 'Intercambios' }).fill('5')
   await expect(page.getByRole('region', { name: 'Guardado del borrador' })).toHaveCount(0)
   await page.reload()
+  if (browserName === 'webkit') await restoreDriveAfterReload(page, browserName)
   await openLab(page)
   await expect(sample).toHaveValue('Inserción · Mezclada')
   await expect(page.getByRole('textbox', { name: 'Intercambios' })).toHaveValue('5')

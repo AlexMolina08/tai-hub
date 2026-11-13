@@ -6,6 +6,7 @@ const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
 const CHUNK_BYTES = 8 * 1024 * 1024;
 const MULTIPART_BYTES = 4 * 1024 * 1024;
 const REPLACEMENT_KEY = 'taiHubReplacement';
+const RETRYABLE_READS = new Set([0, 429, 500, 502, 503, 504]);
 
 export const FILE_FIELDS = 'id,name,mimeType,size,description,modifiedTime,createdTime,headRevisionId,md5Checksum,appProperties,webViewLink,webContentLink,trashed,parents,ownedByMe,shared';
 export const FOLDER_MIME = 'application/vnd.google-apps.folder';
@@ -114,20 +115,39 @@ export class DriveClient {
 
   async json<T>(path: string, query?: Record<string, string>, init?: RequestInit): Promise<T> {
     if (init?.method && init.method !== 'GET') return (await this.#request(url(path, query), init)).json() as Promise<T>;
+    return this.#read(url(path, query), response => response.json() as Promise<T>, init);
+  }
+
+  async #read<T>(address: string, consume: (response: Response) => Promise<T>, init?: RequestInit): Promise<T> {
+    this.signal.throwIfAborted();
+    const caller = init?.signal;
+    caller?.throwIfAborted();
     const controller = new AbortController();
-    const abort = () => controller.abort(this.signal.reason);
-    this.signal.addEventListener('abort', abort, { once: true });
+    const { signal } = controller;
+    const cancel = () => controller.abort(this.signal.aborted ? this.signal.reason : caller?.reason);
+    this.signal.addEventListener('abort', cancel, { once: true });
+    caller?.addEventListener('abort', cancel, { once: true });
     const timeout = setTimeout(() => controller.abort(), 12_000);
     try {
-      return await (await this.#request(url(path, query), { ...init, signal: controller.signal })).json() as T;
+      for (let attempt = 0; ; attempt += 1) {
+        signal.throwIfAborted();
+        try {
+          return await consume(await this.#request(address, { ...init, signal }));
+        } catch (error) {
+          if (signal.aborted || attempt > 0 || (error instanceof DriveError
+            ? !RETRYABLE_READS.has(error.status) : !(error instanceof TypeError))) throw error;
+          await wait(500 + Math.floor(Math.random() * 250), signal);
+        }
+      }
     } catch (error) {
-      if (controller.signal.aborted && !this.signal.aborted) {
+      if (signal.aborted && !this.signal.aborted && !caller?.aborted) {
         throw new DriveError('Google Drive no respondió a tiempo. Puedes volver a intentarlo.', 0);
       }
       throw error;
     } finally {
       clearTimeout(timeout);
-      this.signal.removeEventListener('abort', abort);
+      this.signal.removeEventListener('abort', cancel);
+      caller?.removeEventListener('abort', cancel);
     }
   }
 
@@ -166,6 +186,10 @@ export class DriveClient {
 
   media(path: string): Promise<Response> {
     return this.#request(url(path, { alt: 'media' }));
+  }
+
+  readMedia<T>(path: string, consume: (response: Response) => Promise<T>): Promise<T> {
+    return this.#read(url(path, { alt: 'media' }), consume);
   }
 
   async upload(metadata: FileMetadata, content: Blob, id?: string, progress?: UploadProgress, keepRevision = false, generatedId?: string): Promise<DriveFile> {

@@ -2,6 +2,24 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { DriveFixture } from './fixtures'
 import { samplePackage } from '../src/lab/fixtures.test-support'
 
+test('keeps Drive available after proactive renewal', async ({ page, context }) => {
+  test.skip(process.env.VITE_DRIVE_SESSION !== 'managed', 'Requires the managed session build.')
+  const drive = new DriveFixture()
+  await drive.install(context)
+  let requests = 0
+  await context.route('**/tai-hub/session/token', route => route.fulfill({
+    json: { accountId: 'sample-account', token: 'fixture-token', expiresIn: ++requests === 1 ? 70 : 3600 },
+  }))
+  await page.clock.install()
+  await page.goto('/tai-hub/')
+  const ready = page.getByRole('button', { name: 'Añadir recurso', exact: true })
+  await expect(ready).toBeEnabled()
+  await page.clock.fastForward(30_000)
+  await expect.poll(() => requests).toBe(2)
+  await expect(ready).toBeEnabled()
+  expect(drive.redirectPrompts).toEqual([])
+})
+
 test('managed Drive session recovers after a rejected token and survives a reload', async ({ page, context, baseURL }) => {
   test.skip(process.env.VITE_DRIVE_SESSION !== 'managed', 'Requires the managed session build.')
   const drive = new DriveFixture()
@@ -39,6 +57,30 @@ test('managed Drive session recovers after a rejected token and survives a reloa
   await page.reload()
   await expect(page.getByRole('button', { name: 'Conectar Google Drive', exact: true })).toBeEnabled()
   await expect(ready).toBeDisabled()
+})
+
+test('retries a temporary renewal outage without opening Google', async ({ page, context }) => {
+  test.skip(process.env.VITE_DRIVE_SESSION !== 'managed', 'Requires the managed session build.')
+  const drive = new DriveFixture()
+  await drive.install(context)
+  let requests = 0
+  let unavailable = false
+  await context.route('**/tai-hub/session/token', route => {
+    requests++
+    return unavailable ? route.fulfill({ status: 503, json: {} })
+      : route.fulfill({ json: { accountId: 'sample-account', token: 'fixture-token', expiresIn: 3600 } })
+  })
+  await page.goto('/tai-hub/')
+  const ready = page.getByRole('button', { name: 'Añadir recurso', exact: true })
+  await expect(ready).toBeEnabled()
+  unavailable = true
+  await page.reload()
+  await expect(page.getByText('Recuperando acceso a Drive…')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reconectar', exact: true })).toHaveCount(0)
+  unavailable = false
+  await expect(ready).toBeEnabled({ timeout: 10_000 })
+  expect(requests).toBeGreaterThanOrEqual(3)
+  expect(drive.redirectPrompts).toEqual([])
 })
 
 test('sends an offline answer once after renewal and restores it on a second device', async ({

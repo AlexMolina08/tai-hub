@@ -1,6 +1,6 @@
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
-type AuthStatus = 'loading' | 'ready' | 'connecting' | 'connected' | 'expired' | 'error';
+type AuthStatus = 'loading' | 'ready' | 'connecting' | 'connected' | 'recovering' | 'expired' | 'error';
 export type AuthSnapshot = Readonly<{ status: AuthStatus; error?: string }>;
 
 type TokenResponse = {
@@ -105,6 +105,7 @@ export class GoogleSession {
   #sessionPath?: string;
   #sessionRequest?: AbortController;
   #renewAt = 0;
+  #renewFailures = 0;
   #lastRejectedAt?: number;
   #google?: GoogleOAuth;
   #snapshot: AuthSnapshot = { status: 'loading' };
@@ -286,8 +287,8 @@ export class GoogleSession {
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(8_000)]) });
   }
 
-  async renew(): Promise<void> {
-    if (!this.#sessionPath || this.#sessionRequest || !navigator.onLine || Date.now() < this.#renewAt) return;
+  async renew(force = false): Promise<void> {
+    if (!this.#sessionPath || this.#sessionRequest || !navigator.onLine || (!force && Date.now() < this.#renewAt)) return;
     const request = new AbortController();
     this.#sessionRequest = request;
     this.#renewAt = Date.now() + 15_000;
@@ -297,6 +298,7 @@ export class GoogleSession {
       if (response.status === 401) {
         this.#clearAccess();
         this.#renewAt = Infinity;
+        this.#renewFailures = 0;
         this.#publish(this.#browserAccount ? 'expired' : 'ready');
         return;
       }
@@ -306,9 +308,13 @@ export class GoogleSession {
       if (typeof token !== 'string' || !TOKEN_PATTERN.test(token) || !Number.isSafeInteger(expiresIn)
         || expiresIn <= 0 || typeof accountId !== 'string' || !accountId) throw new Error(FAILED);
       this.#expectedAccount = accountId;
+      this.#renewFailures = 0;
       this.#acceptToken(token, expiresIn);
     } catch {
-      if (!request.signal.aborted && !this.#credential) this.#publish(this.#browserAccount ? 'expired' : 'ready');
+      if (request.signal.aborted) return;
+      this.#renewFailures = Math.min(this.#renewFailures + 1, 5);
+      this.#renewAt = Date.now() + 1_000 * 2 ** this.#renewFailures;
+      if (!this.#credential) this.#publish(this.#browserAccount ? 'recovering' : 'ready');
     } finally {
       if (this.#sessionRequest === request) this.#sessionRequest = undefined;
     }
@@ -350,7 +356,10 @@ export class GoogleSession {
     if (!this.#credential || (expectedToken && this.#credential.token !== expectedToken)) return;
     this.#clearAccess();
     this.#expectedAccount = undefined;
-    if (!this.#cancelConnect && !this.#cancelRedirect) this.#publish('expired', RECONNECT);
+    if (!this.#cancelConnect && !this.#cancelRedirect) {
+      if (this.#sessionPath) this.#publish('recovering');
+      else this.#publish('expired', RECONNECT);
+    }
     if (this.#sessionPath) {
       const now = Date.now();
       if (this.#lastRejectedAt === undefined || now - this.#lastRejectedAt >= 15_000) {
@@ -566,7 +575,8 @@ export class GoogleSession {
     };
     if (this.#sessionPath) this.#renewAt = Date.now() + Math.max(1000, lifetime - 45_000);
     this.#expiryTimer = window.setTimeout(() => this.expire(), lifetime);
-    this.#publish('connected');
+    // A renewal replaces the access signal even when the status is already connected.
+    this.#publish('connected', undefined, !!this.#sessionPath);
   }
 
   #clearAccess(): void {

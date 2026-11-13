@@ -4,6 +4,7 @@ const auth = home + 'session/'
 const sessionCookie = '__Host-tai_session'
 const stateCookie = '__Host-tai_oauth'
 const sessionAge = 90 * 24 * 3600
+const extendWithin = 30 * 24 * 3600
 const timeout = () => AbortSignal.timeout(8000)
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
@@ -78,12 +79,15 @@ async function exchange(env, params) {
 
 async function start(request, env, url) {
   if (request.headers.get('Origin') !== url.origin) return json(403, { error: 'origin' })
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.ALLOWED_GOOGLE_ACCOUNT || !env.SESSION_KEY) {
+    return json(503, { error: 'unavailable' })
+  }
   const state = random()
   const verifier = random()
   const destination = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   destination.search = new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID,
     redirect_uri: url.origin + auth + 'callback', response_type: 'code', scope, access_type: 'offline',
-    prompt: 'consent', login_hint: env.ALLOWED_GOOGLE_ACCOUNT, state, code_challenge_method: 'S256',
+    prompt: 'consent', state, code_challenge_method: 'S256',
     code_challenge: await hash(verifier) }).toString()
   return json(200, { url: destination.href }, [cookie(stateCookie, state + '.' + verifier, 600)])
 }
@@ -134,8 +138,9 @@ async function authenticated(request, env, logout) {
     await remove()
     return json(200, {}, [clear])
   }
-  const session = await env.SESSIONS.prepare('SELECT drive_account, refresh FROM sessions WHERE id = ? AND expires > ?')
-    .bind(id, Math.floor(Date.now() / 1000)).first()
+  const now = Math.floor(Date.now() / 1000)
+  const session = await env.SESSIONS.prepare('SELECT drive_account, refresh, expires FROM sessions WHERE id = ? AND expires > ?')
+    .bind(id, now).first()
   if (!session) return json(401, {}, [clear])
   const value = await exchange(env, { refresh_token: await unseal(session.refresh, env, id), grant_type: 'refresh_token' })
   if (!value) {
@@ -146,7 +151,14 @@ async function authenticated(request, env, logout) {
     await env.SESSIONS.prepare('UPDATE sessions SET refresh = ? WHERE id = ? AND refresh = ?')
       .bind(await seal(value.refresh_token, env, id), id, session.refresh).run()
   }
-  return json(200, { accountId: session.drive_account, token: value.access_token, expiresIn: value.expires_in })
+  const cookies = []
+  if (session.expires - now <= extendWithin) {
+    const extended = await env.SESSIONS.prepare('UPDATE sessions SET expires = MAX(expires, ?) WHERE id = ? AND expires > ?')
+      .bind(now + sessionAge, id, now).run()
+    if (extended.meta.changes === 0) return json(401, {}, [clear])
+    cookies.push(cookie(sessionCookie, secret, sessionAge))
+  }
+  return json(200, { accountId: session.drive_account, token: value.access_token, expiresIn: value.expires_in }, cookies)
 }
 
 export default {

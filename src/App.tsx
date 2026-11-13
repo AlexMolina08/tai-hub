@@ -160,15 +160,17 @@ export default function App() {
     const renew = () => {
       if (document.visibilityState === 'visible') void session.renew()
     }
-    const timer = window.setInterval(renew, 30_000)
+    const timer = window.setInterval(renew, auth.status === 'recovering' ? 2_000 : 30_000)
     document.addEventListener('visibilitychange', renew)
     window.addEventListener('online', renew)
+    window.addEventListener('pageshow', renew)
     return () => {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', renew)
       window.removeEventListener('online', renew)
+      window.removeEventListener('pageshow', renew)
     }
-  }, [])
+  }, [auth.status])
   useEffect(() => {
     if (!useRedirect && !managedDrive) return
     try {
@@ -262,6 +264,7 @@ export default function App() {
   }
   function connect(sameTab?: boolean) {
     setError('')
+    if (auth.status === 'recovering') { void session.renew(true); return }
     const returnTo = view.page === 'lab' ? 'lab' : readerLocation.current && JSON.stringify(readerLocation.current)
     void session.connect({ sameTab, returnTo }).catch(showError)
   }
@@ -556,6 +559,7 @@ export default function App() {
   const showConnect = !account && !loadingLibrary && network
   const libraryStatus = !network ? 'Sin conexión.' : catalogueError || (error ? 'La biblioteca no se pudo cargar.' : 'Cargando biblioteca…')
   const retryLibrary = auth.status === 'connected'
+  const recoveringDrive = auth.status === 'recovering'
   const connectLabel = retryLibrary ? loadingLibrary ? libraryStatus : 'Reintentar'
     : loadingLibrary ? 'Conectando…' : 'Conectar Google Drive'
   const indexLabel = !indexStats.indexed && indexStats.pending
@@ -613,9 +617,9 @@ export default function App() {
       <main className={current ? 'content content-reader' : 'content'} id="main" tabIndex={-1}>
         {!network && <div className="banner" role="status"><CloudOff size={18} /> Sin conexión. {account && !officialView && 'El progreso pendiente se sincronizará al recuperar el acceso a Drive.'}</div>}
         {!officialView && (account || labAccountId) && !connected && <div className="banner" role="status"><CloudOff size={18} />
-          <span>{auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Reconecta Drive para actualizar la biblioteca y sincronizar.'}</span>
+          <span>{recoveringDrive || auth.status === 'connecting' || working ? 'Recuperando acceso a Drive…' : 'Reconecta Drive para actualizar la biblioteca y sincronizar.'}</span>
           <button className="button" disabled={!network || auth.status === 'loading' || auth.status === 'connecting' || working}
-            onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{auth.status === 'connected' ? 'Reintentar' : 'Reconectar'}</button></div>}
+            onClick={() => auth.status === 'connected' ? void refresh() : connect()}>{retryLibrary || recoveringDrive ? 'Reintentar' : 'Reconectar'}</button></div>}
         {!officialView && (error || (auth.status === 'error' && auth.error)) && <div className="banner error" role="alert"><span>{error || auth.error}</span>
           {!ios && !safari && auth.status === 'error' && <button className="button" onClick={() => connect(true)}>Conectar en esta pestaña</button>}
           {error && <button className="icon-button" aria-label="Cerrar aviso" onClick={() => setError('')}><X size={17} /></button>}
@@ -770,7 +774,7 @@ export default function App() {
             <button className="button" disabled={working} onClick={() => { void refresh(); void sync?.refresh().catch(showError) }}><RefreshCw size={16} /> Actualizar</button>
             <button className="button" onClick={() => setModal({ kind: 'import' })}><Upload size={16} /> Importar carpeta</button>
           </> : <button className="button primary" disabled={!clientId || !network || auth.status === 'loading' || auth.status === 'connecting' || working}
-            onClick={() => auth.status === 'connected' ? void refresh() : connect()}><Cloud size={17} /> {auth.status === 'connected' ? 'Reintentar' : 'Conectar Drive'}</button>}
+            onClick={() => auth.status === 'connected' ? void refresh() : connect()}><Cloud size={17} /> {retryLibrary || recoveringDrive ? 'Reintentar' : 'Conectar Drive'}</button>}
             {(account || session.localAccountId() || auth.status === 'connected') && <button className="button" onClick={() => {
               void session.signOut().then(clearPrivate).catch(showError)
             }}><LogOut size={16} /> Desconectar</button>}

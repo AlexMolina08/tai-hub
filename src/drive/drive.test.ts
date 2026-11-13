@@ -237,6 +237,33 @@ describe('Same-tab Google OAuth', () => {
 });
 
 describe('Drive media', () => {
+  it('retries a transient catalogue read with the same access', async () => {
+    const session = await connectedSession();
+    const request = vi.fn()
+      .mockResolvedValueOnce(Response.json({}, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({ files: [{ id: 'verified' }] }));
+    vi.stubGlobal('fetch', request);
+    await expect(new DriveClient(session).list('mimeType != null')).resolves.toEqual([{ id: 'verified' }]);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[0][0]).toBe(request.mock.calls[1][0]);
+    expect(request.mock.calls[1][1].headers.get('Authorization')).toBe('Bearer ' + TEST_TOKEN);
+  });
+
+  it('bounds the wait for the body of a stalled Drive download', async () => {
+    vi.useFakeTimers();
+    const session = await connectedSession();
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      return new Response(new ReadableStream({ start(controller) {
+        init.signal!.addEventListener('abort', () => controller.error(init.signal!.reason), { once: true });
+      } }));
+    }));
+    const pending = new DriveClient(session).readMedia('/files/synthetic', response => response.text());
+    const result = expect(pending).rejects.toThrow('Google Drive no respondió a tiempo');
+    await vi.advanceTimersByTimeAsync(12_000);
+    await result;
+    expect(session.snapshot().status).toBe('connected');
+  });
+
   it('uploads large files by chunks and resumes from Drive’s acknowledged range', async () => {
     vi.useFakeTimers();
     const session = await connectedSession();
