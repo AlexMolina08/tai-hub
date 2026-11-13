@@ -83,7 +83,8 @@ export function recommendLearning(input: RecommendationInput): RecommendationRes
     // Preserve that presentation rather than leaving it unreachable or starting a new group.
     if (attempts.length || !draft.value.trim() && (lesson || !presented)) continue
     add(pack, lesson ? lessonTarget(pack, lesson, activity.id) : activityTarget(pack, activity, draft.attemptGroupId),
-      activity.title, activity.objectiveIds, 'resume', 'Hay una actividad abierta que todavía no has comprobado.', 0, [draft.id])
+      lesson && activity.phase === 'practice' ? activity.title : 'Ejercicio pendiente', activity.objectiveIds, 'resume',
+      'Retoma el ejercicio desde la respuesta guardada.', 0, [draft.id])
     break
   }
 
@@ -164,8 +165,8 @@ export function recommendLearning(input: RecommendationInput): RecommendationRes
           && attempt.eligibility === 'eligible' && attempt.first && attempt.unaided && objective.qualifyingCorrectIds.includes(attempt.attemptId)
           && !!attempt.contextId && !!error?.contextId && before(error.contextId, attempt.contextId)))
         if (recovered) limitations.add('Ya hay una recuperación sin ayuda de un error crítico. Falta la comprobación diferida; repetir ahora el mismo ejercicio no la sustituye.')
-        else if (rechecks[0]) add(pack, activityTarget(pack, rechecks[0]), rechecks[0].title, rechecks[0].objectiveIds, 'critical-error',
-          'Comprueba un concepto con un error crítico pendiente de repaso.', 2, [review.attemptId], true)
+        else if (rechecks[0]) add(pack, activityTarget(pack, rechecks[0]), 'Ejercicio de refuerzo', rechecks[0].objectiveIds, 'critical-error',
+          'Practica con otro ejercicio sobre un concepto que conviene repasar.', 2, [review.attemptId], true)
         else {
           const lesson = lessons.find(lesson => lesson.objectiveIds.includes(objective.objectiveId))
           if (lesson) add(pack, lessonTarget(pack, lesson), lesson.title, lesson.objectiveIds, 'critical-error',
@@ -176,16 +177,16 @@ export function recommendLearning(input: RecommendationInput): RecommendationRes
       if (objective.schedule?.overdue) {
         const activity = activities.find(activity => activity.phase === 'delayed'
           && (!critical.length || critical.every(review => review.diagnosticId && activity.learning?.rechecksDiagnosticIds.includes(review.diagnosticId))))
-        if (activity) add(pack, activityTarget(pack, activity), activity.title, activity.objectiveIds, 'due',
-          'El repaso está vencido según las fechas registradas en tus dispositivos.', 3,
+        if (activity) add(pack, activityTarget(pack, activity), 'Ejercicio de repaso', activity.objectiveIds, 'due',
+          'Ya puedes comprobar si recuerdas lo que estudiaste.', 3,
           [...objective.qualifyingCorrectIds, ...objective.reviews.filter(review => review.open).map(review => review.attemptId)], true)
         else limitations.add('Hay un repaso pendiente sin actividad diferida validada disponible todavía.')
       }
       const reserved = activities.filter(activity => activity.phase === 'reserved' || activity.phase === 'delayed' && activity.evaluationIntent === 'transfer')
       reserves += reserved.length; freshReserves += reserved.filter(fresh).length
       const transfer = reserved.find(activity => fresh(activity) && (activity.phase === 'reserved' || objective.schedule?.overdue))
-      if (transfer && objective.qualifyingCorrectIds.length && !critical.length) add(pack, activityTarget(pack, transfer), transfer.title,
-        transfer.objectiveIds, 'transfer', 'Esta familia todavía no aparece como expuesta en el historial disponible.', 5)
+      if (transfer && objective.qualifyingCorrectIds.length && !critical.length) add(pack, activityTarget(pack, transfer), 'Supuesto nuevo',
+        transfer.objectiveIds, 'transfer', 'Aplica lo que has estudiado a un supuesto distinto.', 5)
     }
   }
 

@@ -130,7 +130,7 @@ export function ExamView(props: ExamViewProps) {
   }, [current, form])
 
   function save(previous: ExamRevision, next: ExamRevision['answers'], submit: boolean, parents = [previous]) {
-    if (buffer.hasUnsaved()) return
+    if (buffer.snapshot().some(entry => entry.status === 'failed') || (submit && buffer.hasUnsaved())) return
     const latestParent = Math.max(...parents.map(parent => Date.parse(parent.createdAt)))
     const wall = Math.max(effectiveNow(), latestParent)
     const end = Date.parse(previous.deadlineAt)
@@ -201,7 +201,6 @@ export function ExamView(props: ExamViewProps) {
     {state.error && <p role="alert">{state.error}</p>}
     {contentError && <p role="alert">{contentError}</p>}
     {clockError && <p role="alert">El reloj del dispositivo marca una hora anterior al inicio. Corrige la hora para continuar.</p>}
-    {pending && <p role="status">Guardando hoja de respuestas…</p>}
     {failed.length > 0 && <div role="alert"><p>{failed[0].error}</p><div className="lab-actions">
       <button className="button" disabled={pending || failed.every(entry => entry.collision)} onClick={() => buffer.retry(record)}>Reintentar guardado</button>
       <button className="button" onClick={downloadPending}>Descargar hoja pendiente</button>
@@ -241,16 +240,17 @@ export function ExamView(props: ExamViewProps) {
       </div></details>
       <p>{item.section.title}</p>
       {item.section.scenario && <details><summary>Leer enunciado común</summary><StudyText text={item.section.scenario} /></details>}
-      <fieldset aria-busy={pending}>
+      <fieldset>
         <legend ref={questionHeading} tabIndex={-1}>{item.label}</legend>
         <StudyText text={item.question.prompt} />
         {item.question.options.map((option, index) => <label key={option.id} className="lab-option">
-          <input type="radio" name="exam-choice" aria-disabled={unsaved} checked={answers.get(item.question.id) === option.id} onChange={() => {
+          <input type="radio" name="exam-choice" aria-disabled={failed.length > 0} checked={answers.get(item.question.id) === option.id} onChange={() => {
             const next = new Map(answers); next.set(item.question.id, option.id)
             save(current, [...next], false)
           }} /><span>{String.fromCharCode(65 + index)}. {option.text}</span>
         </label>)}
-        <button className="button" disabled={unsaved || !answers.has(item.question.id)} onClick={() => {
+        <button className="button" aria-disabled={failed.length > 0 || !answers.has(item.question.id)} onClick={() => {
+          if (!answers.has(item.question.id)) return
           const next = new Map(answers); next.delete(item.question.id); save(current, [...next], false)
         }}>Dejar en blanco</button>
       </fieldset>

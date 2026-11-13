@@ -54,6 +54,7 @@ export function InitialDiagnostic({ targets, events, open, showResults, summaryR
   summaryRef: Ref<HTMLElement>
 }) {
   if (targets.size !== wanted.size) return null
+  const ordered = diagnosticOrder(targets)
   const groups = new Set(Array.from(targets.values(), target => target.attemptGroupId))
   const results = new Map<string, { ordinal: number; label: string }>()
   for (const event of events) {
@@ -73,7 +74,7 @@ export function InitialDiagnostic({ targets, events, open, showResults, summaryR
       <div className="lab-lesson-list">{section.checks.map(({ objective, label }) => {
         const target = targets.get(objective)!
         return <button key={objective} className="lab-lesson" onClick={() => open(target)}>
-          <span><strong>{label}</strong><small>{results.get(target.attemptGroupId)?.label ?? 'Por comprobar'}</small></span>
+          <span><strong>Ejercicio {ordered.indexOf(target) + 1}{results.has(target.attemptGroupId) && ` · ${label}`}</strong><small>{results.get(target.attemptGroupId)?.label ?? 'Por comprobar'}</small></span>
           <ArrowRight size={18} aria-hidden="true" />
         </button>
       })}</div>

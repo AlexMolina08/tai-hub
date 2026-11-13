@@ -139,11 +139,13 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     ? currentPackage?.activities.find(activity => activity.id === selected?.activity) : undefined
   const currentSession = currentPackage?.sessions?.find(session => session.id === selected?.session)
   const currentExam = currentPackage?.exams?.find(form => form.id === selected?.exam)
+  const isStudying = !!(currentLesson || currentSession || currentExam || standalone)
+  const needsRecommendations = !isStudying || !!selected?.proposal
   const sessionPosition = history.events.find((event): event is SessionPosition => event.kind === 'session-position'
     && event.id === selected?.positionId && event.accountId === accountId && event.packageId === currentPackage?.id
     && event.packageVersion === currentPackage?.version && event.sessionId === currentSession?.id && event.sessionVersion === currentSession?.version)
-  const continuation = useMemo(() => studyContinuation(packages, history.events, accountId), [packages, history.events, accountId])
-  const guidedContinuation = useMemo(() => sessionResume(packages, history.events, accountId), [packages, history.events, accountId])
+  const continuation = useMemo(() => !isStudying && studyContinuation(packages, history.events, accountId), [isStudying, packages, history.events, accountId])
+  const guidedContinuation = useMemo(() => !isStudying && sessionResume(packages, history.events, accountId), [isStudying, packages, history.events, accountId])
   const [evaluatedAt, setEvaluatedAt] = useState(() => new Date().toISOString())
   useEffect(() => {
     const update = () => setEvaluatedAt(new Date().toISOString())
@@ -152,9 +154,10 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     return () => { clearInterval(timer); window.removeEventListener('focus', update) }
   }, [])
   const learning = useMemo(() => {
+    if (!needsRecommendations) return { snapshot: null, error: '' }
     try { return { snapshot: deriveLearning({ accountId, packages, events: history.events, now: evaluatedAt, policy: DEFAULT_LEARNING_POLICY }), error: '' } }
     catch (failure) { return { snapshot: null, error: message(failure) } }
-  }, [accountId, packages, history.events, evaluatedAt])
+  }, [accountId, packages, history.events, evaluatedAt, needsRecommendations])
   const targets = useMemo(() => diagnosticTargets(packages), [packages])
   const orderedDiagnostic = useMemo(() => diagnosticOrder(targets), [targets])
   const currentEditions = useMemo(() => [...latestLabPackages(packages).values()], [packages])
@@ -335,14 +338,14 @@ function Workspace({ library, accountId, connected, openMaterial }: {
           : standalone.phase === 'delayed' ? 'Repaso diferido' : standalone.phase === 'reserved' ? 'Comprobación de transferencia' : 'Práctica recomendada'}</p>
         <ActivityView key={`${packageKey(currentPackage)}:${standalone.id}:${selected?.group}`} pack={currentPackage} activity={standalone}
           accountId={accountId} deviceId={deviceId} events={history.events} record={record} newAttemptGroupId={selected?.group}
-          afterAnswer={proposalAction ?? diagnosticAction} />
+          diagnostic={diagnosticIndex >= 0} afterAnswer={proposalAction ?? diagnosticAction} />
       </article> : currentSession ? <GuidedSessionView key={`${packageKey(currentPackage)}:session:${currentSession.id}`} pack={currentPackage} session={currentSession}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial} initialPosition={sessionPosition}
         onPosition={position => setSelected(current => current?.pack === packageKey(currentPackage) && current.session === currentSession.id
           ? { ...current, positionId: position.id } : current)}
         afterSession={proposalAction && <button className="button primary" onClick={proposalAction.run}>{proposalAction.label} <ArrowRight size={17} /></button>}
-        renderActivity={(activity, referenceVisible, afterAnswer) => <ActivityView key={activity.id} pack={currentPackage} activity={activity} accountId={accountId}
-          deviceId={deviceId} events={history.events} record={record} referenceVisible={referenceVisible} afterAnswer={afterAnswer} />} />
+        renderActivity={(activity, referenceVisible, afterAnswer, assessment) => <ActivityView key={activity.id} pack={currentPackage} activity={activity} accountId={accountId}
+          deviceId={deviceId} events={history.events} record={record} referenceVisible={referenceVisible} assessment={assessment} afterAnswer={afterAnswer} />} />
       : currentLesson && <LessonView key={`${packageKey(currentPackage)}:${currentLesson.id}`} pack={currentPackage} lesson={currentLesson}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial}
         initialActivityId={selected?.activity} onActivityChange={activity => setSelected(current => current && { ...current, activity })}
@@ -364,7 +367,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
       </section>}
       {continuation && <section className="lab-continuation" aria-label="Retomar el laboratorio">
         <div><p className="context-label">Tu última actividad guardada</p><h2>{continuation.lesson.title}</h2>
-          <p>Actividad {continuation.activityIndex + 1}: {continuation.activity.title}</p>
+          <p>Actividad {continuation.activityIndex + 1}{continuation.activity.phase === 'practice' && `: ${continuation.activity.title}`}</p>
           <small>Recupera tu respuesta y las pistas consultadas. Puedes explorar otra lección.</small></div>
         <button className="button primary" onClick={() => {
           try { sessionStorage.setItem(activityLocationKey(accountId, continuation.pack, continuation.lesson) + ':pane', 'practice') }
@@ -508,7 +511,7 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
       </section>}
       {(!mobile || pane === 'practice') && <section ref={practice} tabIndex={-1} className="lab-practice" aria-label="Práctica">
         <div className="lab-steps" aria-label="Actividades de la lección">{activities.map((a, i) => <button className="button" key={a.id}
-          title={a.title + (answered.has(a.id) ? ' · Respondida' : '')} aria-current={index === i ? 'step' : undefined}
+          title={(a.phase === 'practice' ? a.title : `Ejercicio ${i + 1}`) + (answered.has(a.id) ? ' · Respondida' : '')} aria-current={index === i ? 'step' : undefined}
           onClick={() => chooseActivity(i)}>{i + 1}{answered.has(a.id) && <Check size={11} aria-hidden="true" />}</button>)}</div>
         <div className="lab-activity-position"><span>Actividad {index + 1} de {activities.length}</span><span>{isPractice ? 'Práctica' : 'Comprobación'}</span></div>
         {activity && <ActivityView key={activity.id} activity={activity} pack={pack} accountId={accountId}
@@ -522,10 +525,10 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
 }
 
 export function ActivityView({ activity, pack, accountId, deviceId, events, record, newAttemptGroupId, referenceVisible = false,
-  previous, next, afterAnswer, proposalAction }: {
+  diagnostic = false, assessment = false, previous, next, afterAnswer, proposalAction }: {
   activity: Activity; pack: LabPackage; accountId: string; deviceId: string; events: LabEvent[];
   record: (events: LabEvent[]) => Promise<void>; newAttemptGroupId?: string; referenceVisible?: boolean
-  previous?: StudyAction; next?: StudyAction; afterAnswer?: StudyAction; proposalAction?: StudyAction
+  diagnostic?: boolean; assessment?: boolean; previous?: StudyAction; next?: StudyAction; afterAnswer?: StudyAction; proposalAction?: StudyAction
 }) {
   const ref = { activityId: activity.id, activityVersion: activity.version, packageId: pack.id, packageVersion: pack.version }
   const buffer = draftWriteBuffer(accountId, ref)
@@ -568,6 +571,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const [error, setError] = useState('')
   const feedbackPanel = useRef<HTMLDivElement>(null)
   const focusFeedback = useRef(false)
+  const checkingChoice = useRef(false)
   const assistance = assistanceFor(events, groupId)
   const attempts = events.filter((e): e is Attempt => e.kind === 'attempt' && e.attemptGroupId === groupId)
   const currentWork = useRef({ assistance, attempts })
@@ -584,7 +588,9 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   useEffect(() => {
     if (busy || !latest || !focusFeedback.current) return
     focusFeedback.current = false
-    focusStudyHeading(feedbackPanel.current)
+    const feedback = feedbackPanel.current
+    feedback?.focus({ preventScroll: true })
+    feedback?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
   }, [busy, latest])
   const latestEvidence = useMemo(() => {
     if (!latest || activity.state !== 'validated') return undefined
@@ -679,6 +685,11 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       answer: value, ...result, ...attemptFacts(), activeMs: activeMs(), phase: activity.phase, gradingVersion: 'choice-v1' }])
     focusFeedback.current = true
   }
+  function checkChoice(value: string | null) {
+    if (checkingChoice.current || busy || semanticBlocked || heads.length !== 1 || failed.length) return
+    checkingChoice.current = true
+    void run(() => submitChoice(value)).finally(() => { checkingChoice.current = false })
+  }
   async function submitModel(value: string, correct: boolean, feedback: string) {
     await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
       familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
@@ -702,11 +713,17 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       return `Versión ${index + 1}: ${view.input.address}, ${view.input.format === 'prefix' ? '/' : 'máscara '}${view.input.value}; ${context}; prueba ${view.input.probe || 'vacía'}; ${phase}. Predicción: ${view.prediction.lower || 'sin límite inferior'}–${view.prediction.upper || 'sin límite superior'}, pertenencia ${view.prediction.member === 'yes' ? 'dentro' : view.prediction.member === 'no' ? 'fuera' : 'sin responder'}.${view.prediction.interpretationNote ? ' Nota: ' + view.prediction.interpretationNote : ''}`
     } catch { return `Versión ${index + 1}: copia conservada para revisión` }
   }
+  const showNeutralHeading = diagnostic || assessment || activity.phase !== 'practice'
+  const leadingQuestion = /^¿[^\n]{1,120}\?\s*\n/.exec(activity.prompt)
+  const heading = showNeutralHeading ? leadingQuestion?.[0].trim() ?? 'Enunciado' : activity.title
+  const prompt = leadingQuestion?.[0].trim() === heading ? activity.prompt.slice(leadingQuestion[0].length) : activity.prompt
+  const checkDisabled = busy || semanticBlocked || heads.length !== 1 || failed.length > 0
+  const showStudyTools = !showNeutralHeading
   return <div className="lab-activity">
-    <h3 tabIndex={-1} data-study-heading>{activity.title}</h3>
+    <h3 tabIndex={-1} data-study-heading>{heading}</h3>
     {capture.warning && <p role="status">{capture.warning}</p>}
-    {semanticBlocked && <section aria-label="Guardado de respuesta y ayuda">
-      <p role="status">{semanticEntries.some(entry => entry.status === 'pending') ? 'Guardando respuesta o consulta…' : 'Hay una respuesta o consulta pendiente de guardar.'}</p>
+    {semanticEntries.some(entry => entry.status === 'failed') && <section aria-label="Guardado de respuesta y ayuda">
+      <p role="status">Hay una respuesta o consulta pendiente de guardar.</p>
       {semanticEntries.some(entry => entry.status === 'failed') && <>
         <p role="alert">{semanticEntries.find(entry => entry.status === 'failed')?.error} El lote original sigue en esta pestaña. Reintenta o descarga una copia antes de cerrarla.</p>
         <div className="lab-actions"><button className="button" disabled={semanticEntries.some(entry => entry.status === 'pending')}
@@ -715,13 +732,13 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       </>}
     </section>}
 
-    <div className="lab-prompt"><StudyText text={activity.prompt} /></div>
+    <div className="lab-prompt"><StudyText text={prompt} /></div>
     {referenceVisible && <p className="lab-reading-support"><BookOpen size={16} aria-hidden="true" /> Puedes consultar la explicación. Tu respuesta contará como práctica con apoyo.</p>}
-    {activity.kind !== 'ipv4-model' && <details className="lab-prediction"><summary>Anotar una predicción (opcional)</summary>
+    {!diagnostic && activity.kind !== 'ipv4-model' && <details className="lab-prediction"><summary>Anotar una predicción (opcional)</summary>
       <StudyNoteEditor target={{ ...ref, kind: 'activity', purpose: 'prediction' }} accountId={accountId} deviceId={deviceId}
         events={events} record={record} label="Tu predicción" />
     </details>}
-    {(pending || failed.length > 0) && <section aria-label="Guardado del borrador">
+    {(failed.length > 0 || (pending && activity.kind !== 'choice')) && <section aria-label="Guardado del borrador">
       <p role="status">{pending ? 'Guardando borrador…' : 'Borrador pendiente de guardar.'}</p>
       {failed.length > 0 && <><p role="alert">{failed[0].error} El texto sigue disponible en esta pestaña. {failed.some(entry => entry.collision)
         ? 'Guarda una copia antes de cerrarla.' : 'Reintenta el guardado antes de cerrarla.'}</p>
@@ -739,20 +756,25 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         if (!await buffer.save(resolved, record)) throw new Error('La elección del borrador sigue pendiente de guardar.')
       })}>Continuar: {draftLabel(head.value, index)}</button>)}
     </div> : activity.kind === 'choice' ? <>
-      <fieldset className="lab-answer-options" disabled={busy || semanticBlocked || heads.length === 0}><legend>Elige una respuesta</legend>
-        {activity.options.map(option => <label key={option.id} className="lab-option"><input type="radio" name={activity.id}
-          value={option.id} checked={answer === option.id} onChange={() => { void run(() => save(option.id)) }} /><span>{option.text}</span></label>)}
+      <fieldset className="lab-answer-options" disabled={heads.length === 0}><legend>Elige una respuesta</legend>
+        {activity.options.map((option, index) => <label key={option.id} className="lab-option"><input type="radio" name={activity.id}
+          value={option.id} checked={answer === option.id} aria-disabled={busy || semanticBlocked || undefined} onChange={() => {
+            if (checkingChoice.current || busy || semanticBlocked) return
+            setError('')
+            void save(option.id).catch(failure => setError(message(failure)))
+          }} /><span className="lab-option-letter" aria-hidden="true">{String.fromCharCode(65 + index)}.</span><span>{option.text}</span></label>)}
       </fieldset>
-      <div className="lab-actions"><button className="button primary" disabled={busy || semanticBlocked || !answer} onClick={() => void run(() => submitChoice(answer))}>Comprobar respuesta</button>
-        <button className="button" disabled={busy || semanticBlocked || heads.length !== 1 || latest?.outcome === 'omitted'}
-          onClick={() => void run(() => submitChoice(null))}>Dejar sin responder</button>
+      <div className="lab-actions"><button className="button primary" aria-disabled={checkDisabled || !answer} onClick={() => { if (answer) checkChoice(answer) }}>Comprobar respuesta</button>
+        <button className="button" aria-disabled={checkDisabled || latest?.outcome === 'omitted'}
+          onClick={() => { if (latest?.outcome !== 'omitted') checkChoice(null) }}>Dejar sin responder</button>
       </div>
       {latest?.kind === 'attempt' && <div className="lab-feedback lab-answer-feedback" tabIndex={-1} ref={feedbackPanel} data-outcome={latest.outcome}>
+        {latest.answer !== null && latest.answer !== answer && <small>Última comprobación</small>}
         <div role="status"><strong>{latest.outcome === 'omitted' ? 'Sin respuesta' : latest.outcome === 'correct' ? 'Respuesta correcta' : 'Revisa la respuesta'}{latest.hintCount > 0 || latest.solutionViewed ? ' · Con ayuda' : ''}</strong>
-        <p>{latest.feedback}</p></div>{latest.outcome !== 'omitted' && <details onToggle={event => {
+        {latest.feedback && <StudyText text={latest.feedback} />}</div>{latest.outcome !== 'omitted' && <details key={latest.id} onToggle={event => {
           if (event.currentTarget.open && !assistance.solutionViewed) void run(revealSolution)
         }}><summary>Por qué cada opción</summary>{assistance.solutionViewed
-          ? activity.options.map(o => <p key={o.id}><strong>{o.text}:</strong> {o.explanation}</p>)
+          ? activity.options.map(o => <div className="lab-option-explanation" key={o.id}><strong>{o.text}</strong><StudyText text={o.explanation} /></div>)
           : <p>{busy ? 'Guardando la consulta de la explicación…' : 'Guarda la consulta para mostrar las explicaciones.'}
             {!busy && <button className="text-link" onClick={() => void run(() => semantic.hasUnsaved() ? retrySemantic() : revealSolution())}>Reintentar mostrar explicaciones</button>}</p>}</details>}</div>}
     </> : activity.kind === 'ipv4-model' ? <IPv4Panel activity={activity} saved={answer} disabled={heads.length === 0 || busy || semanticBlocked}
@@ -786,9 +808,9 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       {nextProposal && <button className={forward ? 'button' : 'button primary'} disabled={busy || semanticBlocked} onClick={nextProposal.run}>{nextProposal.label} <ArrowRight size={17} /></button>}
     </nav>}
     {latest && latest.ordinal > 1 && <p className="lab-mode">Intento {latest.ordinal}. Tu primera respuesta se conserva.</p>}
-    {latestEvidence?.referenceSupport === 'recorded' && <p className="lab-mode">Respuesta con apoyo de lectura. No acredita recuperación sin apoyo.</p>}
-    {latestEvidence?.referenceSupport === 'uncertain' && <p className="lab-mode">No se puede verificar si esta respuesta tuvo apoyo de lectura. Se conserva sin acreditar recuperación sin apoyo.</p>}
-    {heads.length === 1 && activity.phase === 'practice' && <>
+    {latestEvidence?.referenceSupport === 'recorded' && <p className="lab-mode">Has respondido con la explicación disponible. La respuesta cuenta como práctica con apoyo.</p>}
+    {latestEvidence?.referenceSupport === 'uncertain' && <p className="lab-mode">Guardamos la respuesta. Queda por comprobar si puedes resolver el ejercicio sin ayuda.</p>}
+    {heads.length === 1 && activity.phase === 'practice' && (showStudyTools || latest) && <>
       <div className="lab-actions">
         {activity.phase === 'practice' && assistance.hintCount < activity.hints.length && <button className="button" disabled={busy || semanticBlocked}
           onClick={() => void run(() => recordStudy([{ ...ref, accountId, deviceId, id: crypto.randomUUID(), kind: 'assistance',
@@ -796,15 +818,15 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         {activity.phase === 'practice' && !assistance.solutionViewed && <button className="button" disabled={busy || semanticBlocked}
           onClick={() => void run(revealSolution)}>Ver solución</button>}
       </div>
-      {activity.hints.slice(0, assistance.hintCount).map((hint, i) => <p className="lab-feedback" key={i}>Pista {i + 1}: {hint}</p>)}
-      {assistance.solutionViewed && <p className="lab-feedback">{activity.solution}</p>}
+      {activity.hints.slice(0, assistance.hintCount).map((hint, i) => <div className="lab-feedback" key={i}><strong>Pista {i + 1}</strong><StudyText text={hint} /></div>)}
+      {assistance.solutionViewed && <div className="lab-feedback"><strong>Solución</strong><StudyText text={activity.solution} /></div>}
     </>}
     {error && <p role="alert">{error}</p>}
-    <details className="lab-sources"><summary>Fuentes y límites</summary>
+    {(showStudyTools || latest) && <details className="lab-sources"><summary>Fuentes y límites</summary>
       <p>{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : activity.mode.kind === 'documentary' ? 'Caso documental' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</p>
       <p>{activity.mode.limits}</p>
       {activity.claims.map((claim, i) => { const source = pack.sources.find(s => s.id === claim.sourceId)!; return <p key={i}>{claim.text} · <a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>, {source.edition}, {claim.locator}</p> })}
-    </details>
+    </details>}
   </div>
 }
 

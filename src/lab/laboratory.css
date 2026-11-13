@@ -134,7 +134,7 @@
 .lab-study-text > p:empty { display: none; }
 .lab-code-example { margin: 1rem 0; min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); overflow: hidden; }
 .lab-code-example figcaption { padding: .5rem .85rem; border-bottom: 1px solid var(--line); font-size: .75rem; color: var(--muted); }
-.lab-code-example pre { margin: 0; padding: .85rem; white-space: pre-wrap; overflow-wrap: anywhere; font: .85rem/1.65 ui-monospace, monospace; tab-size: 2; }
+.lab-code-example pre { margin: 0; padding: .85rem; white-space: pre-wrap; overflow-wrap: normal; overflow-x: auto; font: .9rem/1.65 ui-monospace, monospace; tab-size: 4; }
 .lab-code-example code { font: inherit; background: none; padding: 0; color: inherit; }
 .lab-activity-position { display: flex; flex-wrap: wrap; gap: .4rem 1rem; justify-content: space-between; margin: 1.3rem 0 .65rem; }
 .lab-activity-navigation { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--line); padding-top: 1.2rem; margin-top: 1.5rem; }
@@ -153,11 +153,16 @@
 .lab-option input { margin-top: .3rem; flex-shrink: 0; }
 .lab-option:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .lab-option:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); }
+.lab-option input { accent-color: var(--accent); }
+.lab-option-letter { flex: none; color: var(--muted); font-weight: 600; }
+.laboratory .button[aria-disabled="true"] { opacity: .55; cursor: default; }
 .lab-option span, .lab-feedback { overflow-wrap: anywhere; white-space: pre-wrap; }
 .lab-feedback { padding: 1rem; border-left: 3px solid currentColor; background: var(--surface); margin: 1rem 0; }
 .lab-answer-feedback { background: var(--soft); border-color: var(--line); border-radius: 0 8px 8px 0; line-height: 1.6; }
 .lab-answer-feedback[data-outcome="correct"] { border-color: var(--accent); }
 .lab-answer-feedback p { margin-block: .45rem 0; }
+.lab-answer-feedback > small { display: block; color: var(--muted); margin-bottom: .4rem; }
+.lab-option-explanation { padding-block: .75rem; border-top: 1px solid var(--line); }
 .lab-answer-feedback details { margin-top: .7rem; }
 .lab-answer-feedback summary, .lab-sources summary, .lab-prediction summary { color: var(--muted); font-size: .88rem; }
 .lab-sources { margin-block: 1.15rem .1rem; }
@@ -192,6 +197,8 @@
   .lab-option { padding: .9rem .75rem; line-height: 1.5; }
   .lab-explanation { padding: .2rem .15rem; }
   .lab-explanation p { font-size: 1rem; line-height: 1.8; }
+  .lab-code-example pre { padding-inline: .7rem; font-size: .84rem; }
+  .lab-answer-feedback { scroll-margin-bottom: 4.75rem; }
   .lab-guided-stages { margin-block: .4rem 1rem; }
   .lab-guided-stages button { min-height: 54px; }
   .lab-answer-navigation .primary { flex: 1 1 auto; }

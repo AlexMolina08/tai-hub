@@ -10,13 +10,14 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   pack: LabPackage; session: GuidedSession; accountId: string; deviceId: string; events: LabEvent[]
   record: (events: LabEvent[]) => Promise<void>
   openMaterial: (resourceId: string, sectionId: string) => void
-  renderActivity: (activity: Activity, referenceVisible: boolean, afterAnswer?: { label: string; run: () => void }) => ReactNode
+  renderActivity: (activity: Activity, referenceVisible: boolean, afterAnswer: { label: string; run: () => void } | undefined, assessment: boolean) => ReactNode
   afterSession?: ReactNode
   initialPosition?: SessionPosition
   onPosition?: (position: SessionPosition) => void
 }) {
   const [stageIndex, setStageIndex] = useState(() => Math.max(0, session.stages.findIndex(stage => stage.id === initialPosition?.stageId)))
   const stage = session.stages[stageIndex]
+  const assessment = stage.kind === 'recover' || stage.kind === 'transfer'
   const [activityId, setActivityId] = useState<string | null>(() => initialPosition?.completed ? null
     : initialPosition?.activityId && stage.activityIds.includes(initialPosition.activityId) ? initialPosition.activityId : stage.activityIds[0] ?? null)
   const [completed, setCompleted] = useState(initialPosition?.completed ?? false)
@@ -115,11 +116,11 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
         </div>
       })}
       {stage.activityIds.length > 1 && <nav className="lab-steps" aria-label="Actividades de esta etapa">{stage.activityIds.map((id, index) => <button
-        className="button" key={id} title={pack.activities.find(activity => activity.id === id)!.title}
+        className="button" key={id} title={assessment ? `Ejercicio ${index + 1}` : pack.activities.find(activity => activity.id === id)!.title}
         aria-current={activityId === id ? 'step' : undefined} onClick={() => void navigate(stageIndex, id)}>
         {index + 1}{answered.has(id) && <Check size={11} aria-hidden="true" />}
       </button>)}</nav>}
-      {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible, continueStudy)}</div>}
+      {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible, continueStudy, assessment)}</div>}
       {stage.kind === 'close' && <section className="lab-guided-summary" aria-label="Respuestas guardadas">
         <h4>{answered.size} de {allIds.length} actividades con respuesta guardada</h4>
         <p>Completar este recorrido no demuestra por sí solo comprensión, retención o transferencia.</p>
