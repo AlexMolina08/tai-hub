@@ -590,6 +590,8 @@ for (const route of ['desktop-reference', 'desktop-memory', 'mobile-reading-retu
         await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
         await expect(page.getByText('Compara cada opción.', { exact: true })).toHaveCount(0)
         if (route === 'desktop-reference') {
+          // Let activity navigation finish moving focus before sending the keyboard activation.
+          await expect(page.locator('.lab-activity').getByRole('heading', { name: 'Enunciado', exact: true })).toBeFocused()
           await disclosure.press('Enter')
           const hide = page.getByRole('button', { name: 'Volver a la actividad', exact: true })
           await expect(hide).toBeFocused()

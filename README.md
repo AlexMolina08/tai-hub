@@ -2,7 +2,7 @@
 
 Biblioteca privada para el ingreso libre en Técnicos Auxiliares de Informática de la AGE. El programa sigue los cuatro bloques y 33 temas del [anexo V del BOE](https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-26262).
 
-La aplicación estática se aloja en [GitHub Pages](https://alexmolina08.github.io/tai-hub/). Google Drive guarda los originales, los metadatos, las revisiones de PDF, los índices y el progreso. Google concede únicamente `drive.file`, limitado a los archivos que gestiona TAI Hub. El token caduca y vive en memoria. Tras la primera conexión, la app recuerda la cuenta en el navegador e intenta recuperar acceso al volver a entrar. Si Google necesita una acción, aparece **Conectar Drive**. **Desconectar** olvida la cuenta y cierra el acceso en las pestañas abiertas de TAI Hub.
+La versión de estudio se abre en [TAI Hub](https://tai-hub-study.tai-hub.workers.dev/tai-hub/) y renueva la sesión de Drive al volver a entrar. Google Drive guarda los originales, los metadatos, las revisiones de PDF, los índices y el progreso. El permiso `drive.file` se limita a los archivos que gestiona TAI Hub. El token de acceso vive en memoria; la sesión persistente se gestiona en [Cloudflare Workers](server/README.md). [GitHub Pages](https://alexmolina08.github.io/tai-hub/) se conserva como alternativa con conexión directa. Si Google necesita una acción, aparece **Conectar Drive**. **Desconectar** cierra el acceso en las pestañas de la aplicación.
 
 ## Desarrollo
 
