@@ -594,6 +594,7 @@ export default function App() {
       </nav>
       <div className="sidebar-footer">
         <button className="nav-setting" onClick={() => { setModal({ kind: 'settings' }); setDrawer(false) }}><Settings2 size={17} /> Ajustes</button>
+        <a className="nav-setting" href={import.meta.env.BASE_URL + 'privacidad.html'} target="_blank" rel="noreferrer">Privacidad <ExternalLink size={14} /></a>
         <div className="sidebar-status"><span className={connected && network ? 'status-dot online' : 'status-dot'} />
           {connected && network ? 'Drive conectado' : 'Biblioteca privada'}</div>
       </div>
