@@ -22,6 +22,7 @@ export interface RecommendationResult { items: LearningRecommendation[]; limitat
 interface Candidate extends LearningRecommendation { rank: number; review: boolean }
 export interface RecommendationInput {
   packages: readonly LabPackage[]
+  currentEditions?: readonly LabPackage[]
   events: readonly LabEvent[]
   learning: LearningSnapshot
   skipped?: readonly string[]
@@ -123,7 +124,7 @@ export function recommendLearning(input: RecommendationInput): RecommendationRes
     && (!activity.provenance.originalId || !seenOriginals.has(activity.provenance.originalId))
   let reserves = 0, freshReserves = 0
 
-  for (const pack of packages) {
+  for (const pack of input.currentEditions ?? packages) {
     const lessons = pack.lessons.filter(lesson => validLesson(pack, lesson))
     const answered = new Set(events.filter(event => event.kind === 'attempt' && ownRef(event, pack) && event.outcome !== 'omitted'
       && pack.activities.some(activity => activity.id === event.activityId && activity.version === event.activityVersion)).map(event => 'activityId' in event ? event.activityId : ''))

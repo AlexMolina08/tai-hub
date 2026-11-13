@@ -1,15 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ArrowRight, CalendarDays, Layers, Lightbulb } from 'lucide-react'
-import type { LabEvent, LabPackage } from './model'
 import type { LearningSnapshot } from './learning'
-import { recommendLearning, type LearningDestination } from './recommendation'
+import type { LearningRecommendation, RecommendationResult } from './recommendation'
 
-export function LearningDashboard({ snapshot, packages, events, open }: {
-  snapshot: LearningSnapshot; packages: LabPackage[]; events: LabEvent[]; open: (target: LearningDestination) => void
+export function LearningDashboard({ snapshot, queue, open, skip, reset }: {
+  snapshot: LearningSnapshot; queue: RecommendationResult; open: (proposal: LearningRecommendation) => void
+  skip: (id: string) => void; reset: () => void
 }) {
-  const [skipped, setSkipped] = useState<string[]>([])
   const [expanded, setExpanded] = useState(false)
-  const queue = useMemo(() => recommendLearning({ packages, events, learning: snapshot, skipped }), [packages, events, snapshot, skipped])
   const next = queue.items[0]
   const count = (field: 'understandingIds' | 'retentionIds' | 'transferIds') => new Set(snapshot.objectives.flatMap(objective => objective[field])).size
   const labels = { insufficient: 'En aprendizaje', consolidated: 'Consolidado', 'review-open': 'Repaso abierto', uncertain: 'Evidencia incompleta' }
@@ -25,11 +23,11 @@ export function LearningDashboard({ snapshot, packages, events, open }: {
   const visible = expanded ? snapshot.objectives : snapshot.objectives.filter(objective => objective.qualifyingCorrectIds.length || objective.reviews.length).slice(0, 4)
   return <section className="lab-learning" aria-labelledby="lab-learning-heading">
     {next ? <section className="lab-next-step" aria-label="Siguiente paso recomendado">
-      <div><p className="context-label">Siguiente paso · {reasonLabels[next.reason]}</p><h2>{next.title}</h2><p>{next.message}</p></div>
-      <div className="lab-actions"><button className="button primary" onClick={() => open(next.target)}>Empezar propuesta <ArrowRight size={17} /></button>
-        <button className="text-link" onClick={() => setSkipped(current => [...current, next.id])}>Otra propuesta</button></div>
-    </section> : <p>No quedan propuestas en esta selección. Puedes explorar las lecciones o <button className="text-link" onClick={() => setSkipped([])}>restablecer propuestas</button>.</p>}
-    <header><p className="context-label">Tu progreso</p><h2 id="lab-learning-heading">Comprender, recordar, aplicar</h2>
+      <div><p className="context-label">Siguiente paso · {reasonLabels[next.reason]}</p><h2 data-study-heading tabIndex={-1}>{next.title}</h2><p>{next.message}</p></div>
+      <div className="lab-actions"><button className="button primary" onClick={() => open(next)}>Empezar propuesta <ArrowRight size={17} /></button>
+        <button className="text-link" onClick={() => skip(next.id)}>Otra propuesta</button></div>
+    </section> : <p>No quedan propuestas en esta selección. Puedes explorar las lecciones o <button className="text-link" onClick={reset}>restablecer propuestas</button>.</p>}
+    <header><p className="context-label">Tu progreso</p><h2 id="lab-learning-heading" data-study-heading tabIndex={-1}>Comprender, recordar, aplicar</h2>
       <p className="lab-learning-lead">Objetivos acreditados en cada fase del estudio ({snapshot.objectives.length} objetivos en total):</p></header>
     <div className="lab-learning-dimensions">
       <div><Lightbulb size={20} aria-hidden="true" /><strong>{count('understandingIds')}</strong><h3>Comprensión</h3><p>Primeras respuestas correctas sin ayuda.</p></div>

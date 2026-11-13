@@ -6,11 +6,12 @@ import { StudyText } from './StudyText'
 import { StudyNoteEditor } from './StudyNoteEditor'
 import { LearningReading } from './LearningReading'
 
-export function GuidedSessionView({ pack, session, accountId, deviceId, events, record, openMaterial, renderActivity, initialPosition, onPosition }: {
+export function GuidedSessionView({ pack, session, accountId, deviceId, events, record, openMaterial, renderActivity, initialPosition, onPosition, afterSession }: {
   pack: LabPackage; session: GuidedSession; accountId: string; deviceId: string; events: LabEvent[]
   record: (events: LabEvent[]) => Promise<void>
   openMaterial: (resourceId: string, sectionId: string) => void
-  renderActivity: (activity: Activity, referenceVisible: boolean) => ReactNode
+  renderActivity: (activity: Activity, referenceVisible: boolean, afterAnswer?: { label: string; run: () => void }) => ReactNode
+  afterSession?: ReactNode
   initialPosition?: SessionPosition
   onPosition?: (position: SessionPosition) => void
 }) {
@@ -70,6 +71,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
     return navigation.current
   }
   const activity = pack.activities.find(activity => activity.id === activityId)
+  const nextActivity = activity ? stage.activityIds[stage.activityIds.indexOf(activity.id) + 1] : undefined
   const referenceVisible = !!activity && stage.readings.some(reading =>
     pack.lessons.find(lesson => lesson.id === reading.lessonId)?.objectiveIds.some(id => activity.objectiveIds.includes(id)))
   const allIds = session.stages.flatMap(stage => stage.activityIds)
@@ -81,7 +83,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
   const names = { correct: 'Correcta', incorrect: 'Por revisar', omitted: 'Sin respuesta', partial: 'Parcial, con campos sin responder' }
   return <article className="lab-guided" aria-label="Sesión guiada">
     <header className="lab-lesson-heading"><p className="context-label">Sesión guiada · {sessionMinutes(session)} min orientativos</p>
-      <h2>{session.title}</h2><p>Avanza a tu ritmo. Puedes parar y continuar desde otro dispositivo cuando se sincronice.</p></header>
+      <h2 tabIndex={-1} data-study-heading>{session.title}</h2><p>Avanza a tu ritmo. Puedes parar y continuar desde otro dispositivo cuando se sincronice.</p></header>
     <nav className="lab-guided-stages" ref={stages} aria-label="Etapas de la sesión">{session.stages.map((step, index) => <button key={step.id}
       aria-current={stageIndex === index ? 'step' : undefined} onClick={() => void navigate(index, step.activityIds[0] ?? null)}>
       <span>{index + 1}. {step.title}</span><small>{step.minutes} min</small>
@@ -109,7 +111,8 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
         aria-current={activityId === id ? 'step' : undefined} onClick={() => void navigate(stageIndex, id)}>
         {index + 1}{answered.has(id) && <Check size={11} aria-hidden="true" />}
       </button>)}</nav>}
-      {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible)}</div>}
+      {activity && <div className="lab-guided-practice">{renderActivity(activity, referenceVisible,
+        nextActivity ? { label: 'Siguiente ejercicio', run: () => void navigate(stageIndex, nextActivity) } : undefined)}</div>}
       {stage.kind === 'close' && <section className="lab-guided-summary" aria-label="Respuestas guardadas">
         <h4>{answered.size} de {allIds.length} actividades con respuesta guardada</h4>
         <p>Completar este recorrido no demuestra por sí solo comprensión, retención o transferencia.</p>
@@ -123,7 +126,7 @@ export function GuidedSessionView({ pack, session, accountId, deviceId, events, 
             {first ? `Primera respuesta: ${names[first.outcome]}. Última: ${names[last!.outcome]}.` : 'Sin respuesta guardada.'}
             {helped.has(id) && ' Hay pistas o soluciones consultadas.'}</p>
         })}</details>
-        {completed ? <p role="status">Sesión cerrada. Tus respuestas y ayudas siguen guardadas.</p>
+        {completed ? <><p role="status">Sesión cerrada. Tus respuestas y ayudas siguen guardadas.</p>{afterSession}</>
           : <button className="button primary" onClick={() => void navigate(stageIndex, null, true)}>Cerrar sesión de estudio</button>}
       </section>}
     </section>

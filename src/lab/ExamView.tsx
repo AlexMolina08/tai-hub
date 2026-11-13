@@ -39,17 +39,29 @@ function warnBeforeUnload(event: BeforeUnloadEvent) {
 export function ExamCatalog({ packages, events, accountId, open }: {
   packages: LabPackage[]; events: LabEvent[]; accountId: string; open: (pack: LabPackage, form: ExamForm) => void
 }) {
-  const forms = packages.flatMap(pack => (pack.exams ?? []).map(form => ({ pack, form })))
+  const editions = new Map<string, { pack: LabPackage; form: ExamForm }[]>()
+  for (const pack of packages) for (const form of pack.exams ?? []) {
+    const key = JSON.stringify([pack.id, form.id])
+    const entries = editions.get(key) ?? []
+    entries.push({ pack, form })
+    editions.set(key, entries)
+  }
+  const forms = [...editions.values()].flatMap(entries => {
+    entries.sort((a, b) => b.pack.version.localeCompare(a.pack.version, 'en', { numeric: true }) || b.pack.version.localeCompare(a.pack.version))
+    return entries.filter(({ pack, form }, index) => index === 0 || examRevisions(events, accountId, pack, form).length > 0)
+      .map(({ pack, form }, index) => ({ pack, form, previous: index > 0 }))
+  })
   if (!forms.length) return null
   return <section className="lab-guided-catalog" aria-label="Evaluaciones y exámenes">
     <h2>Evaluaciones y exámenes</h2>
     <p>Simulacros cronometrados y supuestos prácticos con corrección justificada.</p>
-    <div className="lab-lesson-list">{forms.map(({ pack, form }) => {
+    <div className="lab-lesson-list">{forms.map(({ pack, form, previous }) => {
       const heads = examHeads(examRevisions(events, accountId, pack, form))
       return <button className="lab-lesson" key={JSON.stringify([pack.id, pack.version, form.id])} onClick={() => open(pack, form)}>
         <span><strong>{form.title}</strong>
           <small>{form.durationMinutes} min · {form.partition === 'reserved' ? 'Reservada' : 'Entrenamiento'}
-            {heads.some(head => head.submitted === null) ? ' · En curso' : heads.length ? ' · Con resultados' : ''}</small></span>
+            {heads.some(head => head.submitted === null) ? ' · En curso' : heads.length ? ' · Con resultados' : ''}
+            {previous && ' · Edición anterior'}</small></span>
         <ArrowRight size={19} aria-hidden="true" />
       </button>
     })}</div>

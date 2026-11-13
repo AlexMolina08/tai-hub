@@ -25,7 +25,7 @@ import { isPredictionActivity, parsePredictionDraft } from './prediction'
 import { createIPv4View, parseIPv4View, serializeIPv4View } from './ipv4-workflow'
 import { StudyText } from './StudyText'
 import { activityLocationKey, studyContinuation } from './continuation'
-import { LessonCatalog } from './LessonCatalog'
+import { latestLabPackages, LessonCatalog, nextCatalogueLesson } from './LessonCatalog'
 import { GuidedSessionView } from './GuidedSessionView'
 import { sessionMinutes, sessionResume } from './guided'
 import { StudyNoteEditor } from './StudyNoteEditor'
@@ -33,10 +33,10 @@ import { LearningCapture } from './learning-capture'
 import { semanticWriteBuffer } from './semantic-buffer'
 import { LearningReading } from './LearningReading'
 import { LearningDashboard } from './LearningDashboard'
-import { InitialDiagnostic } from './InitialDiagnostic'
+import { diagnosticOrder, diagnosticTargets, InitialDiagnostic } from './InitialDiagnostic'
 import { ExamCatalog, ExamView } from './ExamView'
 import { DEFAULT_LEARNING_POLICY, deriveLearning } from './learning'
-import type { LearningDestination } from './recommendation'
+import { recommendLearning, type LearningDestination } from './recommendation'
 import './laboratory.css'
 
 const empty: LabSnapshot = { events: [], pendingIds: [], status: 'local' }
@@ -44,6 +44,14 @@ const idle = () => () => {}
 const statusText = { local: 'Guardado en este dispositivo', pending: 'Pendiente de sincronizar', syncing: 'Sincronizando', synced: 'Sincronizado', error: 'Revisa el guardado o la conexión' }
 const message = (error: unknown) => error instanceof Error ? error.message : 'No se pudo completar la operación.'
 const packageKey = (pack: LabPackage) => JSON.stringify([pack.id, pack.version])
+type StudyAction = { label: string; run: () => void }
+type StudyLocation = {
+  pack: string; lesson?: string; activity?: string; session?: string; positionId?: string; group?: string; exam?: string; proposal?: string
+}
+function focusStudyHeading(heading?: HTMLElement | null) {
+  heading?.focus({ preventScroll: true })
+  heading?.scrollIntoView({ block: 'start', behavior: 'instant' })
+}
 const narrowQuery = '(max-width: 800px)'
 const subscribeWidth = (changed: () => void) => {
   const query = matchMedia(narrowQuery); query.addEventListener('change', changed)
@@ -90,17 +98,18 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [deviceId] = useState(deviceIdentity)
   const [packages, setPackages] = useState<LabPackage[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [selected, setSelected] = useState<{ pack: string; lesson?: string; activity?: string; session?: string; positionId?: string; group?: string; exam?: string } | undefined>(() => {
+  const [selected, setSelected] = useState<StudyLocation | undefined>(() => {
     try {
       const value = JSON.parse(sessionStorage.getItem('tai-lab-location:' + accountId) ?? 'null')
+      const proposal = typeof value?.proposal === 'string' ? value.proposal : undefined
       if (typeof value?.pack === 'string' && typeof value?.lesson === 'string') return {
-        pack: value.pack, lesson: value.lesson, activity: typeof value.activity === 'string' ? value.activity : undefined,
+        pack: value.pack, lesson: value.lesson, activity: typeof value.activity === 'string' ? value.activity : undefined, proposal,
       }
       if (typeof value?.pack === 'string' && typeof value?.activity === 'string' && typeof value?.group === 'string') return {
-        pack: value.pack, activity: value.activity, group: value.group,
+        pack: value.pack, activity: value.activity, group: value.group, proposal,
       }
       if (typeof value?.pack === 'string' && typeof value?.session === 'string') return {
-        pack: value.pack, session: value.session, positionId: typeof value.positionId === 'string' ? value.positionId : undefined,
+        pack: value.pack, session: value.session, positionId: typeof value.positionId === 'string' ? value.positionId : undefined, proposal,
       }
       if (typeof value?.pack === 'string' && typeof value?.exam === 'string') return { pack: value.pack, exam: value.exam }
     } catch { /* A missing location does not affect the durable event history. */ }
@@ -108,6 +117,11 @@ function Workspace({ library, accountId, connected, openMaterial }: {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [installStatus, setInstallStatus] = useState('')
+  const [skippedProposals, setSkippedProposals] = useState<string[]>([])
+  const [showDiagnostic, setShowDiagnostic] = useState(false)
+  const studyView = useRef<HTMLDivElement>(null)
+  const diagnosticSummary = useRef<HTMLElement>(null)
+  const focusDestination = useRef(false)
   const drivePackageInput = useRef<HTMLInputElement>(null)
   const currentPackage = packages.find(p => packageKey(p) === selected?.pack)
   const currentLesson = currentPackage?.lessons.find(l => l.id === selected?.lesson)
@@ -131,20 +145,60 @@ function Workspace({ library, accountId, connected, openMaterial }: {
     try { return { snapshot: deriveLearning({ accountId, packages, events: history.events, now: evaluatedAt, policy: DEFAULT_LEARNING_POLICY }), error: '' } }
     catch (failure) { return { snapshot: null, error: message(failure) } }
   }, [accountId, packages, history.events, evaluatedAt])
-  function openRecommendation(target: LearningDestination) {
+  const targets = useMemo(() => diagnosticTargets(packages), [packages])
+  const orderedDiagnostic = useMemo(() => diagnosticOrder(targets), [targets])
+  const currentEditions = useMemo(() => [...latestLabPackages(packages).values()], [packages])
+  const queue = useMemo(() => learning.snapshot ? recommendLearning({ packages, currentEditions, events: history.events, learning: learning.snapshot,
+    skipped: selected?.proposal ? [...skippedProposals, selected.proposal] : skippedProposals }) : undefined,
+  [packages, currentEditions, history.events, learning.snapshot, skippedProposals, selected?.proposal])
+  const nextLesson = useMemo(() => currentLesson && currentPackage
+    ? nextCatalogueLesson(packages, history.events, accountId, currentPackage, currentLesson) : undefined,
+  [packages, history.events, accountId, currentPackage, currentLesson])
+  function openRecommendation(target: LearningDestination, proposal?: string) {
     const pack = packages.find(pack => pack.id === target.packageId && pack.version === target.packageVersion)
     if (!pack) return
-    if (target.kind === 'session') setSelected({ pack: packageKey(pack), session: target.sessionId, positionId: target.positionId })
+    focusDestination.current = true
+    if (target.kind === 'session') setSelected({ pack: packageKey(pack), session: target.sessionId, positionId: target.positionId, proposal })
     else if (target.kind === 'lesson') {
       const lesson = pack.lessons.find(lesson => lesson.id === target.lessonId)
       if (lesson && target.activityId) {
         try { sessionStorage.setItem(activityLocationKey(accountId, pack, lesson) + ':pane', 'practice') }
         catch { /* The activity remains reachable if local navigation preferences cannot be stored. */ }
       }
-      setSelected({ pack: packageKey(pack), lesson: target.lessonId, activity: target.activityId })
+      setSelected({ pack: packageKey(pack), lesson: target.lessonId, activity: target.activityId, proposal })
     }
-    else setSelected({ pack: packageKey(pack), activity: target.activityId, group: target.attemptGroupId ?? crypto.randomUUID() })
+    else setSelected({ pack: packageKey(pack), activity: target.activityId, group: target.attemptGroupId ?? crypto.randomUUID(), proposal })
   }
+  function openLesson(pack: LabPackage, lesson: Lesson, fromPrevious = false) {
+    if (fromPrevious) {
+      try { sessionStorage.removeItem(activityLocationKey(accountId, pack, lesson) + ':pane') }
+      catch { /* The saved answers and position are independent of this preference. */ }
+    }
+    openRecommendation({ kind: 'lesson', packageId: pack.id, packageVersion: pack.version, lessonId: lesson.id })
+  }
+  const diagnosticIndex = orderedDiagnostic.findIndex(target => target.attemptGroupId === selected?.group)
+  const diagnosticTarget = diagnosticIndex < 0 ? undefined : [...orderedDiagnostic.slice(diagnosticIndex + 1), ...orderedDiagnostic.slice(0, diagnosticIndex)]
+    .find(target => !history.events.some(event => event.kind === 'attempt' && event.attemptGroupId === target.attemptGroupId && event.outcome !== 'omitted'))
+  const diagnosticAction: StudyAction | undefined = diagnosticIndex < 0 ? undefined : diagnosticTarget
+    ? { label: 'Siguiente ejercicio', run: () => openRecommendation(diagnosticTarget) }
+    : { label: 'Ver resultados del diagnóstico', run: () => { setShowDiagnostic(true); setSelected(undefined) } }
+  const proposalAction: StudyAction | undefined = selected?.proposal ? {
+    label: queue?.items.length ? 'Siguiente propuesta' : 'Ver propuestas',
+    run: () => {
+      const next = queue?.items[0]
+      setSkippedProposals(current => [...current, selected.proposal!])
+      if (next) openRecommendation(next.target, next.id)
+      else { focusDestination.current = true; setSelected(undefined) }
+    },
+  } : undefined
+  useEffect(() => {
+    if (!focusDestination.current) return
+    focusDestination.current = false
+    focusStudyHeading(studyView.current?.querySelector<HTMLElement>('[data-study-heading]'))
+  }, [selected])
+  useEffect(() => {
+    if (!selected && showDiagnostic) focusStudyHeading(diagnosticSummary.current)
+  }, [selected, showDiagnostic])
 
   useEffect(() => {
     try {
@@ -232,28 +286,36 @@ function Workspace({ library, accountId, connected, openMaterial }: {
         event.currentTarget.value = ''
         void installFiles(files, true)
       }} />
+    <div ref={studyView}>
     {!loaded ? <p role="status">Cargando el historial de este dispositivo…</p> : currentPackage && (currentLesson || currentSession || currentExam || standalone) ? <>
       <button className="text-link" onClick={() => setSelected(undefined)}><ArrowLeft size={16} /> {currentLesson ? 'Volver a las lecciones' : 'Volver al laboratorio'}</button>
       {currentExam ? <ExamView key={JSON.stringify([packageKey(currentPackage), currentExam.id])} pack={currentPackage} form={currentExam}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} />
       : standalone ? <article className="lab-standalone">
-        <p className="context-label">{standalone.phase === 'delayed' ? 'Repaso diferido' : standalone.phase === 'reserved' ? 'Comprobación de transferencia' : 'Práctica recomendada'}</p>
-        <p>Puedes retomar tu borrador al volver. Las respuestas y ayudas anteriores se conservan en el historial.</p>
+        <p className="lab-study-context">{diagnosticIndex >= 0 ? `Diagnóstico inicial · Ejercicio ${diagnosticIndex + 1} de ${orderedDiagnostic.length}`
+          : standalone.phase === 'delayed' ? 'Repaso diferido' : standalone.phase === 'reserved' ? 'Comprobación de transferencia' : 'Práctica recomendada'}</p>
         <ActivityView key={`${packageKey(currentPackage)}:${standalone.id}:${selected?.group}`} pack={currentPackage} activity={standalone}
-          accountId={accountId} deviceId={deviceId} events={history.events} record={record} newAttemptGroupId={selected?.group} />
+          accountId={accountId} deviceId={deviceId} events={history.events} record={record} newAttemptGroupId={selected?.group}
+          afterAnswer={proposalAction ?? diagnosticAction} />
       </article> : currentSession ? <GuidedSessionView key={`${packageKey(currentPackage)}:session:${currentSession.id}`} pack={currentPackage} session={currentSession}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial} initialPosition={sessionPosition}
         onPosition={position => setSelected(current => current?.pack === packageKey(currentPackage) && current.session === currentSession.id
           ? { ...current, positionId: position.id } : current)}
-        renderActivity={(activity, referenceVisible) => <ActivityView key={activity.id} pack={currentPackage} activity={activity} accountId={accountId}
-          deviceId={deviceId} events={history.events} record={record} referenceVisible={referenceVisible} />} />
+        afterSession={proposalAction && <button className="button primary" onClick={proposalAction.run}>{proposalAction.label} <ArrowRight size={17} /></button>}
+        renderActivity={(activity, referenceVisible, afterAnswer) => <ActivityView key={activity.id} pack={currentPackage} activity={activity} accountId={accountId}
+          deviceId={deviceId} events={history.events} record={record} referenceVisible={referenceVisible} afterAnswer={afterAnswer} />} />
       : currentLesson && <LessonView key={`${packageKey(currentPackage)}:${currentLesson.id}`} pack={currentPackage} lesson={currentLesson}
         accountId={accountId} deviceId={deviceId} events={history.events} record={record} openMaterial={openMaterial}
-        initialActivityId={selected?.activity} onActivityChange={activity => setSelected({ pack: packageKey(currentPackage), lesson: currentLesson.id, activity })} />}
+        initialActivityId={selected?.activity} onActivityChange={activity => setSelected(current => current && { ...current, activity })}
+        nextLesson={nextLesson ? { label: 'Siguiente lección', run: () => openLesson(nextLesson.pack, nextLesson.lesson, true) }
+          : { label: 'Explorar lecciones', run: () => { focusDestination.current = true; setSelected(undefined) } }}
+        proposalAction={proposalAction} />}
     </> : <>
-      {packages.length > 0 && learning.snapshot && <LearningDashboard snapshot={learning.snapshot} packages={packages}
-        events={history.events} open={openRecommendation} />}
-      <InitialDiagnostic packages={packages} events={history.events} open={openRecommendation} />
+      {packages.length > 0 && learning.snapshot && queue && <LearningDashboard snapshot={learning.snapshot} queue={queue}
+        open={proposal => openRecommendation(proposal.target, proposal.id)} skip={id => setSkippedProposals(current => [...current, id])}
+        reset={() => setSkippedProposals([])} />}
+      <InitialDiagnostic targets={targets} events={history.events} open={target => { setShowDiagnostic(false); openRecommendation(target) }}
+        showResults={showDiagnostic} summaryRef={diagnosticSummary} />
       {learning.error && <p role="status">No se pudo calcular el progreso de aprendizaje: {learning.error} Tus respuestas siguen guardadas.</p>}
       {guidedContinuation && <section className="lab-continuation" aria-label="Retomar sesión guiada">
         <div><p className="context-label">Tu sesión guardada</p><h2>{guidedContinuation.session.title}</h2>
@@ -271,9 +333,9 @@ function Workspace({ library, accountId, connected, openMaterial }: {
           setSelected({ pack: packageKey(continuation.pack), lesson: continuation.lesson.id, activity: continuation.activity.id })
         }}>Reanudar actividad <ArrowRight size={17} /></button>
       </section>}
-      {packages.some(pack => pack.sessions?.length) && <section className="lab-guided-catalog" aria-label="Sesiones guiadas">
+      {currentEditions.some(pack => pack.sessions?.length) && <section className="lab-guided-catalog" aria-label="Sesiones guiadas">
         <h2>Sesiones guiadas</h2><p>Recupera, comprende, practica y comprueba lo aprendido.</p>
-        <div className="lab-lesson-list">{packages.flatMap(pack => (pack.sessions ?? []).map(session => <button className="lab-lesson"
+        <div className="lab-lesson-list">{currentEditions.flatMap(pack => (pack.sessions ?? []).map(session => <button className="lab-lesson"
           key={JSON.stringify([pack.id, pack.version, session.id])} onClick={() => setSelected({ pack: packageKey(pack), session: session.id })}>
           <span><strong>{session.title}</strong><small>{sessionMinutes(session)} min orientativos · 5 etapas</small></span><ArrowRight size={19} aria-hidden="true" />
         </button>))}</div>
@@ -281,7 +343,7 @@ function Workspace({ library, accountId, connected, openMaterial }: {
       <ExamCatalog packages={packages} events={history.events} accountId={accountId}
         open={(pack, form) => setSelected({ pack: packageKey(pack), exam: form.id })} />
       {packages.some(pack => pack.lessons.length) && <LessonCatalog packages={packages} events={history.events} accountId={accountId}
-        openLesson={(pack, lesson) => setSelected({ pack: packageKey(pack), lesson: lesson.id })} />}
+        openLesson={openLesson} />}
       {!packages.length && <section className="lab-empty" aria-labelledby="lab-start-title">
         <h2 id="lab-start-title">Empieza a estudiar</h2>
         <p>En tu primera instalación, selecciona todos los archivos JSON de la carpeta Paquetes que recibiste.</p>
@@ -317,13 +379,15 @@ function Workspace({ library, accountId, connected, openMaterial }: {
         }} /></label>
       </details>
     </>}
+    </div>
   </>
 }
 
-export function LessonView({ pack, lesson, accountId, deviceId, events, record, openMaterial, initialActivityId, onActivityChange }: {
+export function LessonView({ pack, lesson, accountId, deviceId, events, record, openMaterial, initialActivityId, onActivityChange, nextLesson, proposalAction }: {
   pack: LabPackage; lesson: Lesson; accountId: string; deviceId: string; events: LabEvent[];
   record: (events: LabEvent[]) => Promise<void>; openMaterial: (resourceId: string, sectionId: string) => void
   initialActivityId?: string; onActivityChange?: (activityId: string) => void
+  nextLesson?: StudyAction; proposalAction?: StudyAction
 }) {
   const activities = lesson.activityIds.map(id => pack.activities.find(a => a.id === id)!)
   const positionKey = activityLocationKey(accountId, pack, lesson)
@@ -353,7 +417,7 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
     setIndex(next)
     if (next !== index) setOpenReferenceFor(undefined)
     onActivityChange?.(activities[next].id)
-    if (mobile) requestAnimationFrame(() => practice.current?.scrollIntoView({ block: 'start', behavior: 'instant' }))
+    if (next !== index) requestAnimationFrame(() => focusStudyHeading(practice.current?.querySelector<HTMLElement>('[data-study-heading]')))
   }
   const answered = new Set(events.filter((event): event is Attempt => event.kind === 'attempt' && event.accountId === accountId
     && event.packageId === pack.id && event.packageVersion === pack.version && event.outcome !== 'omitted'
@@ -363,7 +427,7 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
   const desktopReference = !mobile && (isPractice || !!activity && openReferenceFor === activity.id)
   const readingVisible = mobile ? pane === 'read' : desktopReference
   return <article className="lab-session">
-    <header className="lab-lesson-heading"><h2>{lesson.title}</h2><p>{lesson.minutes} minutos de contenido nuevo</p>
+    <header className="lab-lesson-heading"><h2 tabIndex={-1} data-study-heading>{lesson.title}</h2><p>{lesson.minutes} min de lectura</p>
       <span>{activities.filter(a => answered.has(a.id)).length} de {activities.length} actividades respondidas</span></header>
     {mobile && <div className="lab-pane-switch" aria-label="Vista de la lección">
       <button aria-pressed={pane === 'read'} onClick={() => choosePane('read')}><BookOpen size={17} /> Leer explicación</button>
@@ -392,22 +456,22 @@ export function LessonView({ pack, lesson, accountId, deviceId, events, record, 
         <div className="lab-steps" aria-label="Actividades de la lección">{activities.map((a, i) => <button className="button" key={a.id}
           title={a.title + (answered.has(a.id) ? ' · Respondida' : '')} aria-current={index === i ? 'step' : undefined}
           onClick={() => chooseActivity(i)}>{i + 1}{answered.has(a.id) && <Check size={11} aria-hidden="true" />}</button>)}</div>
-        <div className="lab-activity-position"><span>Actividad {index + 1} de {activities.length}</span><span>{isPractice ? 'Práctica' : desktopReference ? 'Comprobación con explicación disponible' : 'Comprobación sin pistas'}</span></div>
+        <div className="lab-activity-position"><span>Actividad {index + 1} de {activities.length}</span><span>{isPractice ? 'Práctica' : 'Comprobación'}</span></div>
         {activity && <ActivityView key={activity.id} activity={activity} pack={pack} accountId={accountId}
-          deviceId={deviceId} events={events} record={record} referenceVisible={desktopReference} />}
-        <nav className="lab-activity-navigation" aria-label="Cambiar actividad">
-          <button className="button" disabled={index === 0} onClick={() => chooseActivity(index - 1)}><ArrowLeft size={17} /> Anterior</button>
-          {index < activities.length - 1 ? <button className="button" onClick={() => chooseActivity(index + 1)}>Siguiente <ArrowRight size={17} /></button>
-            : <span>Fin de las actividades de esta lección</span>}
-        </nav>
+          deviceId={deviceId} events={events} record={record} referenceVisible={desktopReference}
+          previous={index > 0 ? { label: 'Anterior', run: () => chooseActivity(index - 1) } : undefined}
+          next={index < activities.length - 1 ? { label: 'Siguiente ejercicio', run: () => chooseActivity(index + 1) } : undefined}
+          afterAnswer={index === activities.length - 1 ? nextLesson : undefined} proposalAction={proposalAction} />}
       </section>}
     </div>
   </article>
 }
 
-export function ActivityView({ activity, pack, accountId, deviceId, events, record, newAttemptGroupId, referenceVisible = false }: {
+export function ActivityView({ activity, pack, accountId, deviceId, events, record, newAttemptGroupId, referenceVisible = false,
+  previous, next, afterAnswer, proposalAction }: {
   activity: Activity; pack: LabPackage; accountId: string; deviceId: string; events: LabEvent[];
   record: (events: LabEvent[]) => Promise<void>; newAttemptGroupId?: string; referenceVisible?: boolean
+  previous?: StudyAction; next?: StudyAction; afterAnswer?: StudyAction; proposalAction?: StudyAction
 }) {
   const ref = { activityId: activity.id, activityVersion: activity.version, packageId: pack.id, packageVersion: pack.version }
   const buffer = draftWriteBuffer(accountId, ref)
@@ -448,6 +512,8 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   const groupId = heads.length === 1 ? heads[0].attemptGroupId : initial.attemptGroupId
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const feedbackPanel = useRef<HTMLDivElement>(null)
+  const focusFeedback = useRef(false)
   const assistance = assistanceFor(events, groupId)
   const attempts = events.filter((e): e is Attempt => e.kind === 'attempt' && e.attemptGroupId === groupId)
   const currentWork = useRef({ assistance, attempts })
@@ -459,6 +525,13 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
   }
   const latest = attempts.reduce<typeof attempts[number] | undefined>((current, a) => a.kind === 'attempt'
     && (!current || (current.kind === 'attempt' && a.ordinal > current.ordinal)) ? a : current, undefined)
+  const forward = next ?? (latest ? afterAnswer : undefined)
+  const nextProposal = latest ? proposalAction : undefined
+  useEffect(() => {
+    if (busy || !latest || !focusFeedback.current) return
+    focusFeedback.current = false
+    focusStudyHeading(feedbackPanel.current)
+  }, [busy, latest])
   const latestEvidence = useMemo(() => {
     if (!latest || activity.state !== 'validated') return undefined
     try { return deriveLearning({ accountId, packages: [pack], events, now: new Date().toISOString(), policy: DEFAULT_LEARNING_POLICY })
@@ -550,6 +623,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
     await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
       familyId: activity.familyId, objectiveIds: activity.objectiveIds, attemptGroupId: groupId,
       answer: value, ...result, ...attemptFacts(), activeMs: activeMs(), phase: activity.phase, gradingVersion: 'choice-v1' }])
+    focusFeedback.current = true
   }
   async function submitModel(value: string, correct: boolean, feedback: string) {
     await recordStudy([{ ...ref, id: crypto.randomUUID(), kind: 'attempt', deviceId, accountId, createdAt: new Date().toISOString(),
@@ -575,8 +649,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
     } catch { return `Versión ${index + 1}: copia conservada para revisión` }
   }
   return <div className="lab-activity">
-    <h3>{activity.title}</h3><p className="lab-mode">{activity.kind === 'ipv4-model' ? 'Modelo IPv4 · Cálculo local, sin tráfico de red'
-      : <>{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : activity.mode.kind === 'documentary' ? 'Caso documental' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</>}</p>
+    <h3 tabIndex={-1} data-study-heading>{activity.title}</h3>
     {capture.warning && <p role="status">{capture.warning}</p>}
     {semanticBlocked && <section aria-label="Guardado de respuesta y ayuda">
       <p role="status">{semanticEntries.some(entry => entry.status === 'pending') ? 'Guardando respuesta o consulta…' : 'Hay una respuesta o consulta pendiente de guardar.'}</p>
@@ -588,8 +661,8 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       </>}
     </section>}
 
-    <StudyText text={activity.prompt} />
-    {referenceVisible && <p className="lab-mode">La explicación está disponible junto a esta actividad. La respuesta contará con apoyo de lectura.</p>}
+    <div className="lab-prompt"><StudyText text={activity.prompt} /></div>
+    {referenceVisible && <p className="lab-reading-support"><BookOpen size={16} aria-hidden="true" /> Puedes consultar la explicación. Tu respuesta contará como práctica con apoyo.</p>}
     {activity.kind !== 'ipv4-model' && <details className="lab-prediction"><summary>Anotar una predicción (opcional)</summary>
       <StudyNoteEditor target={{ ...ref, kind: 'activity', purpose: 'prediction' }} accountId={accountId} deviceId={deviceId}
         events={events} record={record} label="Tu predicción" />
@@ -612,7 +685,7 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         if (!await buffer.save(resolved, record)) throw new Error('La elección del borrador sigue pendiente de guardar.')
       })}>Continuar: {draftLabel(head.value, index)}</button>)}
     </div> : activity.kind === 'choice' ? <>
-      <fieldset disabled={busy || semanticBlocked || heads.length === 0}><legend>Elige una respuesta</legend>
+      <fieldset className="lab-answer-options" disabled={busy || semanticBlocked || heads.length === 0}><legend>Elige una respuesta</legend>
         {activity.options.map(option => <label key={option.id} className="lab-option"><input type="radio" name={activity.id}
           value={option.id} checked={answer === option.id} onChange={() => { void run(() => save(option.id)) }} /><span>{option.text}</span></label>)}
       </fieldset>
@@ -620,8 +693,9 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
         <button className="button" disabled={busy || semanticBlocked || heads.length !== 1 || latest?.outcome === 'omitted'}
           onClick={() => void run(() => submitChoice(null))}>Dejar sin responder</button>
       </div>
-      {latest?.kind === 'attempt' && <div className="lab-feedback" role="status"><strong>{latest.outcome === 'omitted' ? 'Sin respuesta' : latest.outcome === 'correct' ? 'Respuesta correcta' : 'Revisa la respuesta'}{latest.hintCount > 0 || latest.solutionViewed ? ' · Con ayuda' : ''}</strong>
-        <p>{latest.feedback}</p>{latest.outcome !== 'omitted' && <details onToggle={event => {
+      {latest?.kind === 'attempt' && <div className="lab-feedback lab-answer-feedback" tabIndex={-1} ref={feedbackPanel} data-outcome={latest.outcome}>
+        <div role="status"><strong>{latest.outcome === 'omitted' ? 'Sin respuesta' : latest.outcome === 'correct' ? 'Respuesta correcta' : 'Revisa la respuesta'}{latest.hintCount > 0 || latest.solutionViewed ? ' · Con ayuda' : ''}</strong>
+        <p>{latest.feedback}</p></div>{latest.outcome !== 'omitted' && <details onToggle={event => {
           if (event.currentTarget.open && !assistance.solutionViewed) void run(revealSolution)
         }}><summary>Por qué cada opción</summary>{assistance.solutionViewed
           ? activity.options.map(o => <p key={o.id}><strong>{o.text}:</strong> {o.explanation}</p>)
@@ -652,6 +726,11 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
           activeMs: activeMs(), phase: activity.phase, gradingVersion: SQL_GRADING_VERSION,
           feedback: feedback ?? (correct ? 'La consulta satisface los casos comprobados.' : 'La consulta no coincide con el resultado requerido en todos los casos.') }])
       }} />}
+    {(previous || forward || nextProposal) && <nav className="lab-activity-navigation lab-answer-navigation" aria-label="Continuar el estudio">
+      {previous && <button className="button lab-previous" onClick={previous.run}><ArrowLeft size={17} /> {previous.label}</button>}
+      {forward && <button className={latest ? 'button primary' : 'button'} disabled={busy || semanticBlocked} onClick={forward.run}>{forward.label} <ArrowRight size={17} /></button>}
+      {nextProposal && <button className={forward ? 'button' : 'button primary'} disabled={busy || semanticBlocked} onClick={nextProposal.run}>{nextProposal.label} <ArrowRight size={17} /></button>}
+    </nav>}
     {latest && latest.ordinal > 1 && <p className="lab-mode">Intento {latest.ordinal}. Tu primera respuesta se conserva.</p>}
     {latestEvidence?.referenceSupport === 'recorded' && <p className="lab-mode">Respuesta con apoyo de lectura. No acredita recuperación sin apoyo.</p>}
     {latestEvidence?.referenceSupport === 'uncertain' && <p className="lab-mode">No se puede verificar si esta respuesta tuvo apoyo de lectura. Se conserva sin acreditar recuperación sin apoyo.</p>}
@@ -667,8 +746,9 @@ export function ActivityView({ activity, pack, accountId, deviceId, events, reco
       {assistance.solutionViewed && <p className="lab-feedback">{activity.solution}</p>}
     </>}
     {error && <p role="alert">{error}</p>}
-    <details><summary>Fuentes y límites</summary><p>{activity.mode.limits}</p>
-      {activity.kind === 'ipv4-model' && <p>Versión del modelo: {activity.mode.version}.</p>}
+    <details className="lab-sources"><summary>Fuentes y límites</summary>
+      <p>{activity.mode.kind === 'real' ? 'Ejecución real' : activity.mode.kind === 'trace' ? 'Traza de referencia' : activity.mode.kind === 'documentary' ? 'Caso documental' : 'Simulación'} · {activity.mode.engine} {activity.mode.version}</p>
+      <p>{activity.mode.limits}</p>
       {activity.claims.map((claim, i) => { const source = pack.sources.find(s => s.id === claim.sourceId)!; return <p key={i}>{claim.text} · <a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>, {source.edition}, {claim.locator}</p> })}
     </details>
   </div>

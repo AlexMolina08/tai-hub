@@ -135,7 +135,7 @@ export class DriveFixture {
     if (format === 'mkv') file.mimeType = 'video/x-matroska'
   }
 
-  async install(context: BrowserContext, binaryRouteBridge = false) {
+  async install(context: BrowserContext, binaryRouteBridge = false, origin = `http://localhost:${process.env.TAI_E2E_PORT ?? 5189}`) {
     if (binaryRouteBridge) {
       // Playwright's WebKit interceptor omits Blob-backed request bodies.
       // Send the same bytes as an ArrayBuffer so the mock can inspect them.
@@ -176,7 +176,7 @@ export class DriveFixture {
         body: `<!doctype html><script>location.replace(${JSON.stringify(target.href)})</script>`,
       })
     })
-    await context.route('https://www.googleapis.com/**', route => this.route(route))
+    await context.route('https://www.googleapis.com/**', route => this.route(route, origin))
     await context.route(`https://drive.google.com/file/d/${this.videoId}/view`, route => route.fulfill({
       contentType: 'text/html',
       body: '<title>Visor de Drive simulado</title><p>Vista autenticada simulada</p>',
@@ -211,12 +211,12 @@ export class DriveFixture {
     this.media.set(id, body)
   }
 
-  private async route(route: Route) {
+  private async route(route: Route, origin: string) {
     const request = route.request()
     const url = new URL(request.url())
     const method = request.method()
     const cors = {
-      'access-control-allow-origin': `http://localhost:${process.env.TAI_E2E_PORT ?? 5189}`,
+      'access-control-allow-origin': origin,
       'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS',
       'access-control-allow-headers': 'authorization,content-type,range',
       'access-control-expose-headers': 'accept-ranges,content-length,content-range',

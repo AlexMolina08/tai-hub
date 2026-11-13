@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import type { Ref } from 'react'
 import { ArrowRight } from 'lucide-react'
 import type { LabEvent, LabPackage } from './model'
 import type { LearningDestination } from './recommendation'
+import { latestLabPackages } from './LessonCatalog'
 
 const sections = [
   { title: 'SQL', checks: [
@@ -24,19 +25,11 @@ const sections = [
   ] },
 ]
 const wanted = new Set(sections.flatMap(section => section.checks.map(check => check.objective)))
-const editions = new Intl.Collator('en', { numeric: true })
 type DiagnosticTarget = Extract<LearningDestination, { kind: 'activity' }> & { attemptGroupId: string }
 
-function diagnosticTargets(packages: LabPackage[]) {
-  const current = new Map<string, LabPackage>()
-  for (const pack of packages) {
-    const previous = current.get(pack.id)
-    if (!previous || (editions.compare(pack.version, previous.version) || pack.version.localeCompare(previous.version)) > 0) {
-      current.set(pack.id, pack)
-    }
-  }
+export function diagnosticTargets(packages: LabPackage[]) {
   const targets = new Map<string, DiagnosticTarget>()
-  for (const pack of [...current.values()].sort((a, b) => a.id.localeCompare(b.id))) {
+  for (const pack of [...latestLabPackages(packages).values()].sort((a, b) => a.id.localeCompare(b.id))) {
     const activities = new Map(pack.activities.map(activity => [activity.id, activity]))
     for (const objective of pack.objectives) {
       if (!wanted.has(objective.id) || targets.has(objective.id) || objective.state !== 'validated') continue
@@ -51,10 +44,15 @@ function diagnosticTargets(packages: LabPackage[]) {
   return targets
 }
 
-export function InitialDiagnostic({ packages, events, open }: {
-  packages: LabPackage[]; events: LabEvent[]; open: (target: LearningDestination) => void
+export function diagnosticOrder(targets: ReturnType<typeof diagnosticTargets>) {
+  if (targets.size !== wanted.size) return []
+  return sections.flatMap(section => section.checks.map(check => targets.get(check.objective)!))
+}
+
+export function InitialDiagnostic({ targets, events, open, showResults, summaryRef }: {
+  targets: ReturnType<typeof diagnosticTargets>; events: LabEvent[]; open: (target: LearningDestination) => void; showResults: boolean
+  summaryRef: Ref<HTMLElement>
 }) {
-  const targets = useMemo(() => diagnosticTargets(packages), [packages])
   if (targets.size !== wanted.size) return null
   const groups = new Set(Array.from(targets.values(), target => target.attemptGroupId))
   const results = new Map<string, { ordinal: number; label: string }>()
@@ -67,8 +65,8 @@ export function InitialDiagnostic({ packages, events, open }: {
     results.set(event.attemptGroupId, { ordinal: event.ordinal,
       label: previous?.ordinal === event.ordinal ? 'Varias respuestas iniciales' : label })
   }
-  return <details className="lab-learning-details lab-diagnostic">
-    <summary><span>Diagnóstico inicial</span><small className="lab-summary-meta">{results.size} de {wanted.size} comprobados</small></summary>
+  return <details className="lab-learning-details lab-diagnostic" open={showResults || undefined}>
+    <summary ref={summaryRef}><span>Diagnóstico inicial</span><small className="lab-summary-meta">{results.size} de {wanted.size} comprobados</small></summary>
     <p>Prueba estos diez conceptos clave en el orden que prefieras. Puedes volver en cualquier momento y consultar la primera respuesta de cada ejercicio.</p>
     {sections.map(section => <section key={section.title} className="lab-diagnostic-group" aria-label={section.title}>
       <h3>{section.title}</h3>

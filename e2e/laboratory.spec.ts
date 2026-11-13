@@ -388,7 +388,10 @@ test('learning context survives reload and preserves the first response before l
   await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
   await openLab(page); await page.getByRole('button', { name: 'Cargar lecciones de Drive' }).click()
   await page.getByRole('button', { name: /Lección sintética/ }).click(); await showPractice(page)
-  await expect(page.locator('.lab-activity > .lab-mode').first()).toContainText('Caso documental')
+  const mode = page.getByText(/Caso documental ·/)
+  await expect(mode).toBeHidden()
+  await page.getByText('Fuentes y límites', { exact: true }).click()
+  await expect(mode).toBeVisible()
   await page.getByRole('radio', { name: 'Inválida', exact: true }).check()
   const sync = async () => {
     await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
@@ -505,7 +508,7 @@ for (const route of ['desktop-reference', 'desktop-memory', 'mobile-reading-retu
         await page.setViewportSize({ width: 1440, height: 900 })
         await page.getByRole('button', { name: 'Consultar explicación', exact: true }).click()
         await expect(page.getByText('Compara cada opción.', { exact: true })).toBeVisible()
-        await expect(page.getByText('La explicación está disponible junto a esta actividad. La respuesta contará con apoyo de lectura.', { exact: true })).toBeVisible()
+        await expect(page.getByText('Puedes consultar la explicación. Tu respuesta contará como práctica con apoyo.', { exact: true })).toBeVisible()
         await page.setViewportSize({ width: 390, height: 900 })
         await showPractice(page)
       }
@@ -2135,4 +2138,85 @@ test('algorithm practice restores a different case and keeps its earlier attempt
   expect(attempts.map(event => [event.outcome, JSON.parse(event.answer!).controls[0]])).toEqual([
     ['correct','Binaria, clave ausente'], ['correct','Inserción · Mezclada'],
   ])
+})
+
+test('continues from saved corrections through the diagnostic, proposals and lessons', async ({ page, context, browserName }, info) => {
+  if (browserName === 'webkit') await page.setViewportSize({ width: 390, height: 844 })
+  const drive = new DriveFixture()
+  await drive.install(context, browserName === 'webkit')
+  const diagnosticObjectives = [
+    'III.3-U06-O03', 'III.3-U02-O02', 'III.3-U03-O01', 'III.3-U04-O01', 'III.2-U03-O01',
+    'III.2-U05-O02', 'III.4-U01-O01', 'III.4-U02-O03', 'IV.7-U02-O02', 'IV.7-U04-O02',
+  ]
+  const packs = diagnosticObjectives.map((id, index) => {
+    const pack = samplePackage()
+    pack.id = 'fixture-navigation-' + index
+    pack.objectives[0] = { ...pack.objectives[0], id, topicId: id.split('-')[0], unitId: id.split('-').slice(0, 2).join('-') }
+    pack.lessons[0] = { ...pack.lessons[0], id: 'lesson-' + index, title: 'Lección de navegación ' + index, objectiveIds: [id] }
+    pack.objectives[0].lessonIds = [pack.lessons[0].id]
+    pack.evidence.forEach(row => { if (row.subjectId === 'l1') row.subjectId = pack.lessons[0].id })
+    pack.activities.forEach(activity => {
+      activity.title += ' en ' + index
+      activity.objectiveIds = [id]
+      activity.familyId += '-' + index
+      activity.scenarioId += '-' + index
+      activity.mode = { kind: 'trace', engine: 'Motor sintético', version: 'Edición declarada', limits: 'Límites sintéticos.' }
+    })
+    return { name: pack.id + '.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) }
+  })
+  await page.goto('/tai-hub/')
+  await page.getByRole('button', { name: 'Conectar Google Drive', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Continuar estudio' })).toBeVisible()
+  await openLab(page)
+  await page.getByLabel('Instalar paquetes privados en Drive', { exact: true }).setInputFiles(packs)
+  await expect(page.getByText('10 de 10 paquetes instalados en Drive', { exact: true })).toBeVisible()
+  const correct = async () => {
+    await page.getByRole('radio', { name: 'Válida', exact: true }).check()
+    await page.getByRole('button', { name: 'Comprobar respuesta', exact: true }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Respuesta correcta' })).toBeVisible()
+  }
+  const button = (name: string) => page.getByRole('button', { name, exact: true })
+  await page.getByText('Diagnóstico inicial', { exact: true }).click()
+  await page.getByRole('button', { name: /Claves y restricciones/ }).click()
+  await expect(button('Siguiente ejercicio')).toHaveCount(0)
+  const mode = page.getByText('Traza de referencia · Motor sintético Edición declarada', { exact: true })
+  await expect(mode).toBeHidden()
+  await page.getByText('Fuentes y límites', { exact: true }).click()
+  await expect(mode).toBeVisible()
+  await page.getByText('Fuentes y límites', { exact: true }).click()
+  for (let index = 0; index < 10; index++) {
+    await expect(page.getByText('Diagnóstico inicial · Ejercicio ' + (index + 1) + ' de 10', { exact: true })).toBeVisible()
+    await correct()
+    if (index === 0) {
+      await page.screenshot({ path: info.outputPath('diagnostico.png'), fullPage: true })
+      await page.reload()
+      const activity = page.getByRole('heading', { name: 'Ejemplo sintético p1 en 0', exact: true })
+      if (!await page.getByRole('heading', { name: 'Laboratorio TAI', exact: true }).isVisible()) await openLab(page)
+      await expect(activity).toBeVisible()
+      await expect(page.getByRole('status').filter({ hasText: 'Respuesta correcta' })).toBeVisible()
+    }
+    await button(index === 9 ? 'Ver resultados del diagnóstico' : 'Siguiente ejercicio').click()
+    if (index < 9) await expect(page.getByRole('heading', { name: 'Ejemplo sintético p1 en ' + (index + 1), exact: true })).toBeFocused()
+  }
+  await expect(page.getByText('10 de 10 comprobados', { exact: true })).toBeVisible()
+  await button('Empezar propuesta').click()
+  const first = await page.locator('.lab-session h2, .lab-standalone h3').textContent()
+  await correct()
+  await button('Siguiente propuesta').click()
+  await expect(page.locator('.lab-session h2, .lab-standalone h3')).not.toHaveText(first!)
+  const back = page.getByRole('button', { name: /^Volver (a las lecciones|al laboratorio)$/ })
+  await back.click()
+  const catalog = page.getByRole('region', { name: 'Explorar lecciones' })
+  const lessons = await catalog.locator('.lab-lesson strong').allTextContents()
+  await catalog.getByRole('button').filter({ has: page.getByText(lessons[0], { exact: true }) }).click()
+  if (browserName === 'webkit') await expect(page.getByRole('heading', { name: 'Regla', exact: true })).toBeVisible()
+  await page.screenshot({ path: info.outputPath('explicacion.png'), fullPage: true })
+  await showPractice(page)
+  for (let index = 0; index < 5; index++) {
+    await correct()
+    await button(index === 4 ? 'Siguiente lección' : 'Siguiente ejercicio').click()
+  }
+  await expect(page.getByRole('heading', { name: lessons[1], exact: true })).toBeFocused()
+  if (browserName === 'webkit') await expect(button('Leer explicación')).toHaveAttribute('aria-pressed', 'true')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
