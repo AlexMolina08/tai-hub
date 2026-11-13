@@ -1259,7 +1259,7 @@ test('opens the exact material section and returns to the same activity', async 
   const read = page.getByRole('button', { name: 'Leer explicación', exact: true })
   if (await read.isVisible()) await read.click()
   const material = page.getByRole('button', { name: 'Consultar material completo', exact: true })
-  await material.scrollIntoViewIfNeeded()
+  await material.evaluate(button => button.scrollIntoView({ block: 'center', behavior: 'instant' }))
   const scroll = await page.evaluate(() => scrollY)
   await material.click()
   await expect(page.getByRole('dialog', { name: 'Material sintético' })).toBeVisible()

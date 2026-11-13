@@ -8,6 +8,7 @@ const topics = blocks.filter(block => block.id === 'b3' || block.id === 'b4').fl
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
 const key = (pack: LabPackage, lesson: Lesson) => JSON.stringify([pack.id, pack.version, lesson.id])
 const numericOrder = new Intl.Collator('en', { numeric: true })
+const lessonPageSize = 60
 
 export function latestLabPackages(packages: LabPackage[]) {
   const versions = new Map<string, LabPackage>()
@@ -100,6 +101,7 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
   const [block, setBlock] = useState('all')
   const [topicId, setTopicId] = useState('all')
   const [includePrevious, setIncludePrevious] = useState(false)
+  const [limit, setLimit] = useState(lessonPageSize)
   const latest = useMemo(() => latestLabPackages(packages), [packages])
   const previousAvailable = packages.some(pack => latest.get(pack.id) !== pack && pack.lessons.length > 0)
   const catalogue = useMemo(() => buildCatalogue(packages, events, accountId, includePrevious), [packages, events, accountId, includePrevious])
@@ -110,26 +112,31 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
   const words = normalize(query).trim().split(/\s+/).filter(Boolean)
   const visible = catalogue.filter(item => (block === 'all' || item.topicIds.some(id => id.startsWith(block + '.')))
     && (topicId === 'all' || item.topicIds.includes(topicId)) && words.every(word => item.search.includes(word)))
-  const orderedGroups = orderedLessonGroups(visible, block, topicId)
+  let remaining = limit
+  const orderedGroups = orderedLessonGroups(visible, block, topicId).map(([id, items]) => {
+    const page = items.slice(0, remaining)
+    remaining -= page.length
+    return { id, items: page }
+  }).filter(({ items }) => items.length > 0)
   return <section className="lab-catalog" aria-labelledby="lab-catalog-heading">
     <header><h2 id="lab-catalog-heading" data-study-heading tabIndex={-1}>Explorar lecciones</h2><p>Elige un tema y avanza a tu ritmo.</p></header>
     <div className="lab-catalog-filters">
       <label className="lab-catalog-search"><span className="sr-only">Buscar lecciones</span><Search size={18} aria-hidden="true" />
-        <input ref={search} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar un concepto o una lección" /></label>
+        <input ref={search} type="search" value={query} onChange={event => { setQuery(event.target.value); setLimit(lessonPageSize) }} placeholder="Buscar un concepto o una lección" /></label>
       <div className="lab-block-filter" aria-label="Filtrar por bloque">{[
         ['all', 'Todos'], ['III', 'Bloque III'], ['IV', 'Bloque IV'],
-      ].map(([id, title]) => <button key={id} aria-pressed={block === id} onClick={() => { setBlock(id); setTopicId('all') }}>{title}</button>)}</div>
-      <label className="lab-topic-filter">Tema<select value={topicId} onChange={event => setTopicId(event.target.value)}>
+      ].map(([id, title]) => <button key={id} aria-pressed={block === id} onClick={() => { setBlock(id); setTopicId('all'); setLimit(lessonPageSize) }}>{title}</button>)}</div>
+      <label className="lab-topic-filter">Tema<select value={topicId} onChange={event => { setTopicId(event.target.value); setLimit(lessonPageSize) }}>
         <option value="all">Todos los temas disponibles</option>
         {availableTopics.map(topic => <option key={topic.id} value={topic.id}>{topic.id} · {topic.title}</option>)}
       </select></label>
     </div>
     {previousAvailable && <label className="lab-editions-filter">
-      <input type="checkbox" checked={includePrevious} onChange={event => { setIncludePrevious(event.target.checked); setTopicId('all') }} />
+      <input type="checkbox" checked={includePrevious} onChange={event => { setIncludePrevious(event.target.checked); setTopicId('all'); setLimit(lessonPageSize) }} />
       Mostrar ediciones anteriores
     </label>}
     <p className="lab-catalog-count" role="status">{visible.length} {visible.length === 1 ? 'lección disponible' : 'lecciones disponibles'}</p>
-    {orderedGroups.map(([id, items]) => {
+    {orderedGroups.map(({ id, items }) => {
       const topic = topics.find(topic => topic.id === id)
       return <section className="lab-topic-group" key={id} aria-label={topic ? `${id} ${topic.title}` : 'Otras lecciones'}>
         <h3>{topic && <span>{id}</span>}{topic?.title ?? 'Otras lecciones'}</h3>
@@ -143,7 +150,8 @@ export function LessonCatalog({ packages, events, accountId, openLesson }: {
         </button>)}</div>
       </section>
     })}
+    {visible.length > limit && <button className="button lab-catalog-more" onClick={() => setLimit(count => count + lessonPageSize)}>Mostrar más lecciones</button>}
     {!visible.length && <div className="lab-catalog-empty"><p>No hay lecciones disponibles con estos filtros.</p>
-      <button className="text-link" onClick={() => { setBlock('all'); setTopicId('all'); setQuery(''); search.current?.focus() }}>Mostrar todas las lecciones</button></div>}
+      <button className="text-link" onClick={() => { setBlock('all'); setTopicId('all'); setQuery(''); setLimit(lessonPageSize); search.current?.focus() }}>Mostrar todas las lecciones</button></div>}
   </section>
 }
