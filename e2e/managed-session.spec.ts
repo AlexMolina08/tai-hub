@@ -12,7 +12,7 @@ test('keeps Drive available after proactive renewal', async ({ page, context }) 
   }))
   await page.clock.install()
   await page.goto('/tai-hub/')
-  const ready = page.getByRole('button', { name: 'Añadir recurso', exact: true })
+  const ready = page.getByRole('banner').getByRole('button', { name: 'Añadir recurso', exact: true })
   await expect(ready).toBeEnabled()
   await page.clock.fastForward(30_000)
   await expect.poll(() => requests).toBe(2)
@@ -41,7 +41,7 @@ test('managed Drive session recovers after a rejected token and survives a reloa
       : route.fulfill({ status: 401, json: {} })
   })
   await page.goto('/tai-hub/')
-  const ready = page.getByRole('button', { name: 'Añadir recurso', exact: true })
+  const ready = page.getByRole('banner').getByRole('button', { name: 'Añadir recurso', exact: true })
   await expect(ready).toBeEnabled()
   await page.reload()
   try {
@@ -80,7 +80,7 @@ test('retries a temporary renewal outage without opening Google', async ({ page,
       : route.fulfill({ json: { accountId: 'sample-account', token: 'fixture-token', expiresIn: 3600 } })
   })
   await page.goto('/tai-hub/')
-  const ready = page.getByRole('button', { name: 'Añadir recurso', exact: true })
+  const ready = page.getByRole('banner').getByRole('button', { name: 'Añadir recurso', exact: true })
   await expect(ready).toBeEnabled()
   unavailable = true
   await page.reload()
@@ -106,7 +106,7 @@ test('sends an offline answer once after renewal and restores it on a second dev
   }
   async function openExercise(device: Page) {
     await device.goto(baseURL + '/tai-hub/')
-    await expect(device.getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
+    await expect(device.getByRole('banner').getByRole('button', { name: 'Añadir recurso', exact: true })).toBeEnabled()
     const menu = device.getByRole('button', { name: 'Abrir navegación', exact: true })
     if (await menu.isVisible()) await menu.click()
     await device.getByRole('button', { name: 'Laboratorio TAI', exact: true }).click()
