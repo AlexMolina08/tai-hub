@@ -173,6 +173,7 @@ select, .resource-form input:not([type="file"]):not([type="checkbox"]), textarea
 .snippet { display: block; margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .snippet mark { color: var(--accent); background: var(--accent-soft); border-radius: 2px; font-weight: 670; }
 .resource-topline { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 12px; }
+.pdf-mobile-account { display: none; }
 .resource-heading { margin-bottom: 13px; }
 .resource-heading h1 { font-size: clamp(1.7rem, 4vw, 2.7rem); }
 .resource-actions, .actions { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }

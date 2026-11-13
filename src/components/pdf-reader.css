@@ -550,6 +550,10 @@
     display: none;
   }
 
+  .content-reader:has(> .pdf-reader) .pdf-mobile-account {
+    display: inline-flex;
+  }
+
   .content-reader:has(> .pdf-reader) {
     display: flex;
     flex-direction: column;

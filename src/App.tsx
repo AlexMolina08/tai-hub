@@ -688,6 +688,8 @@ export default function App() {
                 <Star size={17} className={study.favorites[current.id] ? 'filled' : ''} /><span>Favorito</span>
               </button>
               <button className="button" disabled={!connected} onClick={() => setModal({ kind: 'manage', resource: current })}><Ellipsis size={18} /> Opciones</button>
+              {readingPdf && <button className="icon-button pdf-mobile-account" onClick={() => setModal({ kind: 'settings' })}
+                aria-label="Cuenta y ajustes"><Settings2 size={18} /></button>}
             </div>
           </div>
           <div className="page-heading resource-heading">

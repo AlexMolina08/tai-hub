@@ -150,6 +150,7 @@ test('replaces and reindexes a PDF while retaining its previous original', async
   const oldDownload = await oldEvent
   expect(await readFile((await oldDownload.path())!)).toEqual(drive.firstPdf)
   await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Volver', exact: true }).click()
   await search.fill('sustituto verificable')
   await expect(page.getByRole('button', { name: /Documento actualizado.*Página 1/ })).toBeVisible()
   await search.fill('observacion objetivo')
