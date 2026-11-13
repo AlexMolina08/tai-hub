@@ -47,6 +47,7 @@ const CANCELLED = 'Se ha cancelado la conexión con Google.';
 const DENIED = 'No se ha autorizado el acceso a Drive.';
 const FAILED = 'Google no pudo completar la autorización.';
 const INVALID_REDIRECT = 'La autorización de Google ha caducado o no coincide. Vuelve a conectar.';
+const REDIRECT_NOT_STARTED = 'Google está tardando en abrirse. Si no se abre, revisa la conexión y vuelve a intentarlo.';
 const RECONNECT = 'Vuelve a conectar Google Drive para continuar.';
 
 let loadingGoogle: Promise<GoogleOAuth> | undefined;
@@ -489,7 +490,7 @@ export class GoogleSession {
       // Safari can keep the old page alive during a slow cross-origin navigation.
       // Let the user retry without expiring Google's pending one-time state early.
       stopWaiting();
-      this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : INVALID_REDIRECT);
+      this.#publish(quiet ? 'ready' : this.#credential ? 'connected' : 'error', quiet ? undefined : REDIRECT_NOT_STARTED);
     }, REDIRECT_START_TIMEOUT);
     this.#cancelRedirect = cancel;
     window.addEventListener('pageshow', onReturn);
