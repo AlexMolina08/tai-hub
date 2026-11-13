@@ -14,23 +14,3 @@ La versión de estudio se abre en [TAI Hub](https://tai-hub-study.tai-hub.worker
 
 GitHub Actions verifica los cambios de `main`. GitHub Pages publica la rama `gh-pages`. Para actualizarla, confirma el código y ejecuta `sh scripts/publish-pages.sh` con el Client ID público en `.env.local`. El script compila, audita y publica solo `dist`. Guarda materiales e inventarios fuera del repositorio.
 
-## Uso
-
-- **Añadir recurso** admite archivos, enlaces y notas. Desde el recurso puedes editar su tema, fuente y etiquetas, sustituir un PDF o enviar el archivo a la papelera de Drive.
-- **Apuntes ampliados** aparece en cada tema cuando la biblioteca contiene un HTML con esa etiqueta. Abre **Lectura amplia** en el móvil para dedicar la pantalla a los apuntes. **Índice** te lleva al índice del documento y **Volver a la lectura** recupera el punto donde estabas. El lector conserva las tablas, las imágenes y la opción de copiar código. Carga el archivo privado desde Drive, elimina sus scripts y bloquea recursos externos.
-- **Buscar** consulta metadatos y texto por página. Los PDF sin texto extraíble se identifican como tales. La extracción se realiza al conectar Drive y cuando cambia el contenido del PDF. El índice local se guarda en IndexedDB y se sincroniza con Drive.
-- En PDF, **Modo lectura** amplía el espacio disponible. Pulsa el número de página para saltar a otra y usa los controles de zoom para ajustar el texto. El lector guarda la posición dentro de la página, el zoom y el modo lectura. Al recargar una pestaña con un PDF abierto, recupera ese punto. **Abrir último recurso** y **Recientes** recuperan la última posición sincronizada con Drive.
-- En **Laboratorio**, abre un tema desde el mapa y sigue sus lecciones en orden. Para preparar el móvil antes de quedarte sin red, abre **Ajustes del Laboratorio**, carga las lecciones desde Drive y pulsa **Preparar acceso sin conexión**. Las lecciones descargadas y sus ejercicios quedan disponibles en ese dispositivo. Los materiales vinculados que se abren desde Drive, como apuntes, PDF y vídeos, requieren conexión.
-- Toca un subrayado para quitarlo. Pulsa **Deshacer** o usa **⌘Z** en Mac y **Ctrl+Z** en otros teclados. También puedes deshacer o rehacer desde el panel de notas mientras el PDF siga abierto.
-- **Reproducir en Drive** abre la sesión autenticada de Google en otra pestaña. El reproductor de Drive gestiona la transmisión y los controles disponibles para el formato. Los originales también se pueden descargar.
-- **Ajustes → Importar carpeta** recibe un manifiesto v1 y la carpeta de archivos. La operación comprueba cuota, deduplica por huella y verifica tamaño y MD5 cuando el manifiesto lo contiene. Para reanudar tras cerrar la sesión, selecciona el mismo manifiesto y carpeta. Las cargas completas ya verificadas se omiten.
-- **Por revisar** reúne las fichas con la marca **Pendiente de revisión**. Desmárcala y guarda la ficha al terminar.
-- **Tests de Tailabs** abre la sección de tests de Tailabs en una pestaña nueva con la sesión de ese sitio.
-
-## Fuentes oficiales
-
-La pestaña INAP enlaza a las fichas, documentos y exámenes del INAP. El índice incluye títulos y enlaces a los documentos oficiales. El BOE se comprueba con su API pública.
-
-El flujo **Comprobar convocatorias INAP y BOE** revisa las fuentes cada seis horas y escribe los avisos en la rama pública `official-data`. Para iniciar la primera comprobación al incorporar esta función, ejecuta `gh workflow run official-inap.yml --ref main`. El propio flujo crea la rama con el permiso `contents: write`. Puedes seguir la ejecución desde GitHub Actions. La copia incluida en la aplicación permite abrir los recursos durante una interrupción del feed. El historial de lectura de avisos se guarda en cada navegador.
-
-Para comprobar el analizador sin cambiar el índice distribuido, ejecuta `python3 -m unittest discover -s scripts -p 'test_check_inap.py'`. Una comprobación real en un archivo aparte se puede ejecutar con `python3 scripts/check_inap.py /tmp/tai-official-inap.json --baseline public/official-inap.json`.
