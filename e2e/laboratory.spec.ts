@@ -1932,7 +1932,8 @@ test('signal experiments compare two conditions and retain the calculation acros
 })
 
 test('SQL distinguishes dates, timestamp microseconds and integer array bounds', async ({ page, context, browserName }) => {
-  test.setTimeout(90_000)
+  // Five checks start four isolated SQL engines each. Keep the per-check deadline below.
+  test.setTimeout(150_000)
   const pack = samplePackage()
   pack.activities[0] = { ...pack.activities[0], kind: 'sql', starter: 'SELECT d,t,a FROM demo',
     referenceQuery: 'SELECT d,t,a FROM demo', comparison: 'bag', datasets: [
@@ -1958,15 +1959,17 @@ test('SQL distinguishes dates, timestamp microseconds and integer array bounds',
   await expect(page.getByText('Correcta en los casos comprobados.', { exact: true })).toBeVisible({ timeout: 25_000 })
   await expect(result.getByRole('cell', { name: '2024-01-01 12:34:56.123456', exact: true })).toBeVisible()
   await expect(result.getByRole('cell', { name: '[0:1]={9007199254740993,NULL}', exact: true })).toBeVisible()
-  for (const wrong of [
-    'SELECT d+1,t,a FROM demo',
-    "SELECT d,t + interval '1 microsecond',a FROM demo",
-    'SELECT d,t,ARRAY[a[array_lower(a,1)],NULL] FROM demo',
-    'SELECT d::text,t,a FROM demo',
+  for (const [difference, wrong] of [
+    ['date value', 'SELECT d+1,t,a FROM demo'],
+    ['timestamp microsecond', "SELECT d,t + interval '1 microsecond',a FROM demo"],
+    ['array lower bound', 'SELECT d,t,ARRAY[a[array_lower(a,1)],NULL] FROM demo'],
+    ['date column type', 'SELECT d::text,t,a FROM demo'],
   ]) {
-    await query.fill(wrong)
-    await check.click()
-    await expect(page.getByText('Revisa la consulta: algún caso produce otro resultado.', { exact: true })).toBeVisible({ timeout: 25_000 })
+    await test.step(`Reject a different ${difference}`, async () => {
+      await query.fill(wrong)
+      await check.click()
+      await expect(page.getByText('Revisa la consulta: algún caso produce otro resultado.', { exact: true })).toBeVisible({ timeout: 25_000 })
+    })
   }
   await page.getByRole('button', { name: 'Sincronizar progreso', exact: true }).click()
   await expect(page.locator('.lab-workspace-status [role="status"]')).toHaveText('Sincronizado')
