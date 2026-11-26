@@ -2,6 +2,64 @@
   "schema": 1,
   "calls": [
     {
+      "year": 2026,
+      "label": "Ingreso libre",
+      "url": "https://sede.inap.gob.es/es/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2026",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 24 de noviembre de 2026",
+              "url": "https://www.boe.es/boe/dias/2026/11/26/pdfs/BOE-A-2026-24839.pdf"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/TAI_L_Normas_Especificas_2026.pdf"
+            },
+            {
+              "label": "Inscripción",
+              "url": "https://ips.redsara.es/IPSC/secure/buscarConvocatorias"
+            },
+            {
+              "label": "Guía para la inscripción",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/Guia_Inscripcion_CPS.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "7e54d66e17c3d45960ff9f4c23862b67345ac682fa4e9b1d4fff273225335f7c"
+    },
+    {
+      "year": 2026,
+      "label": "Promoción interna",
+      "url": "https://sede.inap.gob.es/es/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-promocion-interna-convocatoria-2026",
+      "sections": [
+        {
+          "title": "Convocatoria",
+          "links": [
+            {
+              "label": "Resolución de 24 de noviembre de 2026",
+              "url": "https://www.boe.es/boe/dias/2026/11/26/pdfs/BOE-A-2026-24839.pdf"
+            },
+            {
+              "label": "Normas específicas",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/TAI_P_Normas_Especificas_2026.pdf"
+            },
+            {
+              "label": "Inscripción",
+              "url": "https://ips.redsara.es/IPSC/secure/buscarConvocatorias"
+            },
+            {
+              "label": "Guía para la inscripción",
+              "url": "https://sede.inap.gob.es/sites/sede/files/public/2026-11/Guia_Inscripcion_CPS.pdf"
+            }
+          ]
+        }
+      ],
+      "fingerprint": "7e54d66e17c3d45960ff9f4c23862b67345ac682fa4e9b1d4fff273225335f7c"
+    },
+    {
       "year": 2025,
       "label": "Ingreso libre",
       "url": "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2025",
@@ -2828,11 +2886,38 @@
       ]
     }
   ],
-  "inapCheckedAt": "2026-11-25T22:28:31+00:00",
-  "boe": [],
-  "boeThrough": "2026-11-25",
-  "sequence": 1,
+  "inapCheckedAt": "2026-11-26T09:29:47+00:00",
+  "boe": [
+    {
+      "id": "BOE-A-2026-24839",
+      "label": "Resolución de 24 de noviembre de 2026, de la Secretaría de Estado de Función Pública, por la que se convocan procesos selectivos para el ingreso y el acceso en Cuerpos de la Administración General del Estado, y se encarga su realización a la Comisión Permanente de Selección.",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-24839",
+      "date": "2026-11-26",
+      "kind": "call"
+    }
+  ],
+  "boeThrough": "2026-11-26",
+  "sequence": 4,
   "changes": [
+    {
+      "label": "Convocatoria publicada en el BOE",
+      "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-24839",
+      "detail": "Resolución de 24 de noviembre de 2026, de la Secretaría de Estado de Función Pública, por la que se convocan procesos selectivos para el ingreso y el acceso en Cuerpos de la Administración General del Estado, y se encarga su realización a la Comisión Permanente de Selección.",
+      "id": 4,
+      "at": "2026-11-26T09:29:47+00:00"
+    },
+    {
+      "label": "Nueva ficha INAP · 2026 · Promoción interna",
+      "url": "https://sede.inap.gob.es/es/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-promocion-interna-convocatoria-2026",
+      "id": 3,
+      "at": "2026-11-26T09:29:47+00:00"
+    },
+    {
+      "label": "Nueva ficha INAP · 2026 · Ingreso libre",
+      "url": "https://sede.inap.gob.es/es/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2026",
+      "id": 2,
+      "at": "2026-11-26T09:29:47+00:00"
+    },
     {
       "label": "Ficha INAP actualizada · 2025 · Promoción interna",
       "url": "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-promocion-interna-convocatoria-2025",
