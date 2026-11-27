@@ -2886,7 +2886,7 @@
       ]
     }
   ],
-  "inapCheckedAt": "2026-11-26T22:18:22+00:00",
+  "inapCheckedAt": "2026-11-27T09:38:47+00:00",
   "boe": [
     {
       "id": "BOE-A-2026-24839",
@@ -2896,7 +2896,7 @@
       "kind": "call"
     }
   ],
-  "boeThrough": "2026-11-26",
+  "boeThrough": "2026-11-27",
   "sequence": 4,
   "changes": [
     {
